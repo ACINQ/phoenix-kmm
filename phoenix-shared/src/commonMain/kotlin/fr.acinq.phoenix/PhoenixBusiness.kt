@@ -69,7 +69,7 @@ class PhoenixBusiness {
             ),
             dustLimit = 100.sat,
             onChainFeeConf = OnChainFeeConf(
-                maxFeerateMismatch = 1.5,
+                maxFeerateMismatch = 10_000.0,
                 closeOnOfflineMismatch = true,
                 updateFeeMinDiffRatio = 0.1
             ),

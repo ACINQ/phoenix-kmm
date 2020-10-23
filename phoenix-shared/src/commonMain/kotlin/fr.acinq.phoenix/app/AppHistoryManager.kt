@@ -54,7 +54,7 @@ class AppHistoryManager(override val di: DI) : DIAware, CoroutineScope by MainSc
                         db.put(
                             Transaction(
                                 id = it.payment.paymentId.toString(),
-                                amountSat = -totalAmount.toLong(), // Need to convert from MilliSatoshi to Satoshi ???
+                                amountSat = -totalAmount.toLong(), // storing value in MilliSatoshi
                                 desc = it.payment.paymentRequest.description ?: "",
                                 status = Transaction.Status.Pending,
                                 timestamp = currentTimestampMillis()
@@ -66,7 +66,7 @@ class AppHistoryManager(override val di: DI) : DIAware, CoroutineScope by MainSc
                         db.put(
                             Transaction(
                                 id = it.payment.paymentId.toString(),
-                                amountSat = -totalAmount.toLong(), // Need to convert from MilliSatoshi to Satoshi ???
+                                amountSat = -totalAmount.toLong(), // storing value in MilliSatoshi
                                 desc = it.payment.paymentRequest.description ?: "",
                                 status = Transaction.Status.Success,
                                 timestamp = currentTimestampMillis()
@@ -77,7 +77,7 @@ class AppHistoryManager(override val di: DI) : DIAware, CoroutineScope by MainSc
                         db.put(
                             Transaction(
                                 id = it.payment.paymentId.toString(),
-                                amountSat = -it.payment.paymentAmount.toLong(), // Need to convert from MilliSatoshi to Satoshi ???
+                                amountSat = -it.payment.paymentAmount.toLong(), // storing value in MilliSatoshi
                                 desc = it.reason.name,
                                 status = Transaction.Status.Failure,
                                 timestamp = currentTimestampMillis()
