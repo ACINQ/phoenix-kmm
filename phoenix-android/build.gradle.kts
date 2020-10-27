@@ -3,8 +3,7 @@ plugins {
     kotlin("android")
 }
 
-val composeVersion = "0.1.0-dev14"
-val composeCompilerVersion = "1.3.70-dev-withExperimentalGoogleExtensions-20200424"
+val composeVersion = "1.0.0-alpha05"
 
 android {
     compileSdkVersion(30)
@@ -31,6 +30,7 @@ android {
 
     kotlinOptions {
         jvmTarget = "1.8"
+        useIR = true
     }
 
     buildFeatures {
@@ -38,7 +38,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerVersion = composeCompilerVersion
+        kotlinCompilerVersion = "1.4.10"
         kotlinCompilerExtensionVersion = composeVersion
     }
 
@@ -53,16 +53,22 @@ kotlin {
 }
 
 dependencies {
-    implementation(kotlin("stdlib"))
     implementation(project(":phoenix-shared"))
-//    implementation("androidx.core:core-ktx:1.3.0")
-    implementation("androidx.appcompat:appcompat:1.1.0")
-    implementation("com.google.android.material:material:1.1.0")
-    implementation("androidx.ui:ui-layout:$composeVersion")
-    implementation("androidx.ui:ui-material:$composeVersion")
+
+    implementation("androidx.core:core-ktx:1.3.2")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.3.0-beta01")
+
+    implementation("androidx.appcompat:appcompat:1.2.0")
+
+    implementation("com.google.android.material:material:1.2.1")
+
+    implementation("androidx.compose.ui:ui:$composeVersion")
+    implementation("androidx.compose.material:material:$composeVersion")
+
     implementation("androidx.ui:ui-tooling:$composeVersion")
-    testImplementation("junit:junit:4.13")
-    androidTestImplementation("androidx.test.ext:junit:1.1.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.2.0")
+
+    testImplementation("junit:junit:4.13.1")
+    androidTestImplementation("androidx.test.ext:junit:1.1.2")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
 }
 

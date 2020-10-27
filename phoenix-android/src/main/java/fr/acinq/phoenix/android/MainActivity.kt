@@ -2,56 +2,39 @@ package fr.acinq.phoenix.android
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.compose.Composable
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.ui.core.setContent
-import androidx.ui.foundation.Text
-import androidx.ui.foundation.lazy.LazyColumnItems
+import androidx.compose.foundation.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.setContent
+import androidx.ui.tooling.preview.Devices
 import androidx.ui.tooling.preview.Preview
-import fr.acinq.phoenix.android.utils.bindOnLifecycle
-import fr.acinq.phoenix.ctrl.LogController
+import fr.acinq.phoenix.android.mvi.MVIView
+import fr.acinq.phoenix.ctrl.Init
+import fr.acinq.phoenix.ctrl.InitController
 import org.kodein.di.DIAware
 import org.kodein.di.android.di
-import org.kodein.di.instance
+import org.kodein.type.generic
 
 class MainActivity : AppCompatActivity(), DIAware {
     override val di by di()
 
-    private val controller: LogController by instance()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        controller
-            .subscribe {
-                setContent {
-                    PhoenixAndroidTheme {
-                        LogList(it.lines)
-                    }
-                }
-            }
-            .bindOnLifecycle(this)
-
         setContent {
             PhoenixAndroidTheme {
-                Text("...")
+                MVIView(di, generic<InitController>()) { m, i -> InitView(m, i) }
             }
         }
     }
 }
 
 @Composable
-fun LogList(logs: List<String>) {
-    LazyColumnItems(logs) {
-        Text(it)
-    }
+fun InitView(model: Init.Model, postIntent: (Init.Intent) -> Unit) {
+    Text(model.toString())
 }
 
-@Preview(showBackground = true)
+@Preview(device = Devices.PIXEL_3)
 @Composable
 fun DefaultPreview() {
-    PhoenixAndroidTheme {
-        LogList(listOf("fake", "log", "list"))
-    }
+    InitView(Init.Model.Initialization) {}
 }
