@@ -113,7 +113,7 @@ object PhoenixBusiness {
         DI.Module("Phoenix/Utility") {
             bind<LoggerFactory>() with instance(LoggerFactory.default)
             bind<TcpSocket.Builder>() with instance(TcpSocket.Builder())
-            bind<NetworkMonitor>() with singleton { NetworkMonitor() }
+            bind<NetworkMonitor>() with singleton { NetworkMonitor(di) }
             bind<HttpClient>() with singleton {
                 HttpClient {
                     install(JsonFeature) {

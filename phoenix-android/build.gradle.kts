@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 plugins {
     id("com.android.application")
     kotlin("android")
@@ -47,7 +49,7 @@ android {
 kotlin {
     target {
         compilations.all {
-            kotlinOptions.freeCompilerArgs += "-Xskip-metadata-version-check"
+            kotlinOptions.freeCompilerArgs += listOf("-Xskip-metadata-version-check", "-Xinline-classes")
         }
     }
 }
@@ -71,4 +73,3 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.2")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
 }
-
