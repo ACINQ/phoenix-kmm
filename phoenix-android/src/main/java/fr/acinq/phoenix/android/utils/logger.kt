@@ -21,9 +21,7 @@ fun logger(): Logger {
         return remember { LoggerFactory(simplePrintFrontend).newLogger(context::class) }
     }
 
-    return remember {
-        val di by closestDI(context.applicationContext as PhoenixApplication)
-
+    return rememberWithDI { di ->
         val factory = di.direct.instance<LoggerFactory>()
 
         factory.newLogger(context::class)
