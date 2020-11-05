@@ -5,7 +5,6 @@ import fr.acinq.bitcoin.PublicKey
 import fr.acinq.eclair.*
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.blockchain.electrum.ElectrumWatcher
-import fr.acinq.eclair.blockchain.fee.FeeEstimator
 import fr.acinq.eclair.blockchain.fee.OnChainFeeConf
 import fr.acinq.eclair.crypto.LocalKeyManager
 import fr.acinq.eclair.db.ChannelsDb
@@ -33,12 +32,7 @@ import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.Transient
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 import org.kodein.db.DB
 import org.kodein.db.DBFactory
 import org.kodein.db.impl.factory
@@ -52,8 +46,13 @@ import org.kodein.log.newLogger
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalUnsignedTypes::class)
 object PhoenixBusiness {
 
-    private fun buildPeer(socketBuilder: TcpSocket.Builder, watcher: ElectrumWatcher, channelsDB: ChannelsDb, loggerFactory: LoggerFactory, wallet: Wallet) : Peer {
-        val remoteNodePubKey = PublicKey.fromHex("039dc0e0b1d25905e44fdf6f8e89755a5e219685840d0bc1d28d3308f9628a3585")
+    private fun buildPeer(di: DI, wallet: Wallet) : Peer {
+        val socketBuilder: TcpSocket.Builder by di.instance()
+        val watcher: ElectrumWatcher by di.instance()
+        val channelsDB: ChannelsDb by di.instance()
+        val loggerFactory: LoggerFactory by di.instance()
+
+        val acinqNodeUri: NodeUri by di.instance(tag = TAG_ACINQ_NODE_URI)
 
         val keyManager = LocalKeyManager(wallet.seed.toByteVector32(), Block.RegtestGenesisBlock.hash)
         newLogger(loggerFactory).info { "NodeId: ${keyManager.nodeId}" }
@@ -101,10 +100,11 @@ object PhoenixBusiness {
             minFundingSatoshis = 1000.sat,
             maxFundingSatoshis = 16777215.sat,
             maxPaymentAttempts = 5,
-            enableTrampolinePayment = true
+            trampolineNode = acinqNodeUri,
+            enableTrampolinePayment = false // TODO: back to true
         )
 
-        val peer = Peer(socketBuilder, params, remoteNodePubKey, watcher, channelsDB, MainScope())
+        val peer = Peer(socketBuilder, params, acinqNodeUri.id, watcher, channelsDB, MainScope())
 
         return peer
     }
@@ -134,20 +134,26 @@ object PhoenixBusiness {
             bind<ChannelsDb>() with singleton { AppChannelsDB(instance()) }
 //        bind<ChannelsDb>() with singleton { MemoryChannelsDB() }
 
-            constant(tag = TAG_ACINQ_ADDRESS) with "localhost"
-            bind<Boolean>(tag = TAG_IS_MAINNET) with singleton { instance<AppConfigurationManager>().getAppConfiguration().chain == Chain.MAINNET }
+            // Regtest
+            //bind<NodeUri>(tag = TAG_ACINQ_NODE_URI) with instance(NodeUri(PublicKey.fromHex("039dc0e0b1d25905e44fdf6f8e89755a5e219685840d0bc1d28d3308f9628a3585"), "localhost", 48001))
+            //bind<Chain>(tag = TAG_CHAIN) with instance(Chain.REGTEST)
+
+            // Testnet
+            bind<NodeUri>(tag = TAG_ACINQ_NODE_URI) with instance(NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735))
+            bind<Chain>(tag = TAG_CHAIN) with instance(Chain.TESTNET)
+
             bind<String>(tag = TAG_MASTER_PUBKEY_PATH) with singleton {
-                if (instance(tag = TAG_IS_MAINNET)) "m/84'/0'/0'" else "m/84'/1'/0'"
+                if (instance<Chain>(tag = TAG_CHAIN) == Chain.MAINNET) "m/84'/0'/0'" else "m/84'/1'/0'"
             }
             bind<String>(tag = TAG_ONCHAIN_ADDRESS_PATH) with singleton {
-                if (instance(tag = TAG_IS_MAINNET)) "m/84'/0'/0'/0/0" else "m/84'/1'/0'/0/0"
+                if (instance<Chain>(tag = TAG_CHAIN) == Chain.MAINNET) "m/84'/0'/0'/0/0" else "m/84'/1'/0'/0/0"
             }
 
             bind<ElectrumClient>() with singleton { ElectrumClient(instance(), MainScope()) }
             bind<ElectrumWatcher>() with singleton { ElectrumWatcher(instance(), MainScope()) }
             bind<Peer>() with singleton {
                 instance<WalletManager>().getWallet()?.let {
-                    buildPeer(instance(), instance(), instance(), instance(), it)
+                    buildPeer(di, it)
                 } ?: error("Wallet must be initialized.")
             }
             bind<AppHistoryManager>() with singleton { AppHistoryManager(di) }

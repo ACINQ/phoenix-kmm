@@ -10,6 +10,7 @@ import fr.acinq.phoenix.app.AppConfigurationManager
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.ChannelsConfiguration
 import fr.acinq.phoenix.data.Chain
+import fr.acinq.phoenix.utils.TAG_CHAIN
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.consumeEach
@@ -25,6 +26,7 @@ class AppChannelsConfigurationController(di: DI) : AppController<ChannelsConfigu
 
     private val peer: Peer by instance()
     private val appConfig: AppConfigurationManager by instance()
+    private val chain: Chain by instance(tag = TAG_CHAIN)
 
     private val json = Json {
         prettyPrint = true
@@ -46,7 +48,7 @@ class AppChannelsConfigurationController(di: DI) : AppController<ChannelsConfigu
                                 state.localCommitmentSpec?.let { it.toLocal.truncateToSatoshi().toLong() to (it.toLocal + it.toRemote).truncateToSatoshi().toLong() },
                                 json.encodeToString(ChannelState.serializer(), state),
                                 if (state is ChannelStateWithCommitments) {
-                                    val prefix = when (appConfig.getAppConfiguration().chain) {
+                                    val prefix = when (chain) {
                                         Chain.MAINNET -> ""
                                         Chain.TESTNET -> "testnet/"
                                         Chain.REGTEST -> "_REGTEST_/"
