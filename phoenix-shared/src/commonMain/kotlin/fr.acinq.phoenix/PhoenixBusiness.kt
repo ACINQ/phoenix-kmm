@@ -51,10 +51,17 @@ object PhoenixBusiness {
         val watcher: ElectrumWatcher by di.instance()
         val channelsDB: ChannelsDb by di.instance()
         val loggerFactory: LoggerFactory by di.instance()
+        val chain: Chain by di.instance()
 
         val acinqNodeUri: NodeUri by di.instance(tag = TAG_ACINQ_NODE_URI)
 
-        val keyManager = LocalKeyManager(wallet.seed.toByteVector32(), Block.RegtestGenesisBlock.hash)
+        val genesisBlock = when (chain) {
+            Chain.MAINNET -> Block.LivenetGenesisBlock
+            Chain.TESTNET -> Block.TestnetGenesisBlock
+            Chain.REGTEST -> Block.RegtestGenesisBlock
+        }
+
+        val keyManager = LocalKeyManager(wallet.seed.toByteVector32(), genesisBlock.hash)
         newLogger(loggerFactory).info { "NodeId: ${keyManager.nodeId}" }
 
         val params = NodeParams(
@@ -93,7 +100,7 @@ object PhoenixBusiness {
             autoReconnect = false,
             initialRandomReconnectDelay = 5,
             maxReconnectInterval = 3600,
-            chainHash = Block.RegtestGenesisBlock.hash,
+            chainHash = genesisBlock.hash,
             channelFlags = 1,
             paymentRequestExpiry = 3600,
             multiPartPaymentExpiry = 30,
@@ -140,13 +147,13 @@ object PhoenixBusiness {
 
             // Testnet
             bind<NodeUri>(tag = TAG_ACINQ_NODE_URI) with instance(NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735))
-            bind<Chain>(tag = TAG_CHAIN) with instance(Chain.TESTNET)
+            bind<Chain>() with instance(Chain.TESTNET)
 
             bind<String>(tag = TAG_MASTER_PUBKEY_PATH) with singleton {
-                if (instance<Chain>(tag = TAG_CHAIN) == Chain.MAINNET) "m/84'/0'/0'" else "m/84'/1'/0'"
+                if (instance<Chain>() == Chain.MAINNET) "m/84'/0'/0'" else "m/84'/1'/0'"
             }
             bind<String>(tag = TAG_ONCHAIN_ADDRESS_PATH) with singleton {
-                if (instance<Chain>(tag = TAG_CHAIN) == Chain.MAINNET) "m/84'/0'/0'/0/0" else "m/84'/1'/0'/0/0"
+                if (instance<Chain>() == Chain.MAINNET) "m/84'/0'/0'/0/0" else "m/84'/1'/0'/0/0"
             }
 
             bind<ElectrumClient>() with singleton { ElectrumClient(instance(), MainScope()) }

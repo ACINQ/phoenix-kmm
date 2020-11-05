@@ -4,7 +4,6 @@ import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.blockchain.electrum.HeaderSubscriptionResponse
 import fr.acinq.phoenix.data.*
 import fr.acinq.phoenix.utils.TAG_APPLICATION
-import fr.acinq.phoenix.utils.TAG_CHAIN
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.utils.io.errors.*
@@ -30,7 +29,7 @@ class AppConfigurationManager(override val di: DI) : DIAware, CoroutineScope by 
     private val db: DB by instance(tag = TAG_APPLICATION)
     private val electrumClient: ElectrumClient by instance()
     private val httpClient: HttpClient by instance()
-    private val chain: Chain by instance(tag = TAG_CHAIN)
+    private val chain: Chain by instance()
 
     private val logger = direct.instance<LoggerFactory>().newLogger(AppConfigurationManager::class)
 

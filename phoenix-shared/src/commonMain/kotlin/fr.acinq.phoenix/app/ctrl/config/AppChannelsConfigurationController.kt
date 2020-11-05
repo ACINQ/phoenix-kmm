@@ -10,7 +10,6 @@ import fr.acinq.phoenix.app.AppConfigurationManager
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.ChannelsConfiguration
 import fr.acinq.phoenix.data.Chain
-import fr.acinq.phoenix.utils.TAG_CHAIN
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.consumeEach
@@ -26,7 +25,7 @@ class AppChannelsConfigurationController(di: DI) : AppController<ChannelsConfigu
 
     private val peer: Peer by instance()
     private val appConfig: AppConfigurationManager by instance()
-    private val chain: Chain by instance(tag = TAG_CHAIN)
+    private val chain: Chain by instance()
 
     private val json = Json {
         prettyPrint = true
