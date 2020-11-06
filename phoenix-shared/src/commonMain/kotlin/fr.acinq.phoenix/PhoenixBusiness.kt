@@ -108,7 +108,7 @@ object PhoenixBusiness {
             maxFundingSatoshis = 16777215.sat,
             maxPaymentAttempts = 5,
             trampolineNode = acinqNodeUri,
-            enableTrampolinePayment = false // TODO: back to true
+            enableTrampolinePayment = true
         )
 
         val peer = Peer(socketBuilder, params, acinqNodeUri.id, watcher, channelsDB, MainScope())
