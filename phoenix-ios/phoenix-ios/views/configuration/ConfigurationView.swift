@@ -22,7 +22,7 @@ struct ConfigurationView: MVIView {
 						}
 					}
 					NavigationLink(destination:  ElectrumConfigurationView()) {
-						Label { Text("Electrum Server") } icon: {
+						Label { Text("Electrum server") } icon: {
 							Image(systemName: "link")
 						}
 					}
