@@ -4,28 +4,13 @@ import PhoenixShared
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
-    let mocks = MockDIBuilder().apply {
-        $0.contentModel = ContentView_Previews.mockModel
-        $0.initModel = InitView_Previews.mockModel
-        $0.homeModel = HomeView_Previews.mockModel
-        $0.receiveModel = ReceiveView_Previews.mockModel
-        $0.scanModel = ScanView_Previews.mockModel
-        $0.restoreWalletModel = RestoreWalletView_Previews.mockModel
-        $0.configurationModel = ConfigurationView_Previews.mockModel
-        $0.displayConfigurationModel = DisplayConfigurationView_Previews.mockModel
-        $0.electrumConfigurationModel = ElectrumConfigurationView_Previews.mockModel
-        $0.channelsConfigurationModel = ChannelsConfigurationView_Previews.mockModel
-    }
-
-    let di: DI
+    let phoenix: PhoenixBusiness
 
     override init() {
         setenv("CFNETWORK_DIAGNOSTICS", "3", 1);
 
-        di = DI(
-            DiIosKt.phoenixDI()
-//            mocks.di()
-        )
+        phoenix = PhoenixBusiness()
+        phoenix.start()
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {

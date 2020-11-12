@@ -8,7 +8,7 @@ struct ElectrumConfigurationView: MVIView {
     @State var showElectrumAddressPopup: Bool = false
 
     var body: some View {
-        mvi { model, intent in
+        mvi({ $0.electrumConfiguration() }) { model, intent in
             ZStack {
                 VStack(spacing: 0) {
                     Text("""
@@ -194,9 +194,7 @@ class ElectrumConfigurationView_Previews: PreviewProvider {
     )
 
     static var previews: some View {
-        mockView(ElectrumConfigurationView()) {
-            $0.electrumConfigurationModel = mockModel
-        }
+        mockView(ElectrumConfigurationView())
                 .previewDevice("iPhone 11")
     }
 

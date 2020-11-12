@@ -41,7 +41,7 @@ struct ReceiveView: MVIView {
 
     var body: some View {
         ZStack {
-            mvi(onModel: { change in
+            mvi({ $0.receive() }, onModel: { change in
                 if let m = change.newModel as? Receive.ModelGenerated {
                     qrCode.generate(value: m.request)
                 }
@@ -220,7 +220,7 @@ class ReceiveView_Previews: PreviewProvider {
 //    static let mockModel = Receive.ModelAwaiting()
 
     static var previews: some View {
-        mockView(ReceiveView()) { $0.receiveModel = ReceiveView_Previews.mockModel }
+        mockView(ReceiveView())
                 .previewDevice("iPhone 11")
     }
 

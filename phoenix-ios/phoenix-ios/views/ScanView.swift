@@ -14,7 +14,7 @@ struct ScanView: MVIView {
 
     var body: some View {
         ZStack {
-            mvi(onModel: { change in
+            mvi({ $0.scan() }, onModel: { change in
                 print("NEW MODEL: \(change.newModel)")
                 if change.newModel is Scan.ModelSending {
                     isShowing = false
@@ -197,7 +197,7 @@ class ScanView_Previews: PreviewProvider {
     )
 
     static var previews: some View {
-        mockView(ScanView(isShowing: .constant(true))) { $0.scanModel = ScanView_Previews.mockModel }
+        mockView(ScanView(isShowing: .constant(true)))
                 .previewDevice("iPhone 11")
     }
 

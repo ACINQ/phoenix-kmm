@@ -6,7 +6,7 @@ struct ConfigurationView: MVIView {
     typealias Intent = Configuration.Intent
 	
 	var body: some View {
-		mvi { model, intent in
+		mvi({ $0.configuration() }) { model, intent in
 			List {
 				let fullMode = model is Configuration.ModelFullMode
 
@@ -90,9 +90,7 @@ class ConfigurationView_Previews: PreviewProvider {
     static let mockModel = Configuration.ModelFullMode()
 
     static var previews: some View {
-        mockView(ConfigurationView()) {
-            $0.configurationModel = mockModel
-        }
+        mockView(ConfigurationView())
 		.previewDevice("iPhone 11")
     }
 

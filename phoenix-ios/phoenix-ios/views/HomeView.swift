@@ -13,6 +13,7 @@ struct HomeView : MVIView {
 
     var body: some View {
         mvi(
+                { $0.home() },
                 background: true,
                 onModel: { change in
                     if lastTransaction != change.newModel.lastTransaction {
@@ -22,7 +23,7 @@ struct HomeView : MVIView {
                 }
         ) { model, intent in
             ZStack {
-                VStack() {
+                VStack {
                     HStack {
                         ConnectionStatus(status: model.connections.global, showPopup: $showConnections)
                         Spacer()
@@ -289,8 +290,7 @@ class HomeView_Previews : PreviewProvider {
     )
 
     static var previews: some View {
-//        mockView(HomeView()) { $0.homeModel = mockModel }
-        appView(HomeView())
+        mockView(HomeView())
                 .previewDevice("iPhone 11")
     }
 

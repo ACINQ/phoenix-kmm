@@ -6,7 +6,7 @@ struct RestoreWalletView: MVIView {
     typealias Intent = RestoreWallet.Intent
 
     var body: some View {
-        mvi(onModel: { change in
+        mvi({ $0.restoreWallet() }, onModel: { change in
             if change.previousModel is RestoreWallet.ModelWarning && !(change.newModel is RestoreWallet.ModelWarning) {
                 change.animation = .default
             }
@@ -206,9 +206,7 @@ class RestoreWalletView_Previews: PreviewProvider {
 //    static let mockModel = RestoreWallet.ModelWordlist(words: ["abc", "abandon", "ability", "able", "about", "above", "absent", "absorb", "abstract", "absurd", "abuse", "access", "accident", "account", "accuse", "achieve", "acid"])
 
     static var previews: some View {
-        mockView(RestoreWalletView()) {
-            $0.restoreWalletModel = mockModel
-        }
+        mockView(RestoreWalletView())
                 .previewDevice("iPhone 11")
     }
 

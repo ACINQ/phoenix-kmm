@@ -6,7 +6,7 @@ struct DisplayConfigurationView: MVIView {
     typealias Intent = DisplayConfiguration.Intent
 
     var body: some View {
-        mvi { model, intent in
+        mvi({ $0.displayConfiguration() }) { model, intent in
             Form {
                 Section {
                     Picker(
@@ -61,9 +61,7 @@ class DisplayConfigurationView_Previews: PreviewProvider {
     static let mockModel = DisplayConfiguration.Model(fiatCurrency: .usd, bitcoinUnit: .satoshi, appTheme: .system)
 
     static var previews: some View {
-        mockView(DisplayConfigurationView()) {
-            $0.displayConfigurationModel = mockModel
-        }
+        mockView(DisplayConfigurationView())
                 .previewDevice("iPhone 11")
     }
 

@@ -13,7 +13,7 @@ struct ChannelsConfigurationView: MVIView {
     @StateObject var toast = Toast()
 
     var body: some View {
-        mvi { model, intent in
+        mvi({ $0.channelsConfiguration() }) { model, intent in
             ZStack {
                 VStack {
                     Text("Your node ID: \(model.nodeId)")
@@ -165,7 +165,7 @@ class ChannelsConfigurationView_Previews : PreviewProvider {
     )
 
     static var previews: some View {
-        mockView(ChannelsConfigurationView()) { $0.channelsConfigurationModel = mockModel }
+        mockView(ChannelsConfigurationView())
             .previewDevice("iPhone 11")
     }
 

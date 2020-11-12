@@ -1,12 +1,12 @@
 import SwiftUI
 import PhoenixShared
 
-struct InitView : MVIView {
-    typealias Model = Init.Model
-    typealias Intent = Init.Intent
+struct InitializationView: MVIView {
+    typealias Model = Initialization.Model
+    typealias Intent = Initialization.Intent
 
 	var body: some View {
-		mvi { model, intent in
+		mvi({ $0.initialization() }) { model, intent in
 			ZStack {
 				
 				// ZStack: layer 0 (background)
@@ -48,7 +48,7 @@ struct InitView : MVIView {
 					.padding(.bottom, 80)
 
 					Button {
-						intent(Init.IntentCreateWallet())
+						intent(Initialization.IntentCreateWallet())
 					} label: {
 						HStack {
 						//	Image("ic_fire")
@@ -110,10 +110,10 @@ struct InitView : MVIView {
 }
 
 class InitView_Previews : PreviewProvider {
-    static let mockModel = Init.ModelInitialization()
+    static let mockModel = Initialization.ModelInitialization()
 
     static var previews: some View {
-        mockView(InitView()) { $0.initModel = mockModel }
+        mockView(InitializationView())
                 .previewDevice("iPhone 11")
     }
 

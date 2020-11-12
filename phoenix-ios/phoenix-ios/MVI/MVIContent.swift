@@ -1,7 +1,7 @@
 import SwiftUI
 import PhoenixShared
 
-struct MVIContext<Model: MVI.Model, Intent: MVI.Intent, Content: View> : View {
+struct MVIContent<Model: MVI.Model, Intent: MVI.Intent, Content: View> : View {
 
     class ModelChange {
         let newModel: Model
@@ -27,10 +27,14 @@ struct MVIContext<Model: MVI.Model, Intent: MVI.Intent, Content: View> : View {
         @Published var model: Model? = nil
 
         private let background: Bool
-        private var onModel: ((ModelChange) -> Void)? = nil
+        private let onModel: ((ModelChange) -> Void)?
 
-        init(background: Bool) {
+        init(
+                background: Bool,
+                onModel: ((ModelChange) -> Void)?
+        ) {
             self.background = background
+            self.onModel = onModel
         }
 
         deinit {
@@ -42,15 +46,14 @@ struct MVIContext<Model: MVI.Model, Intent: MVI.Intent, Content: View> : View {
             }
         }
 
-        func initController(_ di: DI, onModel: ((ModelChange) -> Void)? = nil) {
+        func initController(getController: () -> MVIController<Model, Intent>) {
             if controller == nil {
-                controller = di.instance(of: MVIController<Model, Intent>.self, params: [Model.self, Intent.self])
+                controller = getController()
                 model = controller!.firstModel
             }
         }
 
-        func subscribe(onModel: ((ModelChange) -> Void)?) {
-            self.onModel = onModel
+        func subscribe() {
             if unsub == nil {
                 unsub = controller!.subscribe { newModel in
                     let modelChange = ModelChange(newModel: newModel, previousModel: self.model)
@@ -83,28 +86,29 @@ struct MVIContext<Model: MVI.Model, Intent: MVI.Intent, Content: View> : View {
 
     private let content: (Model, @escaping (Intent) -> Void) -> Content
 
-    @EnvironmentObject private var envDi: ObservableDI
+    @EnvironmentObject private var envControllerFactory: ObservableControllerFactory
 
     @StateObject private var state: MVIState
 
-    private var onModel: ((ModelChange) -> Void)? = nil
+    private let getController: (ControllerFactory) -> MVIController<Model, Intent>
 
     init(
+            _ getController: @escaping (ControllerFactory) -> MVIController<Model, Intent>,
             background: Bool = false,
             onModel: ((ModelChange) -> Void)? = nil,
             @ViewBuilder content: @escaping (Model, @escaping (Intent) -> Void) -> Content
     ) {
-        _state = StateObject(wrappedValue: MVIState(background: background))
-        self.onModel = onModel
+        _state = StateObject(wrappedValue: MVIState(background: background, onModel: onModel))
+        self.getController = getController
         self.content = content
     }
 
     var body: some View {
-        state.initController(envDi.di)
+        state.initController { getController(envControllerFactory.controllerFactory) }
 
         return content(state.model!, state.intent)
                 .onAppear {
-                    state.subscribe(onModel: onModel)
+                    state.subscribe()
                 }
                 .onDisappear {
                     state.unsubscribe()
