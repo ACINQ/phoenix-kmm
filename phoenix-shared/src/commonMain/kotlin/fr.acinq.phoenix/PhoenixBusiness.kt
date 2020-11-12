@@ -38,7 +38,6 @@ import org.kodein.db.DBFactory
 import org.kodein.db.impl.factory
 import org.kodein.db.inDir
 import org.kodein.db.orm.kotlinx.KotlinxSerializer
-import org.kodein.di.*
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
@@ -46,14 +45,8 @@ import org.kodein.log.newLogger
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalUnsignedTypes::class)
 object PhoenixBusiness {
 
-    private fun buildPeer(di: DI, wallet: Wallet) : Peer {
-        val socketBuilder: TcpSocket.Builder by di.instance()
-        val watcher: ElectrumWatcher by di.instance()
-        val channelsDB: ChannelsDb by di.instance()
-        val loggerFactory: LoggerFactory by di.instance()
-        val chain: Chain by di.instance()
-
-        val acinqNodeUri: NodeUri by di.instance(tag = TAG_ACINQ_NODE_URI)
+    private fun buildPeer() : Peer {
+        val wallet = walletManager.getWallet() ?: error("Wallet must be initialized.")
 
         val genesisBlock = when (chain) {
             Chain.MAINNET -> Block.LivenetGenesisBlock
@@ -111,81 +104,60 @@ object PhoenixBusiness {
             enableTrampolinePayment = true
         )
 
-        val peer = Peer(socketBuilder, params, acinqNodeUri.id, watcher, channelsDB, MainScope())
+        val peer = Peer(tcpSocketBuilder, params, acinqNodeUri.id, electrumWatcher, channelsDB, MainScope())
 
         return peer
     }
 
-    val diModules get() = listOf(
-        DI.Module("Phoenix/Utility") {
-            bind<LoggerFactory>() with instance(LoggerFactory.default)
-            bind<TcpSocket.Builder>() with instance(TcpSocket.Builder())
-            bind<NetworkMonitor>() with singleton { NetworkMonitor(di) }
-            bind<HttpClient>() with singleton {
-                HttpClient {
-                    install(JsonFeature) {
-                        serializer = KotlinxSerializer(Json {
-                            ignoreUnknownKeys = true
-                        })
-                    }
-                }
+    val loggerFactory = LoggerFactory.default
+    val tcpSocketBuilder = TcpSocket.Builder()
+
+    val networkMonitor by lazy { NetworkMonitor() }
+    val httpClient by lazy {
+        HttpClient {
+            install(JsonFeature) {
+                serializer = KotlinxSerializer(Json {
+                    ignoreUnknownKeys = true
+                })
             }
+        }
+    }
+    val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath()) }
+    val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
+    val channelsDB by lazy { AppChannelsDB(dbFactory) }
 
-            bind<DBFactory<DB>>() with singleton { DB.factory.inDir(getApplicationFilesDirectoryPath(di)) }
-            bind<DB>(tag = TAG_APPLICATION) with singleton {
-                instance<DBFactory<DB>>().open("application", KotlinxSerializer())
-            }
-        },
+    // RegTest
+//    val acinqNodeUri = NodeUri(PublicKey.fromHex("039dc0e0b1d25905e44fdf6f8e89755a5e219685840d0bc1d28d3308f9628a3585"), "localhost", 48001)
+//    val chain = Chain.REGTEST
 
-        DI.Module("Phoenix/Application") {
-            bind<ChannelsDb>() with singleton { AppChannelsDB(instance()) }
-//        bind<ChannelsDb>() with singleton { MemoryChannelsDB() }
+    // TestNet
+    val acinqNodeUri = NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735)
+    val chain = Chain.TESTNET
 
-            // Regtest
-            //bind<NodeUri>(tag = TAG_ACINQ_NODE_URI) with instance(NodeUri(PublicKey.fromHex("039dc0e0b1d25905e44fdf6f8e89755a5e219685840d0bc1d28d3308f9628a3585"), "localhost", 48001))
-            //bind<Chain>(tag = TAG_CHAIN) with instance(Chain.REGTEST)
+    val masterPubkeyPath = if (chain == Chain.MAINNET) "m/84'/0'/0'" else "m/84'/1'/0'"
+    val onChainAddressPath = if (chain == Chain.MAINNET) "m/84'/0'/0'/0/0" else "m/84'/1'/0'/0/0"
 
-            // Testnet
-            bind<NodeUri>(tag = TAG_ACINQ_NODE_URI) with instance(NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735))
-            bind<Chain>() with instance(Chain.TESTNET)
+    val electrumClient by lazy { ElectrumClient(tcpSocketBuilder, MainScope()) }
+    val electrumWatcher by lazy { ElectrumWatcher(electrumClient, MainScope()) }
 
-            bind<String>(tag = TAG_MASTER_PUBKEY_PATH) with singleton {
-                if (instance<Chain>() == Chain.MAINNET) "m/84'/0'/0'" else "m/84'/1'/0'"
-            }
-            bind<String>(tag = TAG_ONCHAIN_ADDRESS_PATH) with singleton {
-                if (instance<Chain>() == Chain.MAINNET) "m/84'/0'/0'/0/0" else "m/84'/1'/0'/0/0"
-            }
+    val peer by lazy { buildPeer() }
 
-            bind<ElectrumClient>() with singleton { ElectrumClient(instance(), MainScope()) }
-            bind<ElectrumWatcher>() with singleton { ElectrumWatcher(instance(), MainScope()) }
-            bind<Peer>() with singleton {
-                instance<WalletManager>().getWallet()?.let {
-                    buildPeer(di, it)
-                } ?: error("Wallet must be initialized.")
-            }
-            bind<AppHistoryManager>() with singleton { AppHistoryManager(di) }
-            bind<WalletManager>() with singleton { WalletManager(di) }
-            bind<AppConfigurationManager>() with singleton { AppConfigurationManager(di) }
-        },
+    val walletManager by lazy { WalletManager(appDB) }
+    val appHistoryManager by lazy { AppHistoryManager(appDB, peer) }
+    val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, httpClient, chain, loggerFactory) }
 
-        DI.Module("Phoenix/Control") {
-            // MVI controllers
-            bind<ContentController>() with provider { AppContentController(di) }
-            bind<InitController>() with provider { AppInitController(di) }
-            bind<HomeController>() with provider { AppHomeController(di) }
-            bind<ReceiveController>() with provider { AppReceiveController(di) }
-            bind<ScanController>() with provider { AppScanController(di) }
-            bind<RestoreWalletController>() with provider { AppRestoreWalletController(di) }
+    fun newContentController(): ContentController = AppContentController(loggerFactory, walletManager)
+    fun newInitController(): InitController = AppInitController(loggerFactory, walletManager)
+    fun newHomeController(): HomeController = AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
+    fun newReceiveController(): ReceiveController = AppReceiveController(loggerFactory, peer)
+    fun newScanController(): ScanController = AppScanController(loggerFactory, peer)
+    fun newRestoreWalletController(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)
+    fun newConfigurationController(): ConfigurationController = AppConfigurationController(loggerFactory, walletManager)
+    fun newDisplayConfigurationController(): DisplayConfigurationController = AppDisplayConfigurationController(loggerFactory, appConfigurationManager)
+    fun newElectrumConfigurationController(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
+    fun newChannelsConfigurationController(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peer, appConfigurationManager, chain)
 
-            // App Configuration
-            bind<ConfigurationController>() with provider { AppConfigurationController(di) }
-            bind<DisplayConfigurationController>() with provider { AppDisplayConfigurationController(di) }
-            bind<ElectrumConfigurationController>() with provider { AppElectrumConfigurationController(di) }
-            bind<ChannelsConfigurationController>() with provider { AppChannelsConfigurationController(di) }
-
-            // App daemons
-            bind() from eagerSingleton { AppConnectionsDaemon(di) }
-        },
-
-    )
+    fun start() {
+        AppConnectionsDaemon(appConfigurationManager, walletManager, networkMonitor, electrumClient, acinqNodeUri, loggerFactory) { peer }
+    }
 }

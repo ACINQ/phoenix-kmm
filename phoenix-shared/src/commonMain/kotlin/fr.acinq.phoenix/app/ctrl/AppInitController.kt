@@ -6,15 +6,12 @@ import fr.acinq.phoenix.app.WalletManager
 import fr.acinq.phoenix.ctrl.Init
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.kodein.di.DI
-import org.kodein.di.instance
+import org.kodein.log.LoggerFactory
 import kotlin.random.Random
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class AppInitController(di: DI) : AppController<Init.Model, Init.Intent>(di, Init.Model.Initialization) {
-    private val walletManager: WalletManager by instance()
-
+class AppInitController(loggerFactory: LoggerFactory, private val walletManager: WalletManager) : AppController<Init.Model, Init.Intent>(loggerFactory, Init.Model.Initialization) {
     override fun process(intent: Init.Intent) = when (intent) {
         Init.Intent.CreateWallet -> {
             launch { model(Init.Model.Creating) }

@@ -2,10 +2,8 @@ package fr.acinq.phoenix.utils
 
 import fr.acinq.eclair.utils.Connection
 import kotlinx.coroutines.channels.ReceiveChannel
-import org.kodein.di.DI
-import org.kodein.di.DIAware
 
-expect class NetworkMonitor(di: DI) : DIAware {
+expect class NetworkMonitor() {
     fun openNetworkStateSubscription(): ReceiveChannel<Connection>
     fun start()
     fun stop()

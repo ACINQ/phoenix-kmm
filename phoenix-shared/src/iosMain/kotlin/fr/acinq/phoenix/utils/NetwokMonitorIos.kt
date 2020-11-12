@@ -7,13 +7,11 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.launch
-import org.kodein.di.DI
-import org.kodein.di.DIAware
 import platform.Network.*
 import platform.darwin.dispatch_get_main_queue
 
 @OptIn(ExperimentalCoroutinesApi::class)
-actual class NetworkMonitor actual constructor(override val di: DI) : DIAware, CoroutineScope by MainScope() {
+actual class NetworkMonitor actual constructor() : CoroutineScope by MainScope() {
     private val monitor = nw_path_monitor_create()
     private val connectivityChannel = ConflatedBroadcastChannel<Connection>()
     actual fun openNetworkStateSubscription(): ReceiveChannel<Connection> = connectivityChannel.openSubscription()

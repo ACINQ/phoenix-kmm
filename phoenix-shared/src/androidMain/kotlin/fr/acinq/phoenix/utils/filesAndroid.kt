@@ -6,5 +6,5 @@ import org.kodein.di.direct
 import org.kodein.di.instance
 
 
-actual fun getApplicationFilesDirectoryPath(di: DI): String =
+actual fun getApplicationFilesDirectoryPath(): String =
     di.direct.instance<Context>(tag = "app").filesDir.absolutePath
