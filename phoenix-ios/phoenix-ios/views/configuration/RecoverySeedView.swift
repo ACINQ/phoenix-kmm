@@ -31,7 +31,7 @@ struct RecoverySeedView : View {
 					)
 					
 					Text(
-						"Only you alone posses this seed. Keep it private."
+						"Only you alone possess this seed. Keep it private."
 					)
 					.fontWeight(.bold)
 					
