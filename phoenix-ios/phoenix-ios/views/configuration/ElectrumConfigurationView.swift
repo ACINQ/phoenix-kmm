@@ -1,14 +1,12 @@
 import SwiftUI
 import PhoenixShared
 
-struct ElectrumConfigurationView: MVIView {
-    typealias Model = ElectrumConfiguration.Model
-    typealias Intent = ElectrumConfiguration.Intent
+struct ElectrumConfigurationView: View {
 
     @State var showElectrumAddressPopup: Bool = false
 
     var body: some View {
-        mvi({ $0.electrumConfiguration() }) { model, intent in
+        MVIView({ $0.electrumConfiguration() }) { model, postIntent in
             ZStack {
                 VStack(spacing: 0) {
                     Text("""
@@ -95,9 +93,9 @@ struct ElectrumConfigurationView: MVIView {
                 Popup(show: showElectrumAddressPopup) {
                     VStack {
                         if model.electrumServer.customized {
-                            ElectrumAddressPopup(intent: intent, customize: model.electrumServer.customized, addressInput: model.electrumServer.address())
+                            ElectrumAddressPopup(customize: model.electrumServer.customized, addressInput: model.electrumServer.address())
                         } else {
-                            ElectrumAddressPopup(intent: intent)
+                            ElectrumAddressPopup()
                         }
 
                         HStack {
@@ -147,8 +145,6 @@ struct ElectrumConfigurationView: MVIView {
     }
 
     struct ElectrumAddressPopup: View {
-        let intent: IntentReceiver
-
         @State var customize: Bool = false
         @State var addressInput: String = ""
 

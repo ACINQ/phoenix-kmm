@@ -1,12 +1,10 @@
 import SwiftUI
 import PhoenixShared
 
-struct ConfigurationView: MVIView {
-    typealias Model = Configuration.Model
-    typealias Intent = Configuration.Intent
-	
+struct ConfigurationView: View {
+
 	var body: some View {
-		mvi({ $0.configuration() }) { model, intent in
+		MVIView({ $0.configuration() }) { model, postIntent in
 			List {
 				let fullMode = model is Configuration.ModelFullMode
 

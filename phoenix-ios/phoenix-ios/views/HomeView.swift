@@ -2,9 +2,7 @@ import SwiftUI
 import PhoenixShared
 import Network
 
-struct HomeView : MVIView {
-    typealias Model = Home.Model
-    typealias Intent = Home.Intent
+struct HomeView : View {
 
     @State var lastTransaction: PhoenixShared.Transaction? = nil
     @State var showConnections = false
@@ -12,7 +10,7 @@ struct HomeView : MVIView {
     @State var selectedTransaction: PhoenixShared.Transaction? = nil
 
     var body: some View {
-        mvi(
+        MVIView(
                 { $0.home() },
                 background: true,
                 onModel: { change in
@@ -21,7 +19,7 @@ struct HomeView : MVIView {
                         selectedTransaction = lastTransaction
                     }
                 }
-        ) { model, intent in
+        ) { model, postIntent in
             ZStack {
                 VStack {
                     HStack {

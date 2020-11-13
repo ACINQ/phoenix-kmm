@@ -1,12 +1,10 @@
 import SwiftUI
 import PhoenixShared
 
-struct InitializationView: MVIView {
-    typealias Model = Initialization.Model
-    typealias Intent = Initialization.Intent
+struct InitializationView: View {
 
 	var body: some View {
-		mvi({ $0.initialization() }) { model, intent in
+		MVIView({ $0.initialization() }) { model, postIntent in
 			ZStack {
 				
 				// ZStack: layer 0 (background)
@@ -48,7 +46,7 @@ struct InitializationView: MVIView {
 					.padding(.bottom, 80)
 
 					Button {
-						intent(Initialization.IntentCreateWallet())
+						postIntent(Initialization.IntentCreateWallet())
 					} label: {
 						HStack {
 						//	Image("ic_fire")

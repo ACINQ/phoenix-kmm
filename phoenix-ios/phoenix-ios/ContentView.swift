@@ -1,9 +1,7 @@
 import SwiftUI
 import PhoenixShared
 
-struct ContentView: MVIView {
-    typealias Model = Content.Model
-    typealias Intent = Content.Intent
+struct ContentView: View {
 
     static func UIKitAppearance() {
         let appearance = UINavigationBarAppearance()
@@ -16,7 +14,7 @@ struct ContentView: MVIView {
 
     var body: some View {
         appView(
-            mvi({ $0.content() }) { model, intent in
+            MVIView({ $0.content() }) { model, intent in
                 NavigationView {
                     if model is Content.ModelIsInitialized {
                         HomeView()
