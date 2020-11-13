@@ -2,15 +2,15 @@ import UIKit
 import PhoenixShared
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class PhoenixApplicationDelegate: UIResponder, UIApplicationDelegate {
 
-    let phoenix: PhoenixBusiness
+    let business: PhoenixBusiness
 
     override init() {
         setenv("CFNETWORK_DIAGNOSTICS", "3", 1);
 
-        phoenix = PhoenixBusiness()
-        phoenix.start()
+        business = PhoenixBusiness(ctx: PlatformContext())
+        business.start()
     }
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
@@ -49,6 +49,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Use this method to release any resources that were specific to the discarded scenes, as they will not return.
     }
 
-
+    static func get() -> PhoenixApplicationDelegate { UIApplication.shared.delegate as! PhoenixApplicationDelegate }
 }
 

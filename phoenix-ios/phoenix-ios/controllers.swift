@@ -52,7 +52,7 @@ class MockControllerFactory : ControllerFactory {
 }
 
 func appView<V : View>(_ content: V) -> some View {
-    content.environmentObject(ObservableControllerFactory(PhoenixBusiness.Controllers()))
+    content.environmentObject(ObservableControllerFactory(PhoenixApplicationDelegate.get().business.controllers))
 }
 
 func mockView<V : View>(_ content: V) -> some View {
