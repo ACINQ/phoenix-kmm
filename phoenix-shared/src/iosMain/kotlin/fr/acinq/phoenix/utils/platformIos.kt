@@ -5,5 +5,7 @@ import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSUserDomainMask
 
 
-actual fun getApplicationFilesDirectoryPath(): String =
+actual class PlatformContext
+
+actual fun getApplicationFilesDirectoryPath(ctx: PlatformContext): String =
     NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)[0] as String

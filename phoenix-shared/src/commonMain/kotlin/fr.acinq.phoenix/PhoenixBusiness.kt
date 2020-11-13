@@ -37,12 +37,10 @@ import org.kodein.db.inDir
 import org.kodein.db.orm.kotlinx.KotlinxSerializer
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import kotlin.native.concurrent.ThreadLocal
 
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalUnsignedTypes::class)
-@ThreadLocal // TODO: remove this once JB has released the new memory model & its garbage collector.
-object PhoenixBusiness {
+class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private fun buildPeer() : Peer {
         val wallet = walletManager.getWallet() ?: error("Wallet must be initialized.")
@@ -108,10 +106,10 @@ object PhoenixBusiness {
         return peer
     }
 
-    private val loggerFactory = LoggerFactory.default
+    public val loggerFactory = LoggerFactory.default
     private val tcpSocketBuilder = TcpSocket.Builder()
 
-    private val networkMonitor by lazy { NetworkMonitor() }
+    private val networkMonitor by lazy { NetworkMonitor(loggerFactory, ctx) }
     private val httpClient by lazy {
         HttpClient {
             install(JsonFeature) {
@@ -121,7 +119,7 @@ object PhoenixBusiness {
             }
         }
     }
-    private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath()) }
+    private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
     private val channelsDB by lazy { AppChannelsDB(dbFactory) }
 
@@ -148,7 +146,7 @@ object PhoenixBusiness {
         AppConnectionsDaemon(appConfigurationManager, walletManager, networkMonitor, electrumClient, acinqNodeUri, loggerFactory) { peer }
     }
 
-    object Controllers : ControllerFactory {
+    val controllers : ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
         override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
         override fun home(): HomeController = AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
