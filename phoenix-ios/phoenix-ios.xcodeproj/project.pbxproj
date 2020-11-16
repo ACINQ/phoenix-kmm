@@ -39,10 +39,10 @@
 		C8D7ABB189B14D3104ABB50D /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A2327BC90150A3E1493D /* AboutView.swift */; };
 		C8D7ABC95B979B59AF5A7CA7 /* InitializationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A209301A31C14A982ECD /* InitializationView.swift */; };
 		C8D7AFF5BC5754DBBEEB2688 /* ElectrumConfigurationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A1F8A123C59199C182C2 /* ElectrumConfigurationView.swift */; };
-		DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */; };
 		DC67654525655CA0004D4263 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = DC67654225655CA0004D4263 /* about.html */; };
 		DC67654625655CA0004D4263 /* stylesheet.css in Resources */ = {isa = PBXBuildFile; fileRef = DC67654425655CA0004D4263 /* stylesheet.css */; };
 		DC67654E25655D93004D4263 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC67654D25655D93004D4263 /* Colors.xcassets */; };
+		DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */; };
 		DCB0DB8A255AE42F005B29C8 /* PhoenixShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DCB0DB83255AE42F005B29C8 /* PhoenixShared.framework */; };
 		DCB0DBB1255AEE22005B29C8 /* PhoenixShared.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DCB0DB83255AE42F005B29C8 /* PhoenixShared.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		DCC8B1B92502BAE2006B6227 /* (null) in Resources */ = {isa = PBXBuildFile; };
@@ -125,10 +125,10 @@
 		C8D7A607F036B3184C3D6EED /* QRCodeScanner.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QRCodeScanner.swift; sourceTree = "<group>"; };
 		C8D7A986A61CCD64FA661B88 /* DisplayConfigurationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DisplayConfigurationView.swift; sourceTree = "<group>"; };
 		C8D7AFF1A7C09789C6CF2D06 /* ConfigurationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConfigurationView.swift; sourceTree = "<group>"; };
-		DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverySeedView.swift; sourceTree = "<group>"; };
 		DC67654325655CA0004D4263 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/about.html; sourceTree = "<group>"; };
 		DC67654425655CA0004D4263 /* stylesheet.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = stylesheet.css; sourceTree = "<group>"; };
 		DC67654D25655D93004D4263 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
+		DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverySeedView.swift; sourceTree = "<group>"; };
 		DCB0DB83255AE42F005B29C8 /* PhoenixShared.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PhoenixShared.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -248,6 +248,7 @@
 				53BEFD3C3C84A395C4A66297 /* views */,
 				53BEFD8D34A66724B3ACFA01 /* MVI */,
 				53BEF1337AFCFF0AE82A46BD /* utils */,
+				DC67654125655CA0004D4263 /* about */,
 				53BEFA112E0701FFD6B84217 /* colors.swift */,
 				53BEF4E19E60E093D8D51D0A /* controllers.swift */,
 			);
@@ -283,13 +284,10 @@
 		C8D7A7335040D755924F8FFC /* configuration */ = {
 			isa = PBXGroup;
 			children = (
-				DC67654125655CA0004D4263 /* about */,
 				C8D7AFF1A7C09789C6CF2D06 /* ConfigurationView.swift */,
-				C8D7A2327BC90150A3E1493D /* AboutView.swift */,
-				C8D7A986A61CCD64FA661B88 /* DisplayConfigurationView.swift */,
-				C8D7A1F8A123C59199C182C2 /* ElectrumConfigurationView.swift */,
-				53BEF648B3A03C66B611BC06 /* ChannelsConfigurationView.swift */,
-				DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */,
+				DCACF6E02566CEC40009B01E /* general */,
+				DCACF6E42566CF850009B01E /* security */,
+				DCACF6DF2566CEC40009B01E /* advanced */,
 			);
 			path = configuration;
 			sourceTree = "<group>";
@@ -300,7 +298,34 @@
 				DC67654225655CA0004D4263 /* about.html */,
 				DC67654425655CA0004D4263 /* stylesheet.css */,
 			);
-			path = about;
+			name = about;
+			path = views/configuration/about;
+			sourceTree = "<group>";
+		};
+		DCACF6DF2566CEC40009B01E /* advanced */ = {
+			isa = PBXGroup;
+			children = (
+				53BEF648B3A03C66B611BC06 /* ChannelsConfigurationView.swift */,
+			);
+			path = advanced;
+			sourceTree = "<group>";
+		};
+		DCACF6E02566CEC40009B01E /* general */ = {
+			isa = PBXGroup;
+			children = (
+				C8D7A2327BC90150A3E1493D /* AboutView.swift */,
+				C8D7A986A61CCD64FA661B88 /* DisplayConfigurationView.swift */,
+				C8D7A1F8A123C59199C182C2 /* ElectrumConfigurationView.swift */,
+			);
+			path = general;
+			sourceTree = "<group>";
+		};
+		DCACF6E42566CF850009B01E /* security */ = {
+			isa = PBXGroup;
+			children = (
+				DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */,
+			);
+			path = security;
 			sourceTree = "<group>";
 		};
 		DCB0DB84255AE42F005B29C8 /* phoenix-ios-framework */ = {
