@@ -83,6 +83,11 @@ class AppConfigurationManager(
         appDB.put(appConfigurationKey, getAppConfiguration().copy(bitcoinUnit = bitcoinUnit))
     }
 
+    fun putDisplayedCurrency(displayedCurrency: CurrencyUnit) {
+        logger.info { "Change displayed currency unit [$displayedCurrency]" }
+        appDB.put(appConfigurationKey, getAppConfiguration().copy(displayedCurrency = displayedCurrency))
+    }
+
     fun putAppTheme(appTheme: AppTheme) {
         logger.info { "Change app theme [$appTheme]" }
         appDB.put(appConfigurationKey, getAppConfiguration().copy(appTheme = appTheme))

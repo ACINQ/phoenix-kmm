@@ -13,6 +13,7 @@ data class AppConfiguration(
     // Display
     val fiatCurrency: FiatCurrency = FiatCurrency.USD,
     val bitcoinUnit: BitcoinUnit = BitcoinUnit.Satoshi,
+    val displayedCurrency: CurrencyUnit = BitcoinUnit.Satoshi,
     val appTheme: AppTheme = AppTheme.System
 ) : Metadata {
     // Unique ID a their is only one configuration per app
@@ -21,8 +22,13 @@ data class AppConfiguration(
 
 enum class Chain { MAINNET, TESTNET, REGTEST }
 
+interface CurrencyUnit {
+    val label: String
+    val abbrev: String
+}
+
 @Serializable
-enum class BitcoinUnit(val label: String, val abbrev: String) {
+enum class BitcoinUnit(override val label: String, override val abbrev: String) : CurrencyUnit {
     Satoshi("Satoshi (0.00000001 BTC)", "sat"),
     Bits("Bits (0.000001 BTC)", "bits"),
     MilliBitcoin("Milli-Bitcoin (0.001 BTC)", "mbtc"),
@@ -54,7 +60,7 @@ enum class AppTheme(val label: String) {
 }
 
 @Serializable
-enum class FiatCurrency(val label: String) {
+enum class FiatCurrency(override val label: String) : CurrencyUnit {
     AUD("(AUD) Australian Dollar"),
     BRL("(BRL) Brazilian Real"),
     CAD("(CAD) Canadian Dollar"),
@@ -78,6 +84,8 @@ enum class FiatCurrency(val label: String) {
     THB("(THB) Thai Baht"),
     TWD("(TWD) Taiwan New Dollar"),
     USD("(USD) United States Dollar");
+
+    override val abbrev: String = name
 
     companion object default {
         val values = FiatCurrency.values().toList()
