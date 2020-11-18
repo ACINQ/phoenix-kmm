@@ -29,9 +29,9 @@ struct HomeView : View {
                     .padding()
 
                     HStack(alignment: .bottom) {
-                        Text(model.balanceSat.formatNumber())
+                        Text(model.balance.formatNumber())
                                 .font(.largeTitle)
-                        Text("sat")
+                        Text(model.currencyUnit.abbrev)
                                 .font(.title2)
                                 .padding(.bottom, 4)
                     }
@@ -203,8 +203,8 @@ struct HomeView : View {
                         .padding([.leading, .trailing], 6)
                 if (transaction.status != .failure) {
                     HStack {
-                        Text((transaction.amountSat >= 0 ? "+" : "") + Int64((Double(transaction.amountSat) / 1000.0).rounded()).formatNumber())
-                                .foregroundColor(transaction.amountSat >= 0 ? .appGreen : .appRed)
+                        Text((transaction.amountMsat >= 0 ? "+" : "") + Int64((Double(transaction.amountMsat) / 1000.0).rounded()).formatNumber())
+                                .foregroundColor(transaction.amountMsat >= 0 ? .appGreen : .appRed)
                                 + Text(" sat")
                                 .font(.caption)
                                 .foregroundColor(.gray)

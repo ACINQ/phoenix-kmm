@@ -47,7 +47,7 @@ class AppHistoryManager(private val appDb: DB, private val peer: Peer) : Corouti
                         appDb.put(
                             Transaction(
                                 id = it.payment.paymentId.toString(),
-                                amountSat = -totalAmount.toLong(), // storing value in MilliSatoshi
+                                amountMsat = -totalAmount.toLong(), // storing value in MilliSatoshi
                                 desc = it.payment.paymentRequest.description ?: "",
                                 status = Transaction.Status.Pending,
                                 timestamp = currentTimestampMillis()
@@ -59,7 +59,7 @@ class AppHistoryManager(private val appDb: DB, private val peer: Peer) : Corouti
                         appDb.put(
                             Transaction(
                                 id = it.payment.paymentId.toString(),
-                                amountSat = -totalAmount.toLong(), // storing value in MilliSatoshi
+                                amountMsat = -totalAmount.toLong(), // storing value in MilliSatoshi
                                 desc = it.payment.paymentRequest.description ?: "",
                                 status = Transaction.Status.Success,
                                 timestamp = currentTimestampMillis()
@@ -70,7 +70,7 @@ class AppHistoryManager(private val appDb: DB, private val peer: Peer) : Corouti
                         appDb.put(
                             Transaction(
                                 id = it.payment.paymentId.toString(),
-                                amountSat = -it.payment.paymentAmount.toLong(), // storing value in MilliSatoshi
+                                amountMsat = -it.payment.paymentAmount.toLong(), // storing value in MilliSatoshi
                                 desc = it.reason.message(),
                                 status = Transaction.Status.Failure,
                                 timestamp = currentTimestampMillis()

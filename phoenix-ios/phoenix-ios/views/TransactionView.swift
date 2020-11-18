@@ -38,7 +38,7 @@ struct TransactionView : View {
                             .frame(width: 100, height: 100)
                             .foregroundColor(.appGreen)
                     VStack {
-                        Text(transaction.amountSat < 0 ? "SENT" : "RECEIVED")
+                        Text(transaction.amountMsat < 0 ? "SENT" : "RECEIVED")
                                 .font(Font.title2.bold())
                         Text(transaction.timestamp.formatDateMS().uppercased())
                                 .font(Font.title2)
@@ -72,7 +72,7 @@ struct TransactionView : View {
                 }
 
                 HStack(alignment: .bottom) {
-                    Text(Int64((Double(abs(transaction.amountSat)) / 1000.0).rounded()).formatNumber())
+                    Text(Int64((Double(abs(transaction.amountMsat)) / 1000.0).rounded()).formatNumber())
                             .font(.largeTitle)
                     Text("sat")
                             .font(.title3)

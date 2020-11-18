@@ -19,7 +19,7 @@ class AppScanController(loggerFactory: LoggerFactory, private val peer: Peer) : 
                         val paymentRequest = PaymentRequest.read(intent.request.removePrefix("lightning:"))
                         model(Scan.Model.Validate(
                             request = intent.request,
-                            amountSat = paymentRequest.amount?.truncateToSatoshi()?.toLong(),
+                            amountMsat = paymentRequest.amount?.toLong(),
                             requestDescription = paymentRequest.description
                         ))
                     } catch (t: Throwable) { // TODO Throwable is not a good choice, analyze the possible output of PaymentRequest.read(...)
