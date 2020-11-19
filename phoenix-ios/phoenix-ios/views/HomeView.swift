@@ -50,11 +50,13 @@ struct HomeView : View {
                     .padding()
 
                     HStack(alignment: .bottom) {
-                        Text(model.balance.withoutZeroFraction())
+                        Text(model.balance.formatNumber())
                                 .font(.largeTitle)
                         Text(model.displayedCurrency.abbrev)
                                 .font(.title2)
                                 .padding(.bottom, 4)
+                    }.onTapGesture {
+                        postIntent(Home.IntentSwitchCurrency())
                     }
 
                     ScrollView {
@@ -225,8 +227,8 @@ struct HomeView : View {
                         .padding([.leading, .trailing], 6)
                 if (transaction.status != .failure) {
                     HStack {
-                        Text((transaction.amountMsat >= 0 ? "+" : "") + transaction.displayedAmount.withoutZeroFraction())
-                                .foregroundColor(transaction.amountMsat >= 0 ? .appGreen : .appRed)
+                        Text((transaction.displayedAmount >= 0 ? "+" : "") + transaction.displayedAmount.formatNumber())
+                                .foregroundColor(transaction.displayedAmount >= 0 ? .appGreen : .appRed)
                                 + Text(" \(currencyUnit.abbrev)")
                                 .font(.caption)
                                 .foregroundColor(.gray)
@@ -299,8 +301,8 @@ struct HomeView : View {
 class HomeView_Previews : PreviewProvider {
     static let mockModel = Home.Model(
             connections: Connections(internet: .established, peer: .established, electrum: .closed),
-            balance: 10000,
-            displayedCurrency: BitcoinUnit.bitcoin,
+            balance: 119900,
+            displayedCurrency: BitcoinUnit.satoshi,
             history: [
                 mockSpendFailedTransaction,
                 mockReceiveTransaction,

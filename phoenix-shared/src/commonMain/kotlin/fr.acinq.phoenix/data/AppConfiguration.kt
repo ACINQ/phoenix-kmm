@@ -13,7 +13,7 @@ data class AppConfiguration(
     // Display
     val fiatCurrency: FiatCurrency = FiatCurrency.USD,
     val bitcoinUnit: BitcoinUnit = BitcoinUnit.Satoshi,
-    val displayedCurrency: CurrencyUnit = BitcoinUnit.Satoshi,
+    val displayedCurrency: DisplayedCurrency = DisplayedCurrency.BITCOIN,
     val appTheme: AppTheme = AppTheme.System
 ) : Metadata {
     // Unique ID a their is only one configuration per app
@@ -21,6 +21,9 @@ data class AppConfiguration(
 }
 
 enum class Chain { MAINNET, TESTNET, REGTEST }
+
+@Serializable
+enum class DisplayedCurrency { FIAT, BITCOIN }
 
 interface CurrencyUnit {
     val label: String

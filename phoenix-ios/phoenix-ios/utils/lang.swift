@@ -40,7 +40,10 @@ extension Int32 {
 }
 
 extension Double {
-    func withoutZeroFraction() -> String {
-        return truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", self) : String(self)
+    func formatNumber() -> String {
+        let formatter = NumberFormatter()
+        formatter.groupingSeparator = " "
+        formatter.numberStyle = .decimal
+        return formatter.string(from: NSNumber(value: self))!
     }
 }
