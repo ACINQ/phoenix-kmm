@@ -1,6 +1,8 @@
 package fr.acinq.phoenix.ctrl
 
 import fr.acinq.eclair.utils.Connection
+import fr.acinq.phoenix.data.BitcoinUnit
+import fr.acinq.phoenix.data.CurrencyUnit
 import fr.acinq.phoenix.data.Transaction
 import fr.acinq.phoenix.utils.plus
 
@@ -11,13 +13,14 @@ object Home {
 
     data class Model(
         val connections: Connections,
-        val balanceSat: Long,
+        val balance: Double,
+        val displayedCurrency: CurrencyUnit,
         val history: List<Transaction>,
         val lastTransaction: Transaction?
     ) : MVI.Model() {
     }
 
-    val emptyModel = Model(Connections(), 0, emptyList(), null)
+    val emptyModel = Model(Connections(), 3.14159265359, BitcoinUnit.Satoshi, emptyList(), null)
 
     sealed class Intent : MVI.Intent()
 
