@@ -61,7 +61,7 @@ class AppHomeController(
         }
 
         launch {
-            historyManager.transactions
+            historyManager.transactions()
                 .collectIndexed { nth, list ->
                     val modelList = list.map {
                         it.copy(displayedAmount = currencyConverter.convert(it.amountMsat, to = appConfigurationManager.displayedCurrency().value))
@@ -85,7 +85,7 @@ class AppHomeController(
                         to = appDisplayedCurrency
                     )
 
-                    val txs = historyManager.transactions.value.map {
+                    val txs = historyManager.transactions().value.map {
                         it.copy(displayedAmount = currencyConverter.convert(it.amountMsat, appDisplayedCurrency))
                     }
 

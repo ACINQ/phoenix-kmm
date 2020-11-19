@@ -27,7 +27,7 @@ class AppHistoryManager(private val appDb: DB, private val peer: Peer) : Corouti
     private fun getList() = appDb.find<Transaction>().byIndex("timestamp").useModels(reverse = true) { it.toList() }
 
     private val _transactions = MutableStateFlow(getList())
-    val transactions: StateFlow<List<Transaction>> get() = _transactions
+    fun transactions(): StateFlow<List<Transaction>> = _transactions
 
     init {
         launch {
