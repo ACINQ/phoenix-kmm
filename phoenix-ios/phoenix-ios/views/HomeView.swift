@@ -50,9 +50,9 @@ struct HomeView : View {
                     .padding()
 
                     HStack(alignment: .bottom) {
-                        Text(model.balance.formatNumber())
+                        Text(model.balance.withoutZeroFraction())
                                 .font(.largeTitle)
-                        Text(model.currencyUnit.abbrev)
+                        Text(model.displayedCurrency.abbrev)
                                 .font(.title2)
                                 .padding(.bottom, 4)
                     }
@@ -63,7 +63,7 @@ struct HomeView : View {
                                 Button {
                                     selectedTransaction = model.history[index]
                                 } label: {
-                                    TransactionCell(transaction: model.history[index])
+                                    TransactionCell(transaction: model.history[index], currencyUnit: model.displayedCurrency)
                                 }
                             }
                         }
@@ -192,6 +192,7 @@ struct HomeView : View {
     struct TransactionCell : View {
 
         let transaction: PhoenixShared.Transaction
+        let currencyUnit: PhoenixShared.CurrencyUnit
 
         var body: some View {
             HStack {
@@ -224,9 +225,9 @@ struct HomeView : View {
                         .padding([.leading, .trailing], 6)
                 if (transaction.status != .failure) {
                     HStack {
-                        Text((transaction.amountMsat >= 0 ? "+" : "") + Int64((Double(transaction.amountMsat) / 1000.0).rounded()).formatNumber())
+                        Text((transaction.amountMsat >= 0 ? "+" : "") + transaction.displayedAmount.withoutZeroFraction())
                                 .foregroundColor(transaction.amountMsat >= 0 ? .appGreen : .appRed)
-                                + Text(" sat")
+                                + Text(" \(currencyUnit.abbrev)")
                                 .font(.caption)
                                 .foregroundColor(.gray)
                     }
@@ -298,7 +299,8 @@ struct HomeView : View {
 class HomeView_Previews : PreviewProvider {
     static let mockModel = Home.Model(
             connections: Connections(internet: .established, peer: .established, electrum: .closed),
-            balanceSat: 123500,
+            balance: 10000,
+            displayedCurrency: BitcoinUnit.bitcoin,
             history: [
                 mockSpendFailedTransaction,
                 mockReceiveTransaction,

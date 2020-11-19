@@ -38,3 +38,9 @@ extension Int32 {
         return formatter.string(from: NSNumber(value: self))!
     }
 }
+
+extension Double {
+    func withoutZeroFraction() -> String {
+        return truncatingRemainder(dividingBy: 1) == 0 ? String(format: "%.0f", self) : String(self)
+    }
+}
