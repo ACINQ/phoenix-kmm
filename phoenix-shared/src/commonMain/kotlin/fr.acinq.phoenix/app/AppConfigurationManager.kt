@@ -82,21 +82,21 @@ class AppConfigurationManager(
     private val appConfigurationKey = appDB.key<AppConfiguration>(0)
     private fun createAppConfiguration(): AppConfiguration {
         if (appDB[appConfigurationKey] == null) {
-            logger.info { "Create app configuration" }
+            logger.info { "create app configuration" }
             appDB.put(AppConfiguration())
         }
-        return appDB[appConfigurationKey] ?: error("App configuration must be initialized.")
+        return appDB[appConfigurationKey] ?: error("app configuration must be initialized")
     }
 
     fun getAppConfiguration(): AppConfiguration = appDB[appConfigurationKey] ?: createAppConfiguration()
 
     fun putFiatCurrency(fiatCurrency: FiatCurrency) {
-        logger.info { "Change fiat currency [$fiatCurrency]" }
+        logger.info { "change fiat currency=$fiatCurrency" }
         appDB.put(appConfigurationKey, getAppConfiguration().copy(fiatCurrency = fiatCurrency))
     }
 
     fun putBitcoinUnit(bitcoinUnit: BitcoinUnit) {
-        logger.info { "Change bitcoin unit [$bitcoinUnit]" }
+        logger.info { "change bitcoin unit=$bitcoinUnit" }
         appDB.put(appConfigurationKey, getAppConfiguration().copy(bitcoinUnit = bitcoinUnit))
     }
 
@@ -106,12 +106,12 @@ class AppConfigurationManager(
             DisplayedCurrency.BITCOIN -> DisplayedCurrency.FIAT
         }
 
-        logger.info { "Change displayed currency unit [$displayedCurrency]" }
+        logger.info { "change displayed currency unit=$displayedCurrency" }
         appDB.put(appConfigurationKey, getAppConfiguration().copy(displayedCurrency = displayedCurrency))
     }
 
     fun putAppTheme(appTheme: AppTheme) {
-        logger.info { "Change app theme [$appTheme]" }
+        logger.info { "change app theme=$appTheme" }
         appDB.put(appConfigurationKey, getAppConfiguration().copy(appTheme = appTheme))
     }
 
@@ -119,7 +119,7 @@ class AppConfigurationManager(
     private val electrumServerKey = appDB.key<ElectrumServer>(0)
     private fun createElectrumConfiguration(): ElectrumServer {
         if (appDB[electrumServerKey] == null) {
-            logger.info { "Create ElectrumX configuration" }
+            logger.info { "create ElectrumX configuration" }
             setRandomElectrumServer()
         }
         return appDB[electrumServerKey] ?: error("ElectrumServer must be initialized.")
@@ -128,7 +128,7 @@ class AppConfigurationManager(
     fun getElectrumServer(): ElectrumServer = appDB[electrumServerKey] ?: createElectrumConfiguration()
 
     private fun putElectrumServer(electrumServer: ElectrumServer) {
-        logger.info { "Update electrum configuration [$electrumServer]" }
+        logger.info { "update electrum configuration=$electrumServer" }
         appDB.put(electrumServerKey, electrumServer)
     }
 
@@ -162,7 +162,7 @@ class AppConfigurationManager(
                     val response = httpClient.get<MxnApiResponse>("https://api.bitso.com/v3/ticker/?book=btc_mxn")
                     if (response.success) put(FiatCurrency.MXN.name, response.payload.last)
                 } catch (t: Throwable) {
-                    logger.error { "An issue occurred while retrieving exchange rates from API." }
+                    logger.error { "an issue occurred while retrieving exchange rates from API." }
                     logger.error(t)
                 }
             }
@@ -177,7 +177,7 @@ class AppConfigurationManager(
                     }
 
             appDB.execBatch {
-                logger.debug { "Saving price rates: $exchangeRates" }
+                logger.debug { "saving price rates=$exchangeRates" }
                 exchangeRates.forEach {
                     appDB.put(it)
                 }
