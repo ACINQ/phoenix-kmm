@@ -28,8 +28,6 @@ class AppHomeController(
     private val currencyConverter: CurrencyConverter
 ) : AppController<Home.Model, Home.Intent>(loggerFactory, Home.emptyModel) {
 
-    private val displayedCurrency: CurrencyUnit get() = appConfigurationManager.getAppConfiguration().displayedCurrency
-
     init {
         launch {
             peer.connectionState.collect {
@@ -51,7 +49,7 @@ class AppHomeController(
             peer.channelsFlow.collect { channels ->
                 val balance = currencyConverter.convert(
                     amountMsat = channels.values.sumOf { it.localCommitmentSpec?.toLocal?.msat ?: 0 },
-                    to = displayedCurrency
+                    to = appConfigurationManager.displayedCurrency().value
                 )
                 model {
                     copy(
@@ -66,7 +64,7 @@ class AppHomeController(
             historyManager.transactions
                 .collectIndexed { nth, list ->
                     val modelList = list.map {
-                        it.copy(displayedAmount = currencyConverter.convert(it.amountMsat, displayedCurrency))
+                        it.copy(displayedAmount = currencyConverter.convert(it.amountMsat, to = appConfigurationManager.displayedCurrency().value))
                     }
 
                     model {
@@ -79,8 +77,44 @@ class AppHomeController(
                     }
                 }
         }
+        launch {
+            appConfigurationManager.displayedCurrency().collect { appDisplayedCurrency ->
+                logger.info { "appDisplayedCurrency : $appDisplayedCurrency" }
+                model {
+                    val balance = currencyConverter.convert(
+                        amountMsat = peer.channels.values.sumOf { it.localCommitmentSpec?.toLocal?.msat ?: 0 },
+                        to = appDisplayedCurrency
+                    )
+
+                    val txs = historyManager.transactions.value.map {
+                        it.copy(displayedAmount = currencyConverter.convert(it.amountMsat, appDisplayedCurrency))
+                    }
+
+                    val lastTransaction = txs.firstOrNull()
+                    if (lastTransaction != null && lastTransaction.status != Transaction.Status.Pending) {
+                        copy(
+                            balance = balance,
+                            displayedCurrency = appDisplayedCurrency,
+                            history = txs,
+                            lastTransaction = lastTransaction
+                        )
+                    } else {
+                        copy(
+                            balance = balance,
+                            displayedCurrency = appDisplayedCurrency,
+                            history = txs
+                        )
+                    }
+                }
+            }
+        }
     }
 
-    override fun process(intent: Home.Intent) {}
-
+    override fun process(intent: Home.Intent) {
+        when (intent) {
+            Home.Intent.SwitchCurrency -> launch {
+                appConfigurationManager.switchDisplayedCurrency()
+            }
+        }
+    }
 }

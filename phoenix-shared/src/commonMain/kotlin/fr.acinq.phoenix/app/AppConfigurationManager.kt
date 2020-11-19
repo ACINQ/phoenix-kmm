@@ -9,9 +9,7 @@ import io.ktor.utils.io.errors.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.*
 import org.kodein.db.*
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
@@ -33,6 +31,15 @@ class AppConfigurationManager(
     fun openElectrumServerUpdateSubscription(): ReceiveChannel<ElectrumServer> =
         electrumServerUpdates.openSubscription()
 
+    private val displayedCurrency by lazy {
+        val currency = when(getAppConfiguration().displayedCurrency) {
+            DisplayedCurrency.FIAT -> getAppConfiguration().fiatCurrency
+            DisplayedCurrency.BITCOIN -> getAppConfiguration().bitcoinUnit
+        }
+        MutableStateFlow<CurrencyUnit>(currency)
+    }
+    fun displayedCurrency(): StateFlow<CurrencyUnit> = displayedCurrency
+
     /*
         TODO Manage updates for connection configurations:
             e.g. for Electrum Server : reconnect to new server
@@ -41,6 +48,16 @@ class AppConfigurationManager(
         appDB.on<ElectrumServer>().register {
             didPut {
                 launch { electrumServerUpdates.send(it) }
+            }
+        }
+        appDB.on<AppConfiguration>().register {
+            didPut {
+                val newDisplayedCurrency = when(it.displayedCurrency) {
+                    DisplayedCurrency.FIAT -> it.fiatCurrency
+                    DisplayedCurrency.BITCOIN -> it.bitcoinUnit
+                }
+                if (newDisplayedCurrency != displayedCurrency.value)
+                    displayedCurrency.value = newDisplayedCurrency
             }
         }
         launch {
@@ -83,7 +100,12 @@ class AppConfigurationManager(
         appDB.put(appConfigurationKey, getAppConfiguration().copy(bitcoinUnit = bitcoinUnit))
     }
 
-    fun putDisplayedCurrency(displayedCurrency: CurrencyUnit) {
+    fun switchDisplayedCurrency() {
+        val displayedCurrency = when(getAppConfiguration().displayedCurrency) {
+            DisplayedCurrency.FIAT -> DisplayedCurrency.BITCOIN
+            DisplayedCurrency.BITCOIN -> DisplayedCurrency.FIAT
+        }
+
         logger.info { "Change displayed currency unit [$displayedCurrency]" }
         appDB.put(appConfigurationKey, getAppConfiguration().copy(displayedCurrency = displayedCurrency))
     }

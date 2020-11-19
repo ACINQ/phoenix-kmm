@@ -22,7 +22,9 @@ object Home {
 
     val emptyModel = Model(Connections(), 3.14159265359, BitcoinUnit.Satoshi, emptyList(), null)
 
-    sealed class Intent : MVI.Intent()
+    sealed class Intent : MVI.Intent() {
+        object SwitchCurrency : Intent()
+    }
 
 }
 
