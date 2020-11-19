@@ -79,7 +79,6 @@ class AppHomeController(
         }
         launch {
             appConfigurationManager.displayedCurrency().collect { appDisplayedCurrency ->
-                logger.info { "appDisplayedCurrency : $appDisplayedCurrency" }
                 model {
                     val balance = currencyConverter.convert(
                         amountMsat = peer.channels.values.sumOf { it.localCommitmentSpec?.toLocal?.msat ?: 0 },
@@ -90,21 +89,11 @@ class AppHomeController(
                         it.copy(displayedAmount = currencyConverter.convert(it.amountMsat, appDisplayedCurrency))
                     }
 
-                    val lastTransaction = txs.firstOrNull()
-                    if (lastTransaction != null && lastTransaction.status != Transaction.Status.Pending) {
-                        copy(
-                            balance = balance,
-                            displayedCurrency = appDisplayedCurrency,
-                            history = txs,
-                            lastTransaction = lastTransaction
-                        )
-                    } else {
-                        copy(
-                            balance = balance,
-                            displayedCurrency = appDisplayedCurrency,
-                            history = txs
-                        )
-                    }
+                    copy(
+                        balance = balance,
+                        displayedCurrency = appDisplayedCurrency,
+                        history = txs
+                    )
                 }
             }
         }
