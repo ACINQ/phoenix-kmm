@@ -24,74 +24,8 @@ enum BiometricStatus {
 	}
 }
 
-/// Represents the "security.json" file, where we store the wrapped credentials needed to decrypt the databaseKey.
-///
-private struct SecurityFile: Codable {
-	
-	let keychain: KeyInfo?
-	let passphrase: KeyInfo?
-	
-	init(keychain: KeyInfo?) {
-		self.keychain = keychain
-		self.passphrase = nil
-	}
-	
-	private enum CodingKeys: String, CodingKey {
-		case keychain
-		case passphrase
-	}
-
-	init(from decoder: Decoder) throws {
-		let container = try decoder.container(keyedBy: CodingKeys.self)
-		
-		self.keychain = try container.decodeIfPresent(KeyInfo_ChaChaPoly.self, forKey: .keychain)
-		self.passphrase = try container.decodeIfPresent(KeyInfo_ChaChaPoly.self, forKey: .passphrase)
-	}
-	
-	func encode(to encoder: Encoder) throws {
-		
-		var container = encoder.container(keyedBy: CodingKeys.self)
-		
-		if let keychain = self.keychain as? KeyInfo_ChaChaPoly {
-			try container.encode(keychain, forKey: .keychain)
-		}
-		if let passphrase = self.passphrase as? KeyInfo_ChaChaPoly {
-			try container.encode(passphrase, forKey: .passphrase)
-		}
-	}
-}
-
-/// Generic typed container.
-/// Allows us to switch to alternative encryption schemes in the future, if needed.
-///
-private protocol KeyInfo: Codable {
-	var type: String { get }
-}
-
-/// ChaCha20-Poly1305
-/// Via Apple's CryptoKit using ChaChaPoly.
-/// 
-private struct KeyInfo_ChaChaPoly: KeyInfo, Codable {
-	let type: String // "ChaCha20-Poly1305"
-	let nonce: Data
-	let ciphertext: Data
-	let tag: Data
-	
-	init(sealedBox: ChaChaPoly.SealedBox) {
-		type = "ChaCha20-Poly1305"
-		nonce = sealedBox.nonce.dataRepresentation
-		ciphertext = sealedBox.ciphertext
-		tag = sealedBox.tag
-	}
-	
-	func toSealedBox() throws -> ChaChaPoly.SealedBox {
-		return try ChaChaPoly.SealedBox(
-			nonce      : ChaChaPoly.Nonce(data: self.nonce),
-			ciphertext : self.ciphertext,
-			tag        : self.tag
-		)
-	}
-}
+private let keychain_accountName_keychain = "securityFile_keychain"
+private let keychain_accountName_biometrics = "securityFile_biometrics"
 
 class AppSecurity {
 	
@@ -99,10 +33,85 @@ class AppSecurity {
 	///
 	public static let shared = AppSecurity()
 	
-	private init() {
-		// reserved...
+	/// Serial queue ensures that only one operation is reading/modifying the keychain and/or security file at any given time.
+	///
+	private let queue = DispatchQueue(label: "AppSecurity")
+	
+	private init() {/* must use shared instance */}
+	
+	// --------------------------------------------------------------------------------
+	// MARK:- Private Utilities
+	// --------------------------------------------------------------------------------
+	
+	private lazy var securityJsonUrl: URL = {
+		
+		// Thread safety: lazy => thread-safe / uses dispatch_once primitives internally
+		
+		guard let appSupportDir = try?
+			FileManager.default.url(for: .applicationSupportDirectory,
+			                         in: .userDomainMask,
+			             appropriateFor: nil,
+			                     create: true)
+		else {
+			fatalError("FileManager returned nil applicationSupportDirectory !")
+		}
+		
+		return appSupportDir.appendingPathComponent("security.json", isDirectory: false)
+	}()
+	
+	/// Performs disk IO - use in background thread.
+	///
+	private func readFromDisk() -> SecurityFile {
+		
+		assert(!Thread.isMainThread, "Attempting to perform disk IO on the main thread")
+		
+		var result: SecurityFile? = nil
+		do {
+			let data = try Data(contentsOf: self.securityJsonUrl)
+			result = try JSONDecoder().decode(SecurityFile.self, from: data)
+		} catch {
+			// NB: in the event of various failures, we rely on the `createBackup` system.
+		}
+		
+		return result ?? SecurityFile()
 	}
 	
+	/// Performs disk IO - use in background thread.
+	///
+	private func writeToDisk(securityFile: SecurityFile) throws {
+		
+		assert(!Thread.isMainThread, "Attempting to perform disk IO on the main thread")
+		
+		let jsonData = try JSONEncoder().encode(securityFile)
+		
+		try jsonData.write(to: self.securityJsonUrl, options: [.atomic])
+	}
+	
+	private func genericError(_ code: Int, _ description: String? = nil) -> NSError {
+		
+		var userInfo = [String: String]()
+		if let description = description {
+			userInfo[NSLocalizedDescriptionKey] = description
+		}
+			
+		return NSError(domain: "AppSecurity", code: code, userInfo: userInfo)
+	}
+	
+	// --------------------------------------------------------------------------------
+	// MARK:- Public Utilities
+	// --------------------------------------------------------------------------------
+	
+	public func generateDatabaseKey() -> Data {
+		
+		let key = SymmetricKey(size: .bits256)
+		
+		return key.withUnsafeBytes {(bytes: UnsafeRawBufferPointer) -> Data in
+			return Data(bytes: bytes.baseAddress!, count: bytes.count)
+		}
+	}
+	
+	/// Returns the device's current status concerning biometric support.
+	///
 	public func biometricStatus() -> BiometricStatus {
 		
 		let context = LAContext()
@@ -136,121 +145,395 @@ class AppSecurity {
 		return .notAvailable
 	}
 	
-	private lazy var securityJsonUrl: URL = {
-		
-		guard let appSupportDir = try?
-			FileManager.default.url(for: .applicationSupportDirectory,
-			                         in: .userDomainMask,
-			             appropriateFor: nil,
-			                     create: true)
-		else {
-			fatalError("FileManager returned nil applicationSupportDirectory !")
+	// --------------------------------------------------------------------------------
+	// MARK:- Keychain
+	// --------------------------------------------------------------------------------
+	
+	/// Attempts to extract the databaseKey using the keychain.
+	/// If the user hasn't enabled any additional security options, this will succeed.
+	/// Otherwise it will  fail, and the completion closure will specify the additional security in place.
+	///
+	public func tryUnlockWithKeychain(
+		completion: @escaping (_ databaseKey: Data?, _ configuration: EnabledSecurity) -> Void
+	) {
+		let succeed = {(_ databaseKey: Data) -> Void in
+			DispatchQueue.main.async {
+				completion(databaseKey, EnabledSecurity.none)
+			}
 		}
 		
-		return appSupportDir.appendingPathComponent("security.json", isDirectory: false)
-	}()
-	
-	private func writeToDisk(sealedBox: ChaChaPoly.SealedBox) throws {
-		
-		let keyInfo = KeyInfo_ChaChaPoly(sealedBox: sealedBox)
-		let securityFile = SecurityFile(keychain: keyInfo)
-		
-		let jsonData = try JSONEncoder().encode(securityFile)
-		
-		try jsonData.write(to: self.securityJsonUrl, options: [.atomic])
-	}
-	
-	private func readFromDisk() throws -> SecurityFile? {
-		
-		let data: Data
-		do {
-			data = try Data(contentsOf: self.securityJsonUrl)
-		} catch {
-			// Probably the file doesn't exist
-			return nil
+		let fail = {(_ configuration: EnabledSecurity) -> Void in
+			DispatchQueue.main.async {
+				completion(nil, configuration)
+			}
 		}
 		
-		return try JSONDecoder().decode(SecurityFile.self, from: data)
-	}
-	
-	private let keychainAccount = "generic_test"
-	
-	public func keychainRoundTrip() throws {
-		
-		let keychain = GenericPasswordStore()
-		
-		let key1 = SymmetricKey(size: .bits256)
-		print("key1 : \(key1.rawRepresentation.hexEncodedString())")
-		
-		try keychain.deleteKey(account: keychainAccount)
-		try keychain.storeKey(key1, account: keychainAccount)
-		
-		guard let key2: SymmetricKey = try keychain.readKey(account: keychainAccount) else {
-			print("Nothing found in keychain")
-			return
-		}
-		
-		print("key2 : \(key2.rawRepresentation.hexEncodedString())")
-	}
-	
-	public func testRoundTrip() throws {
-		
-		let databaseKey = SymmetricKey(size: .bits256)
-		let externalKey = SymmetricKey(size: .bits256) // used to wrap databaseKey
-		
-		print("databaseKey : \(databaseKey.rawRepresentation.hexEncodedString())")
-		print("externalKey : \(externalKey.rawRepresentation.hexEncodedString())")
-		print("-----------------------------------------------------------------------------")
-		
-		let plaintext = databaseKey.dataRepresentation
-		
-		let sealedBoxA = try ChaChaPoly.seal(plaintext, using: externalKey)
-		try writeToDisk(sealedBox: sealedBoxA)
-		
-		let securityFile = try readFromDisk()
-		let keyInfo = securityFile?.keychain as? KeyInfo_ChaChaPoly
-		
-		if let sealedBoxB = try keyInfo?.toSealedBox() {
+		// Disk IO ahead - get off the main thread.
+		// Also - go thru the serial queue for proper thread safety.
+		queue.async {
 			
-			let decrypted = try ChaChaPoly.open(sealedBoxB, using: externalKey)
+			// Fetch the "security.json" file.
+			// If the file doesn't exist, an empty SecurityFile is returned.
+			let securityFile = self.readFromDisk()
 			
-			print("databaseKey : \(databaseKey.rawRepresentation.hexEncodedString())")
-			print("decrypted   : \(decrypted.hexEncodedString())")
-		
+			// The file tells us which security options have been enabled.
+			// If there isn't a keychain entry, then we cannot unlock the databaseKey.
+			guard
+				let keyInfo = securityFile.keychain as? KeyInfo_ChaChaPoly,
+				let sealedBox = try? keyInfo.toSealedBox()
+			else {
+				return fail(securityFile.enabledSecurity)
+			}
+			
 			let keychain = GenericPasswordStore()
 			
-			try keychain.deleteKey(account: keychainAccount)
-			try keychain.storeKey(externalKey, account: keychainAccount)
+			// Read the lockingKey from the OS keychain
+			let fetchedKey: SymmetricKey?
+			do {
+				fetchedKey = try keychain.readKey(account: keychain_accountName_keychain)
+			} catch {
+				return fail(securityFile.enabledSecurity)
+			}
+			
+			guard let lockingKey = fetchedKey else {
+				return fail(securityFile.enabledSecurity)
+			}
+			
+			// Decrypt the databaseKey using the lockingKey
+			if let databaseKey = try? ChaChaPoly.open(sealedBox, using: lockingKey) {
+				succeed(databaseKey)
+			} else {
+				fail(securityFile.enabledSecurity)
+			}
 		}
 	}
 	
-	public func testReadDatabaseKey() throws {
+	/// Updates the keychain & security file to include an keychain entry.
+	/// This is a destructive action - existing entries will be removed from
+	/// both the keychain & security file.
+	///
+	/// It is designed to be called either:
+	/// - we need to bootstrap the system on first launch
+	/// - the user is explicitly disabling existing security options
+	///
+	public func addKeychainEntry(
+		databaseKey : Data,
+		completion  : @escaping (_ error: Error?) -> Void
+	) {
+		precondition(databaseKey.count == (256 / 8), "Invalid databaseKey")
 		
-		let keychain = GenericPasswordStore()
-		
-		guard let externalKey: SymmetricKey = try keychain.readKey(account: keychainAccount) else {
-			print("Nothing found in keychain")
-			return
+		let succeed = {
+			DispatchQueue.main.async {
+				completion(nil)
+			}
 		}
 		
-		print("externalKey : \(externalKey.rawRepresentation.hexEncodedString())")
-		
-	//	do {
-	//		try FileManager.default.removeItem(at: self.securityJsonUrl)
-	//	} catch {/* throws an error on FileNotFound, which is annoying */}
-		
-		
-		guard let securityFile = try readFromDisk() else {
-			print("Nothing found on disk")
-			return
+		let fail = {(_ error: Error) -> Void in
+			DispatchQueue.main.async {
+				completion(error)
+			}
 		}
 		
-		if let keychain = securityFile.keychain as? KeyInfo_ChaChaPoly,
-		   let sealedBox = try? keychain.toSealedBox()
-		{
-			let decrypted = try ChaChaPoly.open(sealedBox, using: externalKey)
+		// Disk IO ahead - get off the main thread.
+		// Also - go thru the serial queue for proper thread safety.
+		queue.async {
 			
-			print("databaseKey : \(decrypted.hexEncodedString())")
+			let lockingKey = SymmetricKey(size: .bits256)
+			
+			let sealedBox: ChaChaPoly.SealedBox
+			do {
+				sealedBox = try ChaChaPoly.seal(databaseKey, using: lockingKey)
+			} catch {
+				return fail(error)
+			}
+			
+			let keyInfo = KeyInfo_ChaChaPoly(sealedBox: sealedBox)
+			let securityFile = SecurityFile(keychain: keyInfo)
+			
+			// Order matters !
+			// Don't lock out the user from their wallet !
+			//
+			// There are 3 scenarios in which this method may be called:
+			//
+			// 1. App was launched for the first time.
+			//    There are no entries in the keychain.
+			//    The security.json file doesn't exist.
+			//
+			// 2. User has existing security options, but is choosing to disable them.
+			//    The given databaseKey corresponds to the existing database file.
+			//    There are existing entries in the keychain.
+			//    The security.json file exists, and contains entries.
+			//
+			// 3. Something bad happened during app launch.
+			//    We discovered a corrupt database, a corrupt security.json,
+			//    or necessary keychain entries have gone missing.
+			//    When this occurs, the system invokes the various `backup` functions.
+			//    This creates a copy of the database, security.json file & keychain entries.
+			//    Afterwards this function is called.
+			//    And we can treat this scenario as the equivalent of a first app launch.
+			//
+			// So situation #2 is the dangerous one.
+			// Consider what happens if:
+			//
+			// - we delete the touchID entry from the database
+			// - then the app crashes
+			//
+			// Answer => we just lost the user's data ! :(
+			//
+			// So we're careful to to perform operations in a particular order here:
+			//
+			// - add new entry to OS keychain
+			// - write security.json file to disk
+			// - then we can safely remove the old entries from the OS keychain
+			
+			let keychain = GenericPasswordStore()
+			
+			do {
+				try keychain.deleteKey(account: keychain_accountName_keychain)
+			} catch {/* ignored */}
+			do {
+				// Access control considerations:
+				//
+				// This is only for fetching the databaseKey,
+				// which we only need to do once when launching the app.
+				// So we shouldn't need access to the keychain item when the device is locked.
+				
+				var query = [String: Any]()
+				query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+				
+				try keychain.storeKey( lockingKey,
+				              account: keychain_accountName_keychain,
+				               mixins: query)
+			} catch {
+				print("keychain.storeKey(account: keychain): error: \(error)")
+				return fail(error)
+			}
+			
+			do {
+				try self.writeToDisk(securityFile: securityFile)
+			} catch {
+				print("writeToDisk(securityFile): error: \(error)")
+				return fail(error)
+			}
+			
+			// Now we can safely delete the touchID entry in the database (if it exists)
+			do {
+				try keychain.deleteKey(account: keychain_accountName_biometrics)
+			} catch {/* ignored */}
+			
+			succeed()
+		}
+	}
+	
+	// --------------------------------------------------------------------------------
+	// MARK:- Biometrics
+	// --------------------------------------------------------------------------------
+	
+	private func biometricsPrompt() -> String {
+		
+		return NSLocalizedString( "Login to Phoenix",
+		                 comment: "Biometrics prompt to unlock the Phoenix app"
+		)
+	}
+	
+	/// Attempts to extract the databaseKey using biometrics (e.g. touchID, faceID)
+	///
+	public func tryUnlockWithBiometrics(
+		completion: @escaping (_ result: Result<Data?, Error>) -> Void
+	) {
+		let succeed = {(_ databaseKey: Data?) in
+			DispatchQueue.main.async {
+				completion(Result.success(databaseKey))
+			}
+		}
+		
+		let fail = {(_ error: Error) -> Void in
+			DispatchQueue.main.async {
+				completion(Result.failure(error))
+			}
+		}
+		
+		// Disk IO ahead - get off the main thread.
+		// Also - go thru the serial queue for proper thread safety.
+		queue.async {
+			
+			// Fetch the "security.json" file.
+			// If the file doesn't exist, an empty SecurityFile is returned.
+			let securityFile = self.readFromDisk()
+			
+			// The file tells us which security options have been enabled.
+			// If there isn't a keychain entry, then we cannot unlock the databaseKey.
+			guard
+				let keyInfo_biometrics = securityFile.biometrics as? KeyInfo_ChaChaPoly,
+				let sealedBox_biometrics = try? keyInfo_biometrics.toSealedBox()
+			else {
+				return fail(self.genericError(400, "SecurityFile doesn't have biometrics entry"))
+			}
+			
+		//	let keyInfo_passphrase = securityFile.passphrase as? KeyInfo_ChaChaPoly
+		//	let sealedBox_passphrase = try? keyInfo_passphrase?.toSealedBox()
+			
+			let context = LAContext()
+			context.localizedReason = self.biometricsPrompt()
+			
+			var query = [String: Any]()
+			query[kSecUseAuthenticationContext as String] = context
+			
+			let keychain = GenericPasswordStore()
+			let account = keychain_accountName_biometrics
+		
+			let fetchedKey: SymmetricKey?
+			do {
+				fetchedKey = try keychain.readKey(account: account, mixins: query)
+			} catch {
+				return fail(error)
+			}
+			
+			guard let lockingKey = fetchedKey else {
+				return fail(self.genericError(401, "Biometrics keychain entry missing"))
+			}
+		
+			// Decrypt the databaseKey using the lockingKey
+			let databaseKey: Data
+			do {
+				databaseKey = try ChaChaPoly.open(sealedBox_biometrics, using: lockingKey)
+			} catch {
+				return fail(error)
+			}
+			
+		#if targetEnvironment(simulator)
+			
+			// On the iOS simulator you can fake Touch ID.
+			//
+			// Features -> Touch ID -> Enroll
+			//                      -> Matching touch
+			//                      -> Non-matching touch
+			//
+			// However, it has some shortcomings.
+			//
+			// On the device:
+			//     Attempting to read the entry from the keychain will prompt
+			//     the user to authenticate with Touch ID. And the keychain
+			//     entry is only returned if Touch ID succeeds.
+			//
+			// On the simulator:
+			//     Attempting to read the entry from the keychain always succceeds.
+			//     It does NOT prompt the user for Touch ID,
+			//     giving the appearance that we didn't code something properly.
+			//     But in reality, this is just a bug in the iOS simulator.
+			//
+			// So we're going to fake it here.
+			
+			let prompt = self.biometricsPrompt()
+						
+			LAContext().evaluatePolicy( .deviceOwnerAuthenticationWithBiometrics,
+			           localizedReason: prompt
+			) {(success, error) in
+				
+				if let error = error {
+					fail(error)
+				} else {
+					succeed(databaseKey)
+				}
+			}
+		#else
+		
+			// iOS device
+			succeed(databaseKey)
+		
+		#endif
+		}
+	}
+	
+	public func addBiometricsEntry(
+		databaseKey : Data,
+		completion  : @escaping (_ error: Error?) -> Void
+	) {
+		precondition(databaseKey.count == (256 / 8), "Invalid databaseKey")
+		
+		let succeed = {
+			DispatchQueue.main.async {
+				completion(nil)
+			}
+		}
+		
+		let fail = {(_ error: Error) -> Void in
+			DispatchQueue.main.async {
+				completion(error)
+			}
+		}
+		
+		// Disk IO ahead - get off the main thread.
+		// Also - go thru the serial queue for proper thread safety.
+		queue.async {
+			
+			let lockingKey = SymmetricKey(size: .bits256)
+			
+			let sealedBox: ChaChaPoly.SealedBox
+			do {
+				sealedBox = try ChaChaPoly.seal(databaseKey, using: lockingKey)
+			} catch {
+				return fail(error)
+			}
+			
+			let keyInfo_touchID = KeyInfo_ChaChaPoly(sealedBox: sealedBox)
+			
+			let oldSecurityFile = self.readFromDisk()
+			let securityFile = SecurityFile(
+				touchID    : keyInfo_touchID,
+				passphrase : oldSecurityFile.passphrase // maintain existing option
+			)
+			
+			// Order matters !
+			// Don't lock out the user from their wallet !
+			//
+			// There are 2 scenarios in which this method may be called:
+			//
+			// 1. User had no security options enabled, but is now enabling touch ID.
+			//    There is an existing keychain entry for the keychain option.
+			//    There is an existing security.json file with the keychain option.
+			//
+			// 2. User only had passphrase option enabled, but is now adding touch ID.
+			//    There is an existing keychain entry for the passphrase option.
+			//    There is an existing security.json file with the passphrase option.
+			
+			let keychain = GenericPasswordStore()
+			
+			do {
+				try keychain.deleteKey(account: keychain_accountName_biometrics)
+			} catch {/* ignored */}
+			do {
+				let accessControl = SecAccessControlCreateWithFlags(
+					/* allocator  : */ nil,
+					/* protection : */ kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+					/* flags      : */ .userPresence,
+					/* error      : */ nil
+				)!
+				
+				var query = [String: Any]()
+				query[kSecAttrAccessControl as String] = accessControl
+				
+				try keychain.storeKey(lockingKey,
+				             account: keychain_accountName_biometrics,
+				              mixins: query)
+			} catch {
+				print("keychain.storeKey(account: touchID): error: \(error)")
+				return fail(error)
+			}
+			
+			do {
+				try self.writeToDisk(securityFile: securityFile)
+			} catch {
+				print("writeToDisk(securityFile): error: \(error)")
+				return fail(error)
+			}
+			
+			// Now we can safely delete the keychain entry now (if it exists)
+			do {
+				try keychain.deleteKey(account: keychain_accountName_keychain)
+			} catch {/* ignored */}
+			
+			succeed()
 		}
 	}
 }

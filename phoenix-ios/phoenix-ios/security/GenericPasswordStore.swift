@@ -13,16 +13,17 @@ import Security
 struct GenericPasswordStore {
 
 	/// Stores a CryptoKit key in the keychain as a generic password.
-	func storeKey<T: GenericPasswordConvertible>(_ key: T, account: String) throws {
+	func storeKey<T: GenericPasswordConvertible>(
+		_ key   : T,
+		account : String,
+		mixins  : [String: Any]
+	) throws {
 
-        // Treat the key data as a generic password.
-        let query = [
-			kSecClass                     : kSecClassGenericPassword,
-			kSecAttrAccount               : account,
-			kSecUseDataProtectionKeychain : true,
-			kSecAttrAccessible            : kSecAttrAccessibleWhenUnlocked,
-			kSecValueData                 : key.rawRepresentation
-		] as [String: Any]
+		var query = mixins
+		query[kSecClass as String] = kSecClassGenericPassword
+		query[kSecAttrAccount as String] = account
+		query[kSecUseDataProtectionKeychain as String] = true
+		query[kSecValueData as String] = key.rawRepresentation
 		
 		// Add the key data.
 		let status = SecItemAdd(query as CFDictionary, nil)
@@ -32,15 +33,18 @@ struct GenericPasswordStore {
 	}
 
 	/// Reads a CryptoKit key from the keychain as a generic password.
-	func readKey<T: GenericPasswordConvertible>(account: String) throws -> T? {
+	func readKey<T: GenericPasswordConvertible>(
+		account : String,
+		mixins  : [String: Any]? = nil
+	) throws -> T? {
 
 		// Seek a generic password with the given account.
-        let query = [
-			kSecClass                     : kSecClassGenericPassword,
-			kSecAttrAccount               : account,
-			kSecUseDataProtectionKeychain : true,
-			kSecReturnData                : true
-		] as [String: Any]
+		var query = mixins ?? [String: Any]()
+		query[kSecClass as String] = kSecClassGenericPassword
+		query[kSecAttrAccount as String] = account
+		query[kSecUseDataProtectionKeychain as String] = true
+		query[kSecReturnData as String] = true
+		query[kSecMatchLimit as String] = kSecMatchLimitOne
 		
 		// Find and cast the result as data.
 		var item: CFTypeRef?
