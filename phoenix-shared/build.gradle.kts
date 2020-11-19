@@ -46,7 +46,7 @@ kotlin {
         val serializationVersion = "1.0.0"
         val secp256k1Version = "0.4.1"
         val ktorVersion = "1.4.1"
-        val kodeinDBVersion = "0.2.0-beta"
+        val kodeinDBVersion = "0.4.0-beta"
 
         val commonMain by getting {
             dependencies {
@@ -66,6 +66,7 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
+                implementation("org.kodein.db:kodein-db-inmemory:$kodeinDBVersion")
             }
         }
 

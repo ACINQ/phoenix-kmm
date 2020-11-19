@@ -34,7 +34,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.serialization.json.Json
 import org.kodein.db.DB
-import org.kodein.db.impl.factory
+import org.kodein.db.impl.default
 import org.kodein.db.inDir
 import org.kodein.db.orm.kotlinx.KotlinxSerializer
 import org.kodein.log.LoggerFactory
@@ -121,7 +121,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             }
         }
     }
-    private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
+    private val dbFactory by lazy { DB.default.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
     private val channelsDB by lazy { AppChannelsDB(dbFactory) }
 
@@ -143,7 +143,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val walletManager by lazy { WalletManager(appDB) }
     private val appHistoryManager by lazy { AppHistoryManager(appDB, peer) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, httpClient, chain, loggerFactory) }
-
+    private val currencyConverter by lazy { CurrencyConverter(appDB) }
     fun start() {
         AppConnectionsDaemon(appConfigurationManager, walletManager, networkMonitor, electrumClient, acinqNodeUri, loggerFactory) { peer }
     }
@@ -151,7 +151,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     val controllers : ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
         override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
-        override fun home(): HomeController = AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
+        override fun home(): HomeController = AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager, appConfigurationManager, currencyConverter)
         override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peer)
         override fun scan(): ScanController = AppScanController(loggerFactory, peer)
         override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)
