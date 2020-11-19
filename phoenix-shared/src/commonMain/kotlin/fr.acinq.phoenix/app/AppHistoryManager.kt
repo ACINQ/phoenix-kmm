@@ -11,8 +11,9 @@ import fr.acinq.phoenix.data.Transaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kodein.db.DB
 import org.kodein.db.find
@@ -25,7 +26,8 @@ class AppHistoryManager(private val appDb: DB, private val peer: Peer) : Corouti
 
     private fun getList() = appDb.find<Transaction>().byIndex("timestamp").useModels(reverse = true) { it.toList() }
 
-    private val transactions = ConflatedBroadcastChannel(getList())
+    private val _transactions = MutableStateFlow(getList())
+    val transactions: StateFlow<List<Transaction>> get() = _transactions
 
     init {
         launch {
@@ -34,11 +36,11 @@ class AppHistoryManager(private val appDb: DB, private val peer: Peer) : Corouti
                     is PaymentReceived -> {
                         appDb.put(
                             Transaction(
-                                UUID.randomUUID().toString(),
-                                it.incomingPayment.paymentRequest.amount?.toLong() ?: error("Received a payment without amount ?!?"),
-                                it.incomingPayment.paymentRequest.description ?: "",
-                                Transaction.Status.Success,
-                                currentTimestampMillis()
+                                id = UUID.randomUUID().toString(),
+                                amountMsat = it.incomingPayment.paymentRequest.amount?.toLong() ?: error("Received a payment without amount ?!?"),
+                                desc = it.incomingPayment.paymentRequest.description ?: "",
+                                status = Transaction.Status.Success,
+                                timestamp = currentTimestampMillis()
                             )
                         )
                     }
@@ -82,13 +84,11 @@ class AppHistoryManager(private val appDb: DB, private val peer: Peer) : Corouti
             }
         }
 
-        fun updateChannel() = launch { transactions.send(getList()) }
+        fun updateChannel() = launch { _transactions.value = getList() }
 
         appDb.on<Transaction>().register {
             didPut { updateChannel() }
             didDelete { updateChannel() }
         }
     }
-
-    fun openTransactionsSubscriptions() = transactions.openSubscription()
 }
