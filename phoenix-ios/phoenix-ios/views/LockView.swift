@@ -53,6 +53,12 @@ struct LockView : View {
 				}
 				.disabled(true)
 			}
+			
+			if let errorMsg = errorMsg {
+				Text(errorMsg)
+					.foregroundColor(Color.appRed)
+					.padding(.top, 10)
+			}
 		}
 		.offset(x: 0, y: -80) // move center upwards; logo not hidden by TouchID popover
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
