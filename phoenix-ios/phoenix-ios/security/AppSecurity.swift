@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import CommonCrypto
 import CryptoKit
 import LocalAuthentication
@@ -24,6 +25,7 @@ enum BiometricStatus {
 	}
 }
 
+// Names of entries stored within the OS keychain:
 private let keychain_accountName_keychain = "securityFile_keychain"
 private let keychain_accountName_biometrics = "securityFile_biometrics"
 
@@ -33,7 +35,12 @@ class AppSecurity {
 	///
 	public static let shared = AppSecurity()
 	
-	/// Serial queue ensures that only one operation is reading/modifying the keychain and/or security file at any given time.
+	/// Use this for notifications
+	///
+	public let enabledSecurityChanged = PassthroughSubject<EnabledSecurity, Never>()
+	
+	/// Serial queue ensures that only one operation is reading/modifying the
+	/// keychain and/or security file at any given time.
 	///
 	private let queue = DispatchQueue(label: "AppSecurity")
 	
@@ -222,8 +229,9 @@ class AppSecurity {
 	) {
 		precondition(databaseKey.count == (256 / 8), "Invalid databaseKey")
 		
-		let succeed = {
+		let succeed = {(securityFile: SecurityFile) -> Void in
 			DispatchQueue.main.async {
+				self.enabledSecurityChanged.send(securityFile.enabledSecurity)
 				completion(nil)
 			}
 		}
@@ -321,7 +329,7 @@ class AppSecurity {
 				try keychain.deleteKey(account: keychain_accountName_biometrics)
 			} catch {/* ignored */}
 			
-			succeed()
+			succeed(securityFile)
 		}
 	}
 	
@@ -451,8 +459,9 @@ class AppSecurity {
 	) {
 		precondition(databaseKey.count == (256 / 8), "Invalid databaseKey")
 		
-		let succeed = {
+		let succeed = {(securityFile: SecurityFile) -> Void in
 			DispatchQueue.main.async {
+				self.enabledSecurityChanged.send(securityFile.enabledSecurity)
 				completion(nil)
 			}
 		}
@@ -533,7 +542,7 @@ class AppSecurity {
 				try keychain.deleteKey(account: keychain_accountName_keychain)
 			} catch {/* ignored */}
 			
-			succeed()
+			succeed(securityFile)
 		}
 	}
 }

@@ -4,15 +4,15 @@ import SwiftUI
 struct LockView : View {
 	
 	let enabledSecurity: EnabledSecurity
+	@Binding var isUnlocked: Bool
 	
 	@State var isTouchID = true
 	@State var isFaceID = false
 	@State var errorMsg: String? = nil
 	
-	// When the app returns from being in the background, the biometric status may have changed.
-	// For example: .touchID_notEnrolled => .touchID_available
-	//
-	let pub = NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+	let willEnterForegroundPublisher = NotificationCenter.default.publisher(for:
+		UIApplication.willEnterForegroundNotification
+	)
 	
 	var body: some View {
 		
@@ -56,18 +56,40 @@ struct LockView : View {
 				.disabled(true)
 			}
 		}
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
+		.background(Color(UIColor.systemBackground))
+		.edgesIgnoringSafeArea(.all)
 		.onAppear {
-			onAppLaunch()
+			onAppear()
 		}
-		.onReceive(pub, perform: { _ in
-			updateBiometricsStatus(AppSecurity.shared.biometricStatus())
+		.onReceive(willEnterForegroundPublisher, perform: { _ in
+			onWillEnterForeground()
 		})
 	}
 	
-	func onAppLaunch() -> Void {
+	func onAppear() -> Void {
+		
+		// This function is called when:
+		// - app is launched for the first time
+		// - app has just been backgrounded
 		
 		let status = AppSecurity.shared.biometricStatus()
 		updateBiometricsStatus(status)
+		
+		if (status != .notAvailable) && (UIApplication.shared.applicationState == .active) {
+			tryBiometricsLogin()
+		}
+	}
+	
+	func onWillEnterForeground() -> Void {
+		print("onWillEnterForeground()")
+		
+		// When the app returns from being in the background, the biometric status may have changed.
+		// For example: .touchID_notEnrolled => .touchID_available
+		
+		let status = AppSecurity.shared.biometricStatus()
+		updateBiometricsStatus(status)
+		
 		if status != .notAvailable {
 			tryBiometricsLogin()
 		}
@@ -108,6 +130,9 @@ struct LockView : View {
 			switch result {
 				case .success(let databaseKey):
 					print("databaseKey: \(databaseKey?.hexEncodedString() ?? "nil")")
+					if databaseKey != nil{
+						isUnlocked = true
+					}
 				case .failure(let error):
 					print("error: \(error)")
 			}

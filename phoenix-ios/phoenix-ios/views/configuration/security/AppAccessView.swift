@@ -51,11 +51,11 @@ struct AppAccessView : View {
 			}
 			.disabled(!biometricStatus.isAvailable())
 			
-			Button(action: {
-				self.testBiometrics()
-			}) {
-				Text("Authenticate with Touch ID")
-			}
+		//	Button(action: {
+		//		self.testBiometrics()
+		//	}) {
+		//		Text("Authenticate with Touch ID")
+		//	}
 			
 		}
 		.onReceive(pub, perform: { _ in
