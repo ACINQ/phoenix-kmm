@@ -17,6 +17,7 @@ import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.TcpSocket
 import fr.acinq.eclair.utils.msat
 import fr.acinq.eclair.utils.sat
+import fr.acinq.eclair.utils.setEclairLoggerFactory
 import fr.acinq.eclair.utils.toByteVector32
 import fr.acinq.phoenix.app.*
 import fr.acinq.phoenix.app.ctrl.*
@@ -24,6 +25,7 @@ import fr.acinq.phoenix.app.ctrl.config.*
 import fr.acinq.phoenix.ctrl.*
 import fr.acinq.phoenix.ctrl.config.*
 import fr.acinq.phoenix.data.Chain
+import fr.acinq.phoenix.utils.LogMemory
 import fr.acinq.phoenix.utils.NetworkMonitor
 import fr.acinq.phoenix.utils.PlatformContext
 import fr.acinq.phoenix.utils.getApplicationFilesDirectoryPath
@@ -38,7 +40,11 @@ import org.kodein.db.impl.factory
 import org.kodein.db.inDir
 import org.kodein.db.orm.kotlinx.KotlinxSerializer
 import org.kodein.log.LoggerFactory
+import org.kodein.log.frontend.defaultLogFrontend
 import org.kodein.log.newLogger
+import org.kodein.log.withShortPackageKeepLast
+import org.kodein.memory.file.Path
+import org.kodein.memory.file.resolve
 
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalUnsignedTypes::class)
@@ -119,7 +125,13 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         return peer
     }
 
-    public val loggerFactory = LoggerFactory.default
+    private val logMemory = LogMemory(Path(getApplicationFilesDirectoryPath(ctx)).resolve("logs"))
+
+    val loggerFactory = LoggerFactory(
+        defaultLogFrontend.withShortPackageKeepLast(1),
+        logMemory.withShortPackageKeepLast(1)
+    )
+
     private val tcpSocketBuilder = TcpSocket.Builder()
 
     private val networkMonitor by lazy { NetworkMonitor(loggerFactory, ctx) }
@@ -158,6 +170,10 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient) }
 
+    init {
+        setEclairLoggerFactory(loggerFactory)
+    }
+
     fun start() {
         AppConnectionsDaemon(
             appConfigurationManager,
@@ -184,35 +200,18 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         return MnemonicCode.toSeed(mnemonics, passphrase)
     }
 
-    val controllers: ControllerFactory = object : ControllerFactory {
-        override fun content(): ContentController =
-            AppContentController(loggerFactory, walletManager)
-
-        override fun initialization(): InitializationController =
-            AppInitController(loggerFactory, walletManager)
-
-        override fun home(): HomeController =
-            AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
-
-        override fun receive(): ReceiveController =
-            AppReceiveController(loggerFactory, peer)
-
-        override fun scan(): ScanController =
-            AppScanController(loggerFactory, peer)
-
-        override fun restoreWallet(): RestoreWalletController =
-            AppRestoreWalletController(loggerFactory, walletManager)
-
-        override fun configuration(): ConfigurationController =
-            AppConfigurationController(loggerFactory, walletManager)
-
-        override fun displayConfiguration(): DisplayConfigurationController =
-            AppDisplayConfigurationController(loggerFactory, appConfigurationManager)
-
-        override fun electrumConfiguration(): ElectrumConfigurationController =
-            AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
-
-        override fun channelsConfiguration(): ChannelsConfigurationController =
-            AppChannelsConfigurationController(loggerFactory, peer, chain)
+    val controllers : ControllerFactory = object : ControllerFactory {
+        override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
+        override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
+        override fun home(): HomeController = AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
+        override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peer)
+        override fun scan(): ScanController = AppScanController(loggerFactory, peer)
+        override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)
+        override fun configuration(): ConfigurationController = AppConfigurationController(loggerFactory, walletManager)
+        override fun displayConfiguration(): DisplayConfigurationController = AppDisplayConfigurationController(loggerFactory, appConfigurationManager)
+        override fun electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
+        override fun channelsConfiguration(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peer, chain)
+        override fun logsConfiguration(): LogsConfigurationController = AppLogsConfigurationController(ctx, loggerFactory, logMemory)
+//        override fun logsViewConfiguration(fileName: String): LogsViewConfigurationController = AppLogsViewConfigurationController(fileName, loggerFactory, logMemory)
     }
 }
