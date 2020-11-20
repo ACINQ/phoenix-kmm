@@ -1,9 +1,7 @@
 import SwiftUI
 
-
 struct LockView : View {
 	
-	let enabledSecurity: EnabledSecurity
 	@Binding var isUnlocked: Bool
 	
 	@State var isTouchID = true
@@ -130,9 +128,10 @@ struct LockView : View {
 			
 			switch result {
 				case .success(let databaseKey):
-					print("databaseKey: \(databaseKey?.hexEncodedString() ?? "nil")")
-					if databaseKey != nil{
-						isUnlocked = true
+					if databaseKey != nil {
+						withAnimation(.easeInOut) {
+							isUnlocked = true
+						}
 					}
 				case .failure(let error):
 					print("error: \(error)")

@@ -27,21 +27,25 @@ struct ContentView: View {
 			ZStack {
 				
 				if isUnlocked || unlockedOnce {
-					primaryView().onAppear {
-						unlockedOnce = true
-					}
+					primaryView()
+						.zIndex(0) // needed for proper animation
+						.onAppear {
+							unlockedOnce = true
+						}
 				}
 				
 				if !isUnlocked {
-					LockView(enabledSecurity: enabledSecurity, isUnlocked: $isUnlocked)
+					LockView(isUnlocked: $isUnlocked)
+						.zIndex(1) // needed for proper animation
+						.transition(.asymmetric(
+							insertion : .identity,
+							removal   : .move(edge: .bottom)
+						))
 				}
 			}
 			.onReceive(didEnterBackgroundPublisher, perform: { _ in
 				onDidEnterBackground()
 			})
-			.onReceive(AppSecurity.shared.enabledSecurity) { newValue in
-				enabledSecurity = newValue
-			}
 			
 		} else {
 			
@@ -119,7 +123,19 @@ struct ContentView: View {
 	private func onDidEnterBackground() -> Void {
 		print("onDidEnterBackground()")
 		
-		if !enabledSecurity.isEmpty {
+		let currentSecurity = AppSecurity.shared.enabledSecurity.value
+		enabledSecurity = currentSecurity
+		//
+		// Bug alert :
+		//   Even though it *looks* like we just updated the `enabledSecurity` value,
+		//   if we read it right now, we'll still see the old value !!!
+		//
+		// 	 For example, we might see something crazy like this:
+		//
+		//   print("currentSecurity: \(currentSecurity)") => 1
+		//   print("enabledSecurity: \(enabledSecurity)") => 0
+		//
+		if !currentSecurity.isEmpty {
 			self.isUnlocked = false
 		}
 	}
