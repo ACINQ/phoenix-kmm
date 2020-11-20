@@ -9,12 +9,11 @@ struct AppAccessView : View {
 	
 	@State var biometricStatus = AppSecurity.shared.biometricStatus()
 	@State var shutupCompiler = false
-	@State var biometricsEnabled = false
+	@State var biometricsEnabled = AppSecurity.shared.enabledSecurity.value.contains(.biometrics)
 	
-	// When the app returns from being in the background, the biometric status may have changed.
-	// For example: .touchID_notEnrolled => .touchID_available
-	//
-	let pub = NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)
+	let willEnterForegroundPublisher = NotificationCenter.default.publisher(for:
+		UIApplication.willEnterForegroundNotification
+	)
 	
 	var body: some View {
 		
@@ -24,22 +23,22 @@ struct AppAccessView : View {
 				
 				switch biometricStatus {
 					case .touchID_available:
-						Text("Touch ID")
+						Text("Require Touch ID")
 						
 					case .touchID_notAvailable:
-						Text("Touch ID") + Text(" (not available)").foregroundColor(.secondary)
+						Text("Require Touch ID") + Text(" (not available)").foregroundColor(.secondary)
 					
 					case .touchID_notEnrolled:
-						Text("Touch ID") + Text(" (not enrolled)").foregroundColor(.secondary)
+						Text("Require Touch ID") + Text(" (not enrolled)").foregroundColor(.secondary)
 					
 					case .faceID_available:
-						Text("Face ID")
+						Text("Require Face ID")
 					
 					case .faceID_notAvailable:
-						Text("Face ID") + Text(" (not available)").foregroundColor(.secondary)
+						Text("Require Face ID") + Text(" (not available)").foregroundColor(.secondary)
 					
 					case .faceID_notEnrolled:
-						Text("Face ID") + Text(" (not enrolled)").foregroundColor(.secondary)
+						Text("Require Face ID") + Text(" (not enrolled)").foregroundColor(.secondary)
 					
 					default:
 						Text("Biometrics") + Text(" (not available)").foregroundColor(.secondary)
@@ -58,10 +57,19 @@ struct AppAccessView : View {
 		//	}
 			
 		}
-		.onReceive(pub, perform: { _ in
-			
-			self.biometricStatus = AppSecurity.shared.biometricStatus()
+		.navigationBarTitle("App Access", displayMode: .inline)
+		.onReceive(willEnterForegroundPublisher, perform: { _ in
+			onWillEnterForeground()
 		})
+	}
+	
+	func onWillEnterForeground() -> Void {
+		print("onWillEnterForeground()")
+		
+		// When the app returns from being in the background, the biometric status may have changed.
+		// For example: .touchID_notEnrolled => .touchID_available
+		
+		self.biometricStatus = AppSecurity.shared.biometricStatus()
 	}
 	
 	func toggleBiometrics(_ flag: Bool) {
@@ -69,16 +77,21 @@ struct AppAccessView : View {
 		
 		// Todo: fetch from AppDelegate (or wherever we have this already)
 		let databaseKey = AppSecurity.shared.generateDatabaseKey()
-		print("databaseKey: \(databaseKey.hexEncodedString())")
 		
-		if flag {
+		if flag { // toggle => ON
+			
 			AppSecurity.shared.addBiometricsEntry(databaseKey: databaseKey) {(error: Error?) in
 				if error != nil {
-					self.biometricsEnabled = false
+					self.biometricsEnabled = false // failed to enable biometrics
 				}
 			}
-		} else {
-			// Todo...
+		} else { // toggle => OFF
+			
+			AppSecurity.shared.addKeychainEntry(databaseKey: databaseKey) { (error: Error?) in
+				if error != nil {
+					self.biometricsEnabled = true // failed to disable biometrics
+				}
+			}
 		}
 	}
 	

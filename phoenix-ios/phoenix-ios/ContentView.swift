@@ -39,7 +39,7 @@ struct ContentView: View {
 			.onReceive(didEnterBackgroundPublisher, perform: { _ in
 				onDidEnterBackground()
 			})
-			.onReceive(AppSecurity.shared.enabledSecurityChanged) { newValue in
+			.onReceive(AppSecurity.shared.enabledSecurity) { newValue in
 				enabledSecurity = newValue
 			}
 			

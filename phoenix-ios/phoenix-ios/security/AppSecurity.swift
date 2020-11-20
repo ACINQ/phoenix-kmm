@@ -35,9 +35,9 @@ class AppSecurity {
 	///
 	public static let shared = AppSecurity()
 	
-	/// Use this for notifications
+	/// Changes always posted to the main thread.
 	///
-	public let enabledSecurityChanged = PassthroughSubject<EnabledSecurity, Never>()
+	public let enabledSecurity = CurrentValueSubject<EnabledSecurity, Never>(EnabledSecurity())
 	
 	/// Serial queue ensures that only one operation is reading/modifying the
 	/// keychain and/or security file at any given time.
@@ -171,6 +171,7 @@ class AppSecurity {
 		
 		let fail = {(_ configuration: EnabledSecurity) -> Void in
 			DispatchQueue.main.async {
+				self.enabledSecurity.send(configuration)
 				completion(nil, configuration)
 			}
 		}
@@ -231,7 +232,7 @@ class AppSecurity {
 		
 		let succeed = {(securityFile: SecurityFile) -> Void in
 			DispatchQueue.main.async {
-				self.enabledSecurityChanged.send(securityFile.enabledSecurity)
+				self.enabledSecurity.send(securityFile.enabledSecurity)
 				completion(nil)
 			}
 		}
@@ -339,7 +340,7 @@ class AppSecurity {
 	
 	private func biometricsPrompt() -> String {
 		
-		return NSLocalizedString( "Login to Phoenix",
+		return NSLocalizedString( "App is locked",
 		                 comment: "Biometrics prompt to unlock the Phoenix app"
 		)
 	}
@@ -461,7 +462,7 @@ class AppSecurity {
 		
 		let succeed = {(securityFile: SecurityFile) -> Void in
 			DispatchQueue.main.async {
-				self.enabledSecurityChanged.send(securityFile.enabledSecurity)
+				self.enabledSecurity.send(securityFile.enabledSecurity)
 				completion(nil)
 			}
 		}

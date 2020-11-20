@@ -56,6 +56,7 @@ struct LockView : View {
 				.disabled(true)
 			}
 		}
+		.offset(x: 0, y: -80) // move center upwards; logo not hidden by TouchID popover
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(Color(UIColor.systemBackground))
 		.edgesIgnoringSafeArea(.all)
