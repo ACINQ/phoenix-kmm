@@ -31,13 +31,14 @@ class AppConfigurationManager(
     fun openElectrumServerUpdateSubscription(): ReceiveChannel<ElectrumServer> =
         electrumServerUpdates.openSubscription()
 
-    private val displayedCurrency by lazy {
+    private val displayedCurrency: MutableStateFlow<CurrencyUnit> get() {
         val currency = when(getAppConfiguration().displayedCurrency) {
             DisplayedCurrency.FIAT -> getAppConfiguration().fiatCurrency
             DisplayedCurrency.BITCOIN -> getAppConfiguration().bitcoinUnit
         }
-        MutableStateFlow<CurrencyUnit>(currency)
+        return MutableStateFlow(currency)
     }
+
     fun displayedCurrency(): StateFlow<CurrencyUnit> = displayedCurrency
 
     /*
@@ -145,10 +146,6 @@ class AppConfigurationManager(
             }.asElectrumServer()
         )
     }
-
-    // Bitcoin exchange rates
-    public fun getBitcoinRates(): List<BitcoinPriceRate> = appDB.find<BitcoinPriceRate>().all().useModels {it.toList()}
-    public fun getBitcoinRate(fiatCurrency: FiatCurrency): BitcoinPriceRate = appDB.find<BitcoinPriceRate>().byId(fiatCurrency.name).model()
 
     private fun launchUpdateRates() = launch {
         while (isActive) {
