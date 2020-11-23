@@ -39,10 +39,10 @@
 		C8D7ABB189B14D3104ABB50D /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A2327BC90150A3E1493D /* AboutView.swift */; };
 		C8D7ABC95B979B59AF5A7CA7 /* InitializationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A209301A31C14A982ECD /* InitializationView.swift */; };
 		C8D7AFF5BC5754DBBEEB2688 /* ElectrumConfigurationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A1F8A123C59199C182C2 /* ElectrumConfigurationView.swift */; };
-		DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */; };
 		DC67654525655CA0004D4263 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = DC67654225655CA0004D4263 /* about.html */; };
 		DC67654625655CA0004D4263 /* stylesheet.css in Resources */ = {isa = PBXBuildFile; fileRef = DC67654425655CA0004D4263 /* stylesheet.css */; };
 		DC67654E25655D93004D4263 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC67654D25655D93004D4263 /* Colors.xcassets */; };
+		DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */; };
 		DCB0DB8A255AE42F005B29C8 /* PhoenixShared.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DCB0DB83255AE42F005B29C8 /* PhoenixShared.framework */; };
 		DCB0DBB1255AEE22005B29C8 /* PhoenixShared.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = DCB0DB83255AE42F005B29C8 /* PhoenixShared.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		DCC8B1B92502BAE2006B6227 /* (null) in Resources */ = {isa = PBXBuildFile; };
