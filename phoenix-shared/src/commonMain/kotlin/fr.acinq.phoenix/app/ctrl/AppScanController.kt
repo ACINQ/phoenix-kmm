@@ -28,13 +28,14 @@ class AppScanController(loggerFactory: LoggerFactory, private val peer: Peer) : 
             }
             is Scan.Intent.Send -> {
                 launch {
-                    val paymentRequest = PaymentRequest.read(intent.request)
-                    val paymentAmount = intent.amount.toMilliSatoshi(intent.unit)
-                    val paymentId = UUID.randomUUID()
+                    readPaymentRequest(intent.request)?.run {
+                        val paymentAmount = intent.amount.toMilliSatoshi(intent.unit)
+                        val paymentId = UUID.randomUUID()
 
-                    peer.send(SendPayment(paymentId, paymentRequest, paymentAmount))
+                        peer.send(SendPayment(paymentId, this, paymentAmount))
 
-                    model(Scan.Model.Sending)
+                        model(Scan.Model.Sending)
+                    }
                 }
             }
         }
