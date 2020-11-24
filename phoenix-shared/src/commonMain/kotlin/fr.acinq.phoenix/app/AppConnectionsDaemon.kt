@@ -65,7 +65,7 @@ class AppConnectionsDaemon(
                 }
 
                 var previousElectrumServer: ElectrumServer? = null
-                openElectrumServerUpdateSubscription().consumeEach {
+                electrumServer().collect {
                     if (previousElectrumServer?.address() != it.address()) {
                         logger.info { "Electrum server has changed. We need to refresh the connection." }
                         electrumConnectionOrder.send(ConnectionOrder.CLOSE)

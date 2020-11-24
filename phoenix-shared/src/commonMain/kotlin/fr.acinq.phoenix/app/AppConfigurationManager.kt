@@ -7,8 +7,6 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.utils.io.errors.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.*
 import org.kodein.db.*
 import org.kodein.log.LoggerFactory
@@ -27,19 +25,11 @@ class AppConfigurationManager(
 
     private val logger = newLogger(loggerFactory)
 
-    private val electrumServerUpdates = ConflatedBroadcastChannel<ElectrumServer>()
-    fun openElectrumServerUpdateSubscription(): ReceiveChannel<ElectrumServer> =
-        electrumServerUpdates.openSubscription()
+    private lateinit var electrumServerState: MutableStateFlow<ElectrumServer>
+    fun electrumServer(): StateFlow<ElectrumServer> = electrumServerState
 
-    private val displayedCurrency: MutableStateFlow<CurrencyUnit> get() {
-        val currency = when(getAppConfiguration().displayedCurrency) {
-            DisplayedCurrency.FIAT -> getAppConfiguration().fiatCurrency
-            DisplayedCurrency.BITCOIN -> getAppConfiguration().bitcoinUnit
-        }
-        return MutableStateFlow(currency)
-    }
-
-    fun displayedCurrency(): StateFlow<CurrencyUnit> = displayedCurrency
+    private lateinit var displayedCurrencyState: MutableStateFlow<CurrencyUnit>
+    fun displayedCurrency(): StateFlow<CurrencyUnit> = displayedCurrencyState
 
     /*
         TODO Manage updates for connection configurations:
@@ -48,7 +38,9 @@ class AppConfigurationManager(
     init {
         appDB.on<ElectrumServer>().register {
             didPut {
-                launch { electrumServerUpdates.send(it) }
+                if (it != getElectrumServer()) {
+                    electrumServerState.value = it
+                }
             }
         }
         appDB.on<AppConfiguration>().register {
@@ -57,8 +49,9 @@ class AppConfigurationManager(
                     DisplayedCurrency.FIAT -> it.fiatCurrency
                     DisplayedCurrency.BITCOIN -> it.bitcoinUnit
                 }
-                if (newDisplayedCurrency != displayedCurrency.value)
-                    displayedCurrency.value = newDisplayedCurrency
+                if (newDisplayedCurrency != displayedCurrencyState.value) {
+                    displayedCurrencyState.value = newDisplayedCurrency
+                }
             }
         }
         launch {
@@ -77,9 +70,27 @@ class AppConfigurationManager(
                 }
         }
         launchUpdateRates() // TODO do we need to manage cancellation?
+        initConfiguration()
     }
 
     // General
+    private fun initConfiguration() = launch {
+        logger.info { "loading existing app configuration" }
+
+        // Get or Create the app configuration
+        val appConfiguration = getAppConfiguration()
+
+        // Load state for displayed currency
+        val currency = when(appConfiguration.displayedCurrency) {
+            DisplayedCurrency.FIAT -> appConfiguration.fiatCurrency
+            DisplayedCurrency.BITCOIN -> appConfiguration.bitcoinUnit
+        }
+        displayedCurrencyState = MutableStateFlow(currency)
+
+        // Get or Create the electrum configuration
+        electrumServerState = MutableStateFlow(getElectrumServer())
+    }
+
     private val appConfigurationKey = appDB.key<AppConfiguration>(0)
     private fun createAppConfiguration(): AppConfiguration {
         if (appDB[appConfigurationKey] == null) {

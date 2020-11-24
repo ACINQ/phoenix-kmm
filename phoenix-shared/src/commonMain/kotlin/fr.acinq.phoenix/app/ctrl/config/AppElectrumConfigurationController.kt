@@ -29,7 +29,7 @@ class AppElectrumConfigurationController(loggerFactory: LoggerFactory, private v
         }
 
         launch {
-            configurationManager.openElectrumServerUpdateSubscription().consumeEach {
+            configurationManager.electrumServer().collect {
                 sendElectrumConfigurationModel()
             }
         }
