@@ -32,8 +32,12 @@ struct ScanView: View {
     @ViewBuilder
     func view(model: Scan.Model, postIntent: @escaping (Scan.Intent) -> Void) -> some View {
         switch model {
-        case _ as Scan.ModelReady, _ as Scan.ModelBadRequest: ReadyView(model: nil, postIntent: postIntent)
-        case let m as Scan.ModelRequestWithoutAmount: ReadyView(model: m, postIntent: postIntent)
+        case _ as Scan.ModelReady, _ as Scan.ModelBadRequest: ReadyView(postIntent: postIntent, paymentRequest: nil)
+        case let m as Scan.ModelRequestWithoutAmount: ReadyView(
+                postIntent: postIntent,
+                isWarningDisplayed: true,
+                paymentRequest: m.request
+        )
         case let m as Scan.ModelValidate: ValidateView(model: m, postIntent: postIntent)
         case let m as Scan.ModelSending: SendingView(model: m)
         default:
@@ -42,8 +46,9 @@ struct ScanView: View {
     }
 
     struct ReadyView: View {
-        let model: Scan.Model?
         let postIntent: (Scan.Intent) -> Void
+        @State var isWarningDisplayed: Bool = false
+        let paymentRequest: String?
 
         var body: some View {
             ZStack {
@@ -54,8 +59,9 @@ struct ScanView: View {
                             .font(.title2)
 
                     QrCodeScannerView { request in
-                        print(request)
-                        postIntent(Scan.IntentParse(request: request))
+                        if !isWarningDisplayed {
+                            postIntent(Scan.IntentParse(request: request))
+                        }
                     }
                             .cornerRadius(10)
                             .overlay(
@@ -84,10 +90,11 @@ struct ScanView: View {
                         .zIndex(2)
                         .transition(.asymmetric(insertion: .identity, removal: .move(edge: .bottom)))
 
-                if let m = model as? Scan.ModelRequestWithoutAmount {
+                if paymentRequest != nil {
                     PopupAlert(
+                            show: $isWarningDisplayed,
                             postIntent: postIntent,
-                            paymentRequest: m.request
+                            paymentRequest: paymentRequest!
                     )
                 }
             }
@@ -196,7 +203,7 @@ struct ScanView: View {
 
     struct PopupAlert : View {
 
-        @State var show: Bool = true
+        @Binding var show: Bool
 
         let postIntent: (Scan.Intent) -> Void
         let paymentRequest: String
