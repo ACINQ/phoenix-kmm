@@ -10,6 +10,8 @@ struct HomeView : View {
     @State var selectedTransaction: PhoenixShared.Transaction? = nil
 
     @Environment(\.openURL) var openURL
+	
+	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
     var body: some View {
         MVIView(
@@ -50,11 +52,15 @@ struct HomeView : View {
                     .padding()
 
                     HStack(alignment: .bottom) {
-                        Text(model.balanceSat.formatNumber())
-                                .font(.largeTitle)
-                        Text("sat")
-                                .font(.title2)
-                                .padding(.bottom, 4)
+						Text(Utils.format(
+								sat: model.balanceSat,
+								currencyPrefs: currencyPrefs,
+								includeSuffix: false
+						))
+                            .font(.largeTitle)
+						Text(currencyPrefs.bitcoinUnit.abbrev)
+                            .font(.title2)
+                            .padding(.bottom, 4)
                     }
 
                     ScrollView {

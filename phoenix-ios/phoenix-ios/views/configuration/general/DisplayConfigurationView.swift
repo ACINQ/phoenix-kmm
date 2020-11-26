@@ -9,9 +9,9 @@ struct DisplayConfigurationView: View {
 				Section {
 					Picker(
 						selection: Binding(
-							get: { model.fiatCurrency },
+							get: { Prefs.shared.fiatCurrency },
 							set: {
-								postIntent(DisplayConfiguration.IntentUpdateFiatCurrency(fiatCurrency: $0))
+								Prefs.shared.fiatCurrency = $0
 							}
 						), label: Text("Fiat currency")
 					) {
@@ -23,9 +23,9 @@ struct DisplayConfigurationView: View {
 					
 					Picker(
 						selection: Binding(
-							get: { model.bitcoinUnit },
+							get: { Prefs.shared.bitcoinUnit },
 							set: {
-								postIntent(DisplayConfiguration.IntentUpdateBitcoinUnit(bitcoinUnit: $0))
+								Prefs.shared.bitcoinUnit = $0
 							}
 						), label: Text("Bitcoin unit")
 					) {
