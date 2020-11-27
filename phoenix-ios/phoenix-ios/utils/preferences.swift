@@ -168,4 +168,13 @@ class CurrencyPrefs: ObservableObject {
 			self?.bitcoinUnit = newValue
 		}.store(in: &cancellables)
 	}
+	
+	func toggleCurrencyType() -> Void {
+		
+		if currencyType == .fiat {
+			currencyType = .bitcoin
+		} else {
+			currencyType = .fiat
+		}
+	}
 }

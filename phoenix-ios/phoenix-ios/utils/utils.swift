@@ -1,49 +1,93 @@
-//
-//  utils.swift
-//  phoenix-ios
-//
-//  Created by Robbie Hanson on 11/26/20.
-//  Copyright © 2020 Acinq. All rights reserved.
-//
-
 import Foundation
 import PhoenixShared
 
+struct FormattedAmount {
+	
+	/// The currency amount, formatted for the current locale. E.g.:
+	/// - "12,845.123456"
+	/// - "12 845.123456"
+	/// - "12.845,123456"
+	///
+	let digits: String
+	
+	/// The currency type. E.g.:
+	/// - "USD"
+	/// - "btc"
+	///
+	let type: String
+	
+	/// The locale-specific separator between the integerDigits & fractionDigits.
+	/// If you're doing custom formatting between the two,
+	/// be sure that you use this value. Don't assume it's a dot !
+	///
+	let decimalSeparator: String
+	
+	/// Returns the simple string value. E.g.:
+	/// - "42,526 sat"
+	///
+	var string: String {
+		return "\(digits) \(type)"
+	}
+	
+	/// Returns only the integer portion of the digits. E.g.:
+	/// - digits="12,845.123456" => "12,845"
+	/// - digits="12 845.123456" => "12 845"
+	/// - digits="12.845,123456" => "12.845"
+	///
+	var integerDigits: String {
+	
+		guard let sRange = digits.range(of: decimalSeparator) else {
+			return digits
+		}
+		let range = digits.startIndex ..< sRange.lowerBound
+		return String(digits[range])
+	}
+	
+	/// Returns only the fraction portion of the digits. E.g.:
+	/// - digits="12,845.123456" => "123456"
+	/// - digits="12 845.123456" => "123456"
+	/// - digits="12.845,123456" => "123456"
+	///
+	var fractionDigits: String {
+		
+		guard let sRange = digits.range(of: decimalSeparator) else {
+			return ""
+		}
+		let range = sRange.upperBound ..< digits.endIndex
+		return String(digits[range])
+	}
+}
+
 class Utils {
 	
-	static func format(sat: Int64, currencyPrefs: CurrencyPrefs, includeSuffix: Bool = true) -> String {
-		return format(sat: sat, target: currencyPrefs.bitcoinUnit, includeSuffix: includeSuffix)
+	static func format(_ currencyPrefs: CurrencyPrefs, sat: Int64) -> FormattedAmount {
+		return format(currencyPrefs, msat: (sat * 1_000))
 	}
 	
-	static func format(sat: Int64, target: BitcoinUnit, includeSuffix: Bool = true) -> String {
-		let msat = sat * 1_000
-		return format(msat: msat, target: target, includeSuffix: includeSuffix)
+	static func format(_ currencyPrefs: CurrencyPrefs, msat: Int64) -> FormattedAmount {
+		
+		if currencyPrefs.currencyType == .bitcoin {
+			return formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
+		} else {
+			return FormattedAmount(digits: "19.42", type: "USD", decimalSeparator: ".")
+		}
 	}
 	
-	static func format(msat: Int64, target: BitcoinUnit, includeSuffix: Bool = true) -> String {
-		let msatNum = NSNumber(value: msat)
-		return format(msat: msatNum, target: target, includeSuffix: includeSuffix)
-	}
-	
-	static func format(
-		msat: NSNumber,
-		target: BitcoinUnit,
-		includeSuffix: Bool = true // Whether or not to include the target (e.g. " sat")
-	) -> String {
+	static func formatBitcoin(msat: Int64, bitcoinUnit: BitcoinUnit) -> FormattedAmount {
 		
 		let targetAmount: Double
-		switch target {
-		case .satoshi      : targetAmount = msat.doubleValue /           1_000.0
-		case .bits         : targetAmount = msat.doubleValue /         100_000.0
-		case .millibitcoin : targetAmount = msat.doubleValue /     100_000_000.0
-		default/*.bitcoin*/: targetAmount = msat.doubleValue / 100_000_000_000.0
+		switch bitcoinUnit {
+			case .satoshi      : targetAmount = Double(msat) /           1_000.0
+			case .bits         : targetAmount = Double(msat) /         100_000.0
+			case .millibitcoin : targetAmount = Double(msat) /     100_000_000.0
+			default/*.bitcoin*/: targetAmount = Double(msat) / 100_000_000_000.0
 		}
 		
 		let formatter = NumberFormatter()
 		formatter.numberStyle = .decimal
 		formatter.usesGroupingSeparator = true // thousands separator (US="10,000", FR="10 000")
 		
-		switch target {
+		switch bitcoinUnit {
 			case .satoshi      : formatter.maximumFractionDigits = 0
 			case .bits         : formatter.maximumFractionDigits = 2
 			case .millibitcoin : formatter.maximumFractionDigits = 5
@@ -52,11 +96,12 @@ class Utils {
 		
 		formatter.roundingMode = .floor
 		
-		let amountStr = formatter.string(from: NSNumber(value: targetAmount)) ?? targetAmount.description
-		if includeSuffix {
-			return "\(amountStr) \(target.abbrev)"
-		} else {
-			return amountStr
-		}
+		let digits = formatter.string(from: NSNumber(value: targetAmount)) ?? targetAmount.description
+		
+		return FormattedAmount(
+			digits: digits,
+			type: bitcoinUnit.abbrev,
+			decimalSeparator: formatter.decimalSeparator
+		)
 	}
 }
