@@ -147,23 +147,58 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val walletManager by lazy { WalletManager(appDB) }
     private val appHistoryManager by lazy { AppHistoryManager(appDB, peer) }
-    private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, httpClient, chain, loggerFactory) }
+    private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
+
+    val eventBus by lazy { EventBus(loggerFactory, ) }
+    val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient, eventBus) }
 
     fun start() {
-        AppConnectionsDaemon(appConfigurationManager, walletManager, networkMonitor, electrumClient, acinqNodeUri, loggerFactory) { peer }
+        AppConnectionsDaemon(
+            appConfigurationManager,
+            walletManager,
+            networkMonitor,
+            electrumClient,
+            acinqNodeUri,
+            loggerFactory
+        ) {
+            // initialize lazy variables
+            currencyManager
+            peer
+        }
     }
 
     val controllers : ControllerFactory = object : ControllerFactory {
-        override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
-        override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
-        override fun home(): HomeController = AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
-        override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peer)
-        override fun scan(): ScanController = AppScanController(loggerFactory, peer)
-        override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)
-        override fun configuration(): ConfigurationController = AppConfigurationController(loggerFactory, walletManager)
-        override fun displayConfiguration(): DisplayConfigurationController = AppDisplayConfigurationController(loggerFactory, appConfigurationManager)
-        override fun electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
-        override fun channelsConfiguration(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peer, appConfigurationManager, chain)
-        override fun recoveryPhraseConfiguration(): RecoveryPhraseConfigurationController = AppRecoveryPhraseConfigurationController(loggerFactory, walletManager)
+        override fun content(): ContentController =
+            AppContentController(loggerFactory, walletManager)
+
+        override fun initialization(): InitializationController =
+            AppInitController(loggerFactory, walletManager)
+
+        override fun home(): HomeController =
+            AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
+
+        override fun receive(): ReceiveController =
+            AppReceiveController(loggerFactory, peer)
+
+        override fun scan(): ScanController =
+            AppScanController(loggerFactory, peer)
+
+        override fun restoreWallet(): RestoreWalletController =
+            AppRestoreWalletController(loggerFactory, walletManager)
+
+        override fun configuration(): ConfigurationController =
+            AppConfigurationController(loggerFactory, walletManager)
+
+        override fun displayConfiguration(): DisplayConfigurationController =
+            AppDisplayConfigurationController(loggerFactory, appConfigurationManager)
+
+        override fun electrumConfiguration(): ElectrumConfigurationController =
+            AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
+
+        override fun channelsConfiguration(): ChannelsConfigurationController =
+            AppChannelsConfigurationController(loggerFactory, peer, chain)
+
+        override fun recoveryPhraseConfiguration(): RecoveryPhraseConfigurationController =
+            AppRecoveryPhraseConfigurationController(loggerFactory, walletManager)
     }
 }
