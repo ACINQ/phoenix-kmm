@@ -18,6 +18,39 @@ enum CurrencyType: String, CaseIterable {
 
 extension FiatCurrency {
 	
+	/// Returns the short version of the label.
+	/// For example: "AUD", "BRL"
+	///
+	var shortLabel: String {
+		
+		if let idx0 = label.firstIndex(of: "("),
+		   let idx1 = label.firstIndex(of: ")"),
+		   idx0 < idx1
+		{
+			let range = label.index(after: idx0)..<idx1
+			return String(label[range])
+		}
+		else {
+			return label
+		}
+	}
+	
+	/// Returns the long version of the label.
+	/// For example: "Australian Dollar", "Brazilian Real"
+	///
+	var longLabel: String {
+		
+		if let idx = label.firstIndex(of: ")") {
+			
+			let range = label.index(after: idx)..<label.endIndex
+			let substr = String(label[range])
+			
+			return substr.trimmingCharacters(in: .whitespaces)
+		} else {
+			return label
+		}
+	}
+	
 	static func parse(_ str: String) -> FiatCurrency? {
 		for value in FiatCurrency.default().values {
 			if str == value.label {
@@ -36,23 +69,12 @@ extension FiatCurrency {
 		// - "USD"
 		// - "JPY"
 		
-		for value in FiatCurrency.default().values {
+		for fiat in FiatCurrency.default().values {
 			
-			let label = value.label
-			// FiatCurrency.label examples:
-			// - "(AUD) Australian Dollar"
-			// - "(BRL) Brazilian Real"
+			let fiatCode = fiat.shortLabel // e.g. "AUD", "BRL"
 			
-			if let idx0 = label.firstIndex(of: "("),
-			   let idx1 = label.firstIndex(of: ")"),
-			   idx0 < idx1
-			{
-				let range = label.index(after: idx0)..<idx1
-				let valueCode = String(label[range]) // e.g. "AUD", "BRL"
-				
-				if currencyCode.caseInsensitiveCompare(valueCode) == .orderedSame {
-					return value
-				}
+			if currencyCode.caseInsensitiveCompare(fiatCode) == .orderedSame {
+				return fiat
 			}
 		}
 		
@@ -149,7 +171,10 @@ class CurrencyPrefs: ObservableObject {
 	@Published var fiatCurrency: FiatCurrency
 	@Published var bitcoinUnit: BitcoinUnit
 	
+	@Published var fiatExchangeRates: [BitcoinPriceRate] = []
+	
 	private var cancellables = Set<AnyCancellable>()
+	private var unsubscribe: (() -> Void)? = nil
 
 	init() {
 		currencyType = Prefs.shared.currencyType
@@ -167,6 +192,28 @@ class CurrencyPrefs: ObservableObject {
 		Prefs.shared.bitcoinUnitPublisher.sink {[weak self](newValue: BitcoinUnit) in
 			self?.bitcoinUnit = newValue
 		}.store(in: &cancellables)
+		
+		let business = PhoenixApplicationDelegate.get().business
+		let refreshFiatExchangeRates = {[weak self] in
+			print("refreshFiatExchangeRates")
+
+			let rates = business.currencyManager.getBitcoinRates()
+			self?.fiatExchangeRates = rates
+		}
+
+		refreshFiatExchangeRates()
+		unsubscribe = business.eventBus.subscribe {(event: Event) in
+			print("EventBus notification: \(event)")
+
+			if let _ = event as? FiatExchangeRatesUpdated {
+				print("FiatExchangeRatesUpdated")
+				refreshFiatExchangeRates()
+			}
+		}
+	}
+	
+	deinit {
+		unsubscribe?()
 	}
 	
 	func toggleCurrencyType() -> Void {

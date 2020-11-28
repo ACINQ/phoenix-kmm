@@ -60,6 +60,11 @@ struct FormattedAmount {
 
 class Utils {
 	
+	private static var Millisatoshis_Per_Satoshi      =           1_000.0
+	private static var Millisatoshis_Per_Bit          =         100_000.0
+	private static var Millisatoshis_Per_Millibitcoin =     100_000_000.0
+	private static var Millisatoshis_Per_Bitcoin      = 100_000_000_000.0
+	
 	static func format(_ currencyPrefs: CurrencyPrefs, sat: Int64) -> FormattedAmount {
 		return format(currencyPrefs, msat: (sat * 1_000))
 	}
@@ -69,7 +74,20 @@ class Utils {
 		if currencyPrefs.currencyType == .bitcoin {
 			return formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
 		} else {
-			return FormattedAmount(digits: "19.42", type: "USD", decimalSeparator: ".")
+			let selectedFiat = currencyPrefs.fiatCurrency
+			let exchangeRate = currencyPrefs.fiatExchangeRates.first { rate -> Bool in
+				return (rate.fiatCurrency == selectedFiat)
+			}
+			
+			if let exchangeRate = exchangeRate {
+				return formatFiat(msat: msat, exchangeRate: exchangeRate)
+			} else {
+				return FormattedAmount(
+					digits: "?.??",
+					type: selectedFiat.shortLabel,
+					decimalSeparator: NumberFormatter().currencyDecimalSeparator
+				)
+			}
 		}
 	}
 	
@@ -77,10 +95,10 @@ class Utils {
 		
 		let targetAmount: Double
 		switch bitcoinUnit {
-			case .satoshi      : targetAmount = Double(msat) /           1_000.0
-			case .bits         : targetAmount = Double(msat) /         100_000.0
-			case .millibitcoin : targetAmount = Double(msat) /     100_000_000.0
-			default/*.bitcoin*/: targetAmount = Double(msat) / 100_000_000_000.0
+			case .satoshi      : targetAmount = Double(msat) / Millisatoshis_Per_Satoshi
+			case .bits         : targetAmount = Double(msat) / Millisatoshis_Per_Bit
+			case .millibitcoin : targetAmount = Double(msat) / Millisatoshis_Per_Millibitcoin
+			default/*.bitcoin*/: targetAmount = Double(msat) / Millisatoshis_Per_Bitcoin
 		}
 		
 		let formatter = NumberFormatter()
@@ -102,6 +120,40 @@ class Utils {
 			digits: digits,
 			type: bitcoinUnit.abbrev,
 			decimalSeparator: formatter.decimalSeparator
+		)
+	}
+	
+	static func formatFiat(msat: Int64, exchangeRate: BitcoinPriceRate) -> FormattedAmount {
+		
+		// exchangeRate.fiatCurrency: FiatCurrency { get }
+		// exchangeRate.price: Double { get }
+		//
+		// exchangeRate.price => value of 1.0 BTC in fiat
+		
+		let btc = Double(msat) / Millisatoshis_Per_Bitcoin
+		let fiat = btc * exchangeRate.price
+		
+		let formatter = NumberFormatter()
+		formatter.numberStyle = .currency
+		
+		var digits = formatter.string(from: NSNumber(value: fiat)) ?? fiat.description
+		
+		// digits has the currencySymbol embedded in it:
+		// - "$1,234.57"
+		// - "1 234,57 €"
+		// - "￥1,234.57"
+		//
+		// So we need to trim that, and any leftover whitespace
+		
+		if let range = digits.range(of: formatter.currencySymbol) {
+			digits.removeSubrange(range)
+		}
+		digits = digits.trimmingCharacters(in: .whitespaces) // removes from only the ends
+		
+		return FormattedAmount(
+			digits: digits,
+			type: exchangeRate.fiatCurrency.shortLabel,
+			decimalSeparator: formatter.currencyDecimalSeparator
 		)
 	}
 }
