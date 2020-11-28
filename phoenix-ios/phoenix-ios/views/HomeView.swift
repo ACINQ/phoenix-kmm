@@ -214,53 +214,69 @@ struct HomeView : View {
         }
     }
 
-    struct TransactionCell : View {
+	struct TransactionCell : View {
 
-        let transaction: PhoenixShared.Transaction
+		let transaction: PhoenixShared.Transaction
+		
+		@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
-        var body: some View {
-            HStack {
-                switch (transaction.status) {
-                case .success:
-                    Image("payment_holder_def_success")
-                            .padding(4)
-                            .background(
-                                    RoundedRectangle(cornerRadius: .infinity)
-                                            .fill(Color.appHorizon)
-                            )
-                case .pending:
-                    Image("payment_holder_def_pending")
-                            .padding(4)
-                case .failure:
-                    Image("payment_holder_def_failed")
-                            .padding(4)
-                default: EmptyView()
-                }
-                VStack(alignment: .leading) {
-                    Text(transaction.desc)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .foregroundColor(.appDark)
-                    Text(transaction.timestamp.formatDateMS())
-                            .font(.caption)
-                            .foregroundColor(.gray)
-                }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding([.leading, .trailing], 6)
-                if (transaction.status != .failure) {
-                    HStack {
-                        Text((transaction.amountSat >= 0 ? "+" : "") + Int64((Double(transaction.amountSat) / 1000.0).rounded()).formatNumber())
-                                .foregroundColor(transaction.amountSat >= 0 ? .appGreen : .appRed)
-                                + Text(" sat")
-                                .font(.caption)
-                                .foregroundColor(.gray)
-                    }
-                }
-            }
-                    .padding([.top, .bottom], 14)
-                    .padding([.leading, .trailing], 12)
-        }
-
+		var body: some View {
+			HStack {
+				switch (transaction.status) {
+				case .success:
+					Image("payment_holder_def_success")
+						.padding(4)
+						.background(
+							RoundedRectangle(cornerRadius: .infinity)
+								.fill(Color.appHorizon)
+						)
+				case .pending:
+					Image("payment_holder_def_pending")
+						.padding(4)
+				case .failure:
+					Image("payment_holder_def_failed")
+						.padding(4)
+				default: EmptyView()
+				}
+                
+				VStack(alignment: .leading) {
+					Text(transaction.desc)
+						.lineLimit(1)
+						.truncationMode(.tail)
+						.foregroundColor(.appDark)
+					Text(transaction.timestamp.formatDateMS())
+						.font(.caption)
+						.foregroundColor(.gray)
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding([.leading, .trailing], 6)
+				
+                if transaction.status != .failure {
+					HStack(spacing: 0) {
+						
+						// transaction.amountSat is actually in msat !
+						// There is a pending PR that contains a fix for this bug.
+						// I'm going to try to get it merged independently of the PR soon.
+						//
+						let amount = Utils.format(currencyPrefs, msat: transaction.amountSat)
+						let isNegative = transaction.amountSat < 0
+						
+						Text(isNegative ? "" : "+")
+							.foregroundColor(isNegative ? .appRed : .appGreen)
+							.padding(.trailing, 1)
+						
+						Text(amount.digits)
+							.foregroundColor(isNegative ? .appRed : .appGreen)
+							
+						Text(" " + amount.type)
+							.font(.caption)
+							.foregroundColor(.gray)
+					}
+				}
+			}
+			.padding([.top, .bottom], 14)
+			.padding([.leading, .trailing], 12)
+		}
     }
 
     struct BottomBar : View {
