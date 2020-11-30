@@ -110,6 +110,7 @@ class TransactionView_Previews : PreviewProvider {
 		//	transaction: mockReceiveTransaction,
 			close: {}
 		)
+		.environmentObject(CurrencyPrefs.mockEUR())
     }
 
     #if DEBUG

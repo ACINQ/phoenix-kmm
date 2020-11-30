@@ -212,6 +212,20 @@ class CurrencyPrefs: ObservableObject {
 		}
 	}
 	
+	private init(
+		currencyType: CurrencyType,
+		fiatCurrency: FiatCurrency,
+		bitcoinUnit: BitcoinUnit,
+		exchangeRate: Double
+	) {
+		self.currencyType = currencyType
+		self.fiatCurrency = fiatCurrency
+		self.bitcoinUnit = bitcoinUnit
+		
+		let exchangeRate = BitcoinPriceRate(fiatCurrency: fiatCurrency, price: exchangeRate)
+		fiatExchangeRates.append(exchangeRate)
+	}
+	
 	deinit {
 		unsubscribe?()
 	}
@@ -223,5 +237,13 @@ class CurrencyPrefs: ObservableObject {
 		} else {
 			currencyType = .fiat
 		}
+	}
+	
+	static func mockUSD() -> CurrencyPrefs {
+		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .usd, bitcoinUnit: .satoshi, exchangeRate: 20_000.00)
+	}
+	
+	static func mockEUR() -> CurrencyPrefs {
+		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .usd, bitcoinUnit: .satoshi, exchangeRate: 17_000.00)
 	}
 }

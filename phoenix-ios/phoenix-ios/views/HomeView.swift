@@ -356,7 +356,8 @@ class HomeView_Previews : PreviewProvider {
 
     static var previews: some View {
         mockView(HomeView())
-                .previewDevice("iPhone 11")
+			.environmentObject(CurrencyPrefs.mockEUR())
+            .previewDevice("iPhone 11")
     }
 
     #if DEBUG
