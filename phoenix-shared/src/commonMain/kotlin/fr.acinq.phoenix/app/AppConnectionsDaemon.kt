@@ -34,7 +34,7 @@ class AppConnectionsDaemon(
     private val electrumConnectionOrder = Channel<ConnectionOrder>()
     private val peerConnectionOrder = Channel<ConnectionOrder>()
 
-    private var peerConnectionJob :Job? = null
+    private var peerConnectionJob: Job? = null
     private var electrumConnectionJob: Job? = null
     private var networkMonitorJob: Job? = null
 
@@ -80,7 +80,7 @@ class AppConnectionsDaemon(
         launch {
             peerConnectionOrder.consumeEach {
                 when {
-                    it == ConnectionOrder.CONNECT  && networkStatus != Connection.CLOSED -> {
+                    it == ConnectionOrder.CONNECT && networkStatus != Connection.CLOSED -> {
                         peerConnectionJob = connectionLoop("Peer", getPeer().connectionState) {
                             getPeer().connect(acinqNodeUri.host, acinqNodeUri.port)
                         }
@@ -105,12 +105,14 @@ class AppConnectionsDaemon(
             if (networkStatus == it) return@consumeEach
             logger.info { "New internet status: $it" }
 
-            when(it) {
+            when (it) {
                 Connection.CLOSED -> {
+                    logger.info { "lost internet connection, closing peer and electrum connections" }
                     peerConnectionOrder.send(ConnectionOrder.CLOSE)
                     electrumConnectionOrder.send(ConnectionOrder.CLOSE)
                 }
                 else -> {
+                    logger.info { "got internet connection, connecting to peer and electrum" }
                     peerConnectionOrder.send(ConnectionOrder.CONNECT)
                     electrumConnectionOrder.send(ConnectionOrder.CONNECT)
                 }
@@ -127,7 +129,7 @@ class AppConnectionsDaemon(
 
             if (it == Connection.CLOSED) {
                 logger.verbose { "Wait for $retryDelay before retrying connection on $name" }
-                delay(retryDelay) ; retryDelay = increaseDelay(retryDelay)
+                delay(retryDelay); retryDelay = increaseDelay(retryDelay)
                 connect()
             } else if (it == Connection.ESTABLISHED) {
                 retryDelay = 1.seconds

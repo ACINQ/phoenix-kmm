@@ -54,15 +54,20 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         }
 
         val keyManager = LocalKeyManager(wallet.seed.toByteVector32(), genesisBlock.hash)
-        newLogger(loggerFactory).info { "NodeId: ${keyManager.nodeId}" }
+        newLogger(loggerFactory).info { "node_id=${keyManager.nodeId}" }
 
         val params = NodeParams(
             keyManager = keyManager,
             alias = "alice",
             features = Features(
                 setOf(
-                    ActivatedFeature(Feature.OptionDataLossProtect, FeatureSupport.Optional),
-                    ActivatedFeature(Feature.VariableLengthOnion, FeatureSupport.Optional)
+                    ActivatedFeature(Feature.OptionDataLossProtect, FeatureSupport.Mandatory),
+                    ActivatedFeature(Feature.VariableLengthOnion, FeatureSupport.Optional),
+                    ActivatedFeature(Feature.PaymentSecret, FeatureSupport.Optional),
+                    ActivatedFeature(Feature.BasicMultiPartPayment, FeatureSupport.Optional),
+                    ActivatedFeature(Feature.Wumbo, FeatureSupport.Optional),
+                    ActivatedFeature(Feature.StaticRemoteKey, FeatureSupport.Optional),
+                    ActivatedFeature(Feature.TrampolinePayment, FeatureSupport.Optional),
                 )
             ),
             dustLimit = 100.sat,
@@ -125,10 +130,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
     private val channelsDB by lazy { AppChannelsDB(dbFactory) }
 
-    // RegTest
-//    val acinqNodeUri = NodeUri(PublicKey.fromHex("039dc0e0b1d25905e44fdf6f8e89755a5e219685840d0bc1d28d3308f9628a3585"), "localhost", 48001)
-//    val chain = Chain.REGTEST
-
     // TestNet
     private val acinqNodeUri = NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735)
     private val chain = Chain.TESTNET
@@ -140,7 +141,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val peer by lazy { buildPeer() }
 
-    private val walletManager by lazy { WalletManager(appDB) }
+    val walletManager by lazy { WalletManager(appDB) }
     private val appHistoryManager by lazy { AppHistoryManager(appDB, peer) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, httpClient, chain, loggerFactory) }
 

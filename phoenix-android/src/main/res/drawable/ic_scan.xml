@@ -1,6 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?>
 <!--
-  ~ Copyright 2019 ACINQ SAS
+  ~ Copyright 2020 ACINQ SAS
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -15,11 +14,12 @@
   ~ limitations under the License.
   -->
 
-<resources>
-    <color name="purple">#5741D9</color>
-    <color name="applegreen">#50B338</color>
-    <color name="green">#1AC486</color>
-    <color name="horizon">#91B4D1</color>
-    <color name="gray900">#2b313e</color>
-    <color name="white">#ffffff</color>
-</resources>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="@dimen/icon_size"
+    android:height="@dimen/icon_size"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:fillColor="@color/gray900"
+        android:pathData="M11,14v11h5v-9h9v-5H14a3,3 0,0 0,-3 3zM14,53h11v-5h-9v-9h-5v11a3,3 0,0 0,3 3zM53,49.998V39h-5v9h-9v5h11c1.657,0 3,-1.345 3,-3.002zM49.997,11H39v5h9v9h5V14c0,-1.657 -1.346,-3 -3.003,-3z" />
+</vector>

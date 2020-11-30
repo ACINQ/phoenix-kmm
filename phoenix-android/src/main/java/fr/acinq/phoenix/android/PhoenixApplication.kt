@@ -8,10 +8,4 @@ class PhoenixApplication : Application() {
 
     val business by lazy { PhoenixBusiness(PlatformContext(this)) }
 
-    override fun onCreate() {
-        super.onCreate()
-
-        business.start()
-    }
-
 }

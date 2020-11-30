@@ -2,12 +2,18 @@ package fr.acinq.phoenix.android.mvi
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.viewinterop.viewModel
+import androidx.navigation.NavController
 import fr.acinq.phoenix.android.utils.isPreview
+import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.ControllerFactory
 import fr.acinq.phoenix.ctrl.MVI
 
-
-@Composable fun <M : MVI.Model, I : MVI.Intent> MVIView(getController: ControllerFactory.() -> MVI.Controller<M, I>, children: @Composable (model: M, postIntent: (I) -> Unit) -> Unit) {
+@Composable
+fun <M : MVI.Model, I : MVI.Intent> MVIView(
+    getController: ControllerFactory.() -> MVI.Controller<M, I>,
+    children: @Composable (model: M, postIntent: (I) -> Unit) -> Unit
+) {
+    val logger = logger()
     // Gets the MVI controller or create it if it does not already exist.
     // Note that the controller is stored inside a ViewModel, which means that it will survive configuration changes activity restarts.
     val controller = if (!isPreview) {

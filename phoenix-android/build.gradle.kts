@@ -3,9 +3,12 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     id("com.android.application")
     kotlin("android")
+    id("kotlin-android")
 }
 
 val composeVersion = "1.0.0-alpha07"
+val navComposeVersion = "1.0.0-alpha02"
+val zxingVersion = "4.1.0"
 
 android {
     compileSdkVersion(30)
@@ -57,17 +60,19 @@ kotlin {
 dependencies {
     implementation(project(":phoenix-shared"))
 
+    implementation("com.google.android.material:material:1.2.1")
     implementation("androidx.core:core-ktx:1.3.2")
+    implementation("androidx.appcompat:appcompat:1.2.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.3.0-beta01")
 
-    implementation("androidx.appcompat:appcompat:1.2.0")
-
-    implementation("com.google.android.material:material:1.2.1")
-
+    // -- jetpack compose
     implementation("androidx.compose.ui:ui:$composeVersion")
     implementation("androidx.compose.material:material:$composeVersion")
-
     implementation("androidx.ui:ui-tooling:$composeVersion")
+    implementation("androidx.navigation:navigation-compose:$navComposeVersion")
+
+    // -- scanner zxing
+    implementation("com.journeyapps:zxing-android-embedded:$zxingVersion")
 
     testImplementation("junit:junit:4.13.1")
     androidTestImplementation("androidx.test.ext:junit:1.1.2")

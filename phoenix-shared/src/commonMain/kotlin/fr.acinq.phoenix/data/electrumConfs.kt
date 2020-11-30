@@ -25,8 +25,8 @@ val electrumMainnetConfigurations = listOf(
     ElectrumConf(host = "electrum.qtornado.com"),
     ElectrumConf(host = "fortress.qtornado.com"),
     ElectrumConf(host = "enode.duckdns.org"),
-    ElectrumConf(host = "bitcoin.dragon.zone",  sslPort = 50004, tcpPort = 50003),
-    ElectrumConf(host = "ecdsa.net",  sslPort = 110),
+    ElectrumConf(host = "bitcoin.dragon.zone", sslPort = 50004, tcpPort = 50003),
+    ElectrumConf(host = "ecdsa.net", sslPort = 110),
     ElectrumConf(host = "e2.keff.org"),
     ElectrumConf(host = "electrum.hodlister.co"),
     ElectrumConf(host = "electrum3.hodlister.co"),
@@ -42,7 +42,7 @@ val electrumTestnetConfigurations = listOf(
 //    ElectrumConf(host = "testnet1.bauerj.eu"),
 //    ElectrumConf(host = "tn.not.fyi", sslPort= 55002, tcpPort=55001),
 //    ElectrumConf(host = "bitcoin.cluelessperson.com", sslPort= 51002, tcpPort=51001),
-    ElectrumConf(host = "testnet1.electrum.acinq.co", sslPort= 51002, tcpPort=51001),
+    ElectrumConf(host = "testnet1.electrum.acinq.co", sslPort = 51002, tcpPort = 51001),
 )
 
 expect fun platformElectrumRegtestConf(): ElectrumConf

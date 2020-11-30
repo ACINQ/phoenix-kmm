@@ -9,6 +9,7 @@ object RestoreWallet {
         object Ready : Model()
         data class Wordlist(val words: List<String>) : Model()
         object InvalidSeed : Model()
+        object CreatingWallet : Model()
     }
 
     sealed class Intent : MVI.Intent() {
