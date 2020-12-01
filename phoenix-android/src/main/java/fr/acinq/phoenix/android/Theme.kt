@@ -90,8 +90,8 @@ val typography = Typography(
 
 val shapes = Shapes(
     small = RoundedCornerShape(4.dp),
-    medium = RoundedCornerShape(4.dp),
-    large = RoundedCornerShape(0.dp)
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp)
 )
 
 @Composable
@@ -109,3 +109,6 @@ fun errorColor(): Color = if (isSystemInDarkTheme()) red500 else red300
 
 @Composable
 fun successColor(): Color = if (isSystemInDarkTheme()) green else applegreen
+
+@Composable
+fun whiteLowOp(): Color = Color(0x33ffffff)

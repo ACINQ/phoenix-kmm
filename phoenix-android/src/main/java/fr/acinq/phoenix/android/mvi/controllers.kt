@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Providers
@@ -94,10 +95,10 @@ val application: PhoenixApplication
     get() = ContextAmbient.current.applicationContext as? PhoenixApplication
         ?: error("Application is not of type PhoenixApplication. Are you using appView in preview?")
 
+@ExperimentalMaterialApi
 @Composable
 fun AppView(wallet: WalletState) {
     val navController = rememberNavController()
-
     Providers(
         ControllerFactoryAmbient provides application.business.controllers,
         NavControllerAmbient provides navController,
@@ -155,11 +156,7 @@ private fun cleanUpInvoice(input: String): String {
 }
 
 
-fun copyToClipboard(context: Context, data: String, dataLabel: String = "") {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText(dataLabel, data))
-    Toast.makeText(context, R.string.utils_copied, Toast.LENGTH_SHORT).show()
-}
+
 
 @Suppress("UNREACHABLE_CODE")
 val MockControllers = object : ControllerFactory {

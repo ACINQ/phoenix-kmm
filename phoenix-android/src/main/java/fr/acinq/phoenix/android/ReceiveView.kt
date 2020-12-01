@@ -9,6 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ContextAmbient
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import copyToClipboard
 import fr.acinq.phoenix.android.mvi.*
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.Receive

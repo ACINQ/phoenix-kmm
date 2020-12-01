@@ -40,6 +40,8 @@ android {
 
     buildFeatures {
         compose = true
+        viewBinding = true
+        dataBinding = true
     }
 
     composeOptions {
@@ -67,8 +69,11 @@ dependencies {
 
     // -- jetpack compose
     implementation("androidx.compose.ui:ui:$composeVersion")
-    implementation("androidx.compose.material:material:$composeVersion")
+    implementation("androidx.compose.ui:ui-viewbinding:$composeVersion")
+    implementation("androidx.compose.runtime:runtime-livedata:$composeVersion")
     implementation("androidx.ui:ui-tooling:$composeVersion")
+    implementation("androidx.compose.material:material:$composeVersion")
+    // -- jetpack compose: navigation
     implementation("androidx.navigation:navigation-compose:$navComposeVersion")
 
     // -- scanner zxing
