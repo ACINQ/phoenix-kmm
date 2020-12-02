@@ -9,6 +9,9 @@ buildscript {
         classpath("com.android.tools.build:gradle:$androidVersion")
 
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.10")
+
+        val sqldelightVersion = "1.4.4"
+        classpath("com.squareup.sqldelight:gradle-plugin:$sqldelightVersion")
     }
 }
 

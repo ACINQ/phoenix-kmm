@@ -26,6 +26,8 @@ import fr.acinq.phoenix.ctrl.config.DisplayConfigurationController
 import fr.acinq.phoenix.ctrl.config.ElectrumConfigurationController
 import fr.acinq.phoenix.ctrl.config.RecoveryPhraseConfigurationController
 import fr.acinq.phoenix.data.Chain
+import fr.acinq.phoenix.db.SqliteChannelsDb
+import fr.acinq.phoenix.db.createChannelsDbDriver
 import fr.acinq.phoenix.utils.*
 import io.ktor.client.*
 import io.ktor.client.features.json.JsonFeature
@@ -108,7 +110,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             enableTrampolinePayment = true
         )
 
-        val peer = Peer(tcpSocketBuilder, params, acinqNodeUri.id, electrumWatcher, channelsDB, MainScope())
+        val peer = Peer(tcpSocketBuilder, params, acinqNodeUri.id, electrumWatcher, channelsDb, MainScope())
 
         return peer
     }
@@ -128,7 +130,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
     private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
-    private val channelsDB by lazy { AppChannelsDB(dbFactory) }
+    private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) }
 
     // RegTest
 //    val acinqNodeUri = NodeUri(PublicKey.fromHex("039dc0e0b1d25905e44fdf6f8e89755a5e219685840d0bc1d28d3308f9628a3585"), "localhost", 48001)
