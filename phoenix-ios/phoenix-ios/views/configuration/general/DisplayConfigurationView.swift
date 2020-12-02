@@ -17,7 +17,7 @@ struct DisplayConfigurationView: View {
 					) {
 						ForEach(0 ..< FiatCurrency.default().values.count) {
 							let fiatCurrency = FiatCurrency.default().values[$0]
-							Text(fiatCurrency.label).tag(fiatCurrency)
+							fiatCurrencyText(fiatCurrency).tag(fiatCurrency)
 						}
 					}
 					
@@ -30,8 +30,8 @@ struct DisplayConfigurationView: View {
 						), label: Text("Bitcoin unit")
 					) {
 						ForEach(0 ..< BitcoinUnit.default().values.count) {
-							let unit = BitcoinUnit.default().values[$0]
-							Text(unit.label).tag(unit)
+							let bitcoinUnit = BitcoinUnit.default().values[$0]
+							bitcoinUnitText(bitcoinUnit).tag(bitcoinUnit)
 						}
 					}
                 }
@@ -59,6 +59,26 @@ struct DisplayConfigurationView: View {
             Spacer()
         }
     }
+	
+	@ViewBuilder func fiatCurrencyText(_ fiatCurrency: FiatCurrency) -> some View {
+		
+		Text(fiatCurrency.shortLabel) +
+		Text(" (\(fiatCurrency.longLabel))")
+			.font(.footnote)
+			.foregroundColor(Color.secondary)
+	}
+	
+	@ViewBuilder func bitcoinUnitText(_ bitcoinUnit: BitcoinUnit) -> some View {
+		
+		if bitcoinUnit.explanation.count == 0 {
+			Text(bitcoinUnit.label)
+		} else {
+			Text(bitcoinUnit.label) +
+			Text(" (\(bitcoinUnit.explanation))")
+				.font(.footnote)
+				.foregroundColor(Color.secondary)
+		}
+	}
 }
 
 class DisplayConfigurationView_Previews: PreviewProvider {

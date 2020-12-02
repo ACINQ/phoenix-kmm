@@ -6,9 +6,13 @@ enum CurrencyType: String, CaseIterable {
 	case fiat
 	case bitcoin
 	
-	static func parse(_ str: String) -> CurrencyType? {
+	func serialize() -> String {
+		return self.rawValue
+	}
+	
+	static func deserialize(_ str: String) -> CurrencyType? {
 		for value in CurrencyType.allCases {
-			if str == value.rawValue {
+			if str == value.serialize() {
 				return value
 			}
 		}
@@ -18,42 +22,13 @@ enum CurrencyType: String, CaseIterable {
 
 extension FiatCurrency {
 	
-	/// Returns the short version of the label.
-	/// For example: "AUD", "BRL"
-	///
-	var shortLabel: String {
-		
-		if let idx0 = label.firstIndex(of: "("),
-		   let idx1 = label.firstIndex(of: ")"),
-		   idx0 < idx1
-		{
-			let range = label.index(after: idx0)..<idx1
-			return String(label[range])
-		}
-		else {
-			return label
-		}
+	func serialize() -> String {
+		return self.shortLabel
 	}
 	
-	/// Returns the long version of the label.
-	/// For example: "Australian Dollar", "Brazilian Real"
-	///
-	var longLabel: String {
-		
-		if let idx = label.firstIndex(of: ")") {
-			
-			let range = label.index(after: idx)..<label.endIndex
-			let substr = String(label[range])
-			
-			return substr.trimmingCharacters(in: .whitespaces)
-		} else {
-			return label
-		}
-	}
-	
-	static func parse(_ str: String) -> FiatCurrency? {
+	static func deserialize(_ str: String) -> FiatCurrency? {
 		for value in FiatCurrency.default().values {
-			if str == value.label {
+			if str == value.serialize() {
 				return value
 			}
 		}
@@ -84,9 +59,13 @@ extension FiatCurrency {
 
 extension BitcoinUnit {
 	
-	static func parse(_ str: String) -> BitcoinUnit? {
+	func serialize() -> String {
+		return self.abbrev
+	}
+	
+	static func deserialize(_ str: String) -> BitcoinUnit? {
 		for value in BitcoinUnit.default().values {
-			if str == value.label {
+			if str == value.serialize() {
 				return value
 			}
 		}
@@ -115,13 +94,13 @@ class Prefs {
 		get {
 			var saved: CurrencyType? = nil
 			if let str = UserDefaults.standard.string(forKey: UserDefaultsKey.currencyType.rawValue) {
-				saved = CurrencyType.parse(str)
+				saved = CurrencyType.deserialize(str)
 			}
 			return saved ?? CurrencyType.bitcoin
 		}
 		set {
-			UserDefaults.standard.set( newValue.rawValue,
-			                   forKey: UserDefaultsKey.currencyType.rawValue)
+			let str = newValue.serialize()
+			UserDefaults.standard.set(str, forKey: UserDefaultsKey.currencyType.rawValue)
 			currencyTypePublisher.send(newValue)
 	  }
 	}
@@ -135,12 +114,13 @@ class Prefs {
 		get {
 			var saved: FiatCurrency? = nil
 			if let str = UserDefaults.standard.string(forKey: UserDefaultsKey.fiatCurrency.rawValue) {
-				saved = FiatCurrency.parse(str)
+				saved = FiatCurrency.deserialize(str)
 			}
 			return saved ?? FiatCurrency.localeDefault() ?? FiatCurrency.usd
 		}
 		set {
-			UserDefaults.standard.set( newValue.label, forKey: UserDefaultsKey.fiatCurrency.rawValue)
+			let str = newValue.serialize()
+			UserDefaults.standard.set(str, forKey: UserDefaultsKey.fiatCurrency.rawValue)
 			fiatCurrencyPublisher.send(newValue)
 	  }
 	}
@@ -154,12 +134,13 @@ class Prefs {
 		get {
 			var saved: BitcoinUnit? = nil
 			if let str = UserDefaults.standard.string(forKey: UserDefaultsKey.bitcoinUnit.rawValue) {
-				saved = BitcoinUnit.parse(str)
+				saved = BitcoinUnit.deserialize(str)
 			}
 			return saved ?? BitcoinUnit.satoshi
 		}
 		set {
-			UserDefaults.standard.set( newValue.label, forKey: UserDefaultsKey.bitcoinUnit.rawValue)
+			let str = newValue.serialize()
+			UserDefaults.standard.set(str, forKey: UserDefaultsKey.bitcoinUnit.rawValue)
 			bitcoinUnitPublisher.send(newValue)
 		}
 	}
