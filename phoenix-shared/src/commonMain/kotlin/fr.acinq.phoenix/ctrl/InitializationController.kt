@@ -5,12 +5,12 @@ typealias InitializationController = MVI.Controller<Initialization.Model, Initia
 object Initialization {
 
     sealed class Model : MVI.Model() {
-        object Initialization : Model()
-        object Creating : Model()
+        object Ready : Model()
+        data class GeneratedMnemonics(val mnemonics: List<String>) : Model()
     }
 
     sealed class Intent : MVI.Intent() {
-        object CreateWallet : Intent()
+        data class GenerateMnemonics(val seed: ByteArray) : Intent()
     }
 
 }

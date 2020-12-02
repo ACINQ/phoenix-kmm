@@ -14,27 +14,24 @@ import org.kodein.db.*
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletManager (private val appDb: DB) : CoroutineScope by MainScope() {
     private val walletUpdates = ConflatedBroadcastChannel<Wallet>()
+    private var wallet: Wallet? = null
+
     fun openWalletUpdatesSubscription(): ReceiveChannel<Wallet> = walletUpdates.openSubscription()
 
-    init {
-        appDb.on<Wallet>().register {
-            didPut {
-                launch { walletUpdates.send(it) }
-            }
-        }
-        getWallet()?.let {
-            launch { walletUpdates.send(it) }
-        }
+    fun importWallet(entropy: ByteArray): Unit {
+        val mnemonics = MnemonicCode.toMnemonics(entropy = entropy)
+        importWallet(mnemonics = mnemonics)
     }
 
-    fun createWallet(mnemonics: List<String>): Unit {
+    fun importWallet(mnemonics: List<String>): Unit {
         MnemonicCode.validate(mnemonics)
-        appDb.put(Wallet(mnemonics = mnemonics))
+        val newWallet = Wallet(mnemonics = mnemonics)
+        wallet = newWallet
+        launch { walletUpdates.send(newWallet) }
     }
 
     fun getWallet() : Wallet? {
-        val key = appDb.key<Wallet>(0)
-        return appDb[key]
+        return wallet
     }
 
 }

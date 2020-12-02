@@ -160,6 +160,12 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         }
     }
 
+    fun importWallet(mnemonics: List<String>): Unit {
+        if (walletManager.getWallet() == null) {
+            walletManager.importWallet(mnemonics)
+        }
+    }
+
     val controllers: ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController =
             AppContentController(loggerFactory, walletManager)
@@ -190,8 +196,5 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
         override fun channelsConfiguration(): ChannelsConfigurationController =
             AppChannelsConfigurationController(loggerFactory, peer, chain)
-
-        override fun recoveryPhraseConfiguration(): RecoveryPhraseConfigurationController =
-            AppRecoveryPhraseConfigurationController(loggerFactory, walletManager)
     }
 }

@@ -4,9 +4,9 @@ import fr.acinq.bitcoin.*
 import kotlinx.serialization.Serializable
 import org.kodein.db.model.orm.Metadata
 
-@Serializable
+// @DefinitelyNotSerializable_DoNotPutMeInTheDatabase_Ever
 data class Wallet(
-    // Unique ID a their is only one wallet per app
+    // Unique ID as there is only one wallet per app
     override val id: Int = 0,
     val mnemonics: List<String>) : Metadata {
 
