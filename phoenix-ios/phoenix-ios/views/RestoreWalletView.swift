@@ -168,73 +168,62 @@ struct RestoreView: View {
 			// #1   #7
 			// #2   #8
 			// ...  ...
-			HStack {
+			ForEach(0..<6, id: \.self) { idx in
 				
-				VStack {
-					ForEach(0..<6, id: \.self) { idx in
-						Text("#\(idx + 1) ")
+				let idxLeftColumn = idx
+				let idxRightColumn = idx + 6
+				
+				VStack(spacing: 2) {
+					HStack(alignment: .center, spacing: 0) {
+						
+						Text("#\(idxLeftColumn + 1) ")
 							.font(.headline)
 							.foregroundColor(.secondary)
-							.padding(.bottom, 2)
-					}
-				}
-				.padding(.trailing, 2)
-				
-				VStack(alignment: .leading) {
-					ForEach(0..<6, id: \.self) { idx in
+							.padding(.trailing, 2)
+						
 						HStack {
-							Text(mnemonic(idx))
+							Text(mnemonic(idxLeftColumn))
 								.font(.headline)
 								.frame(maxWidth: .infinity, alignment: .leading)
-								.padding(.bottom, 2)
 							
 							Button {
-								mnemonics.removeSubrange(idx..<mnemonics.count)
+								mnemonics.removeSubrange(idxLeftColumn..<mnemonics.count)
 							} label: {
 								Image("ic_cross")
 									.resizable()
 									.frame(width: 24, height: 24)
 									.foregroundColor(Color.appRed)
 							}
-							.isHidden(mnemonics.count <= idx)
+							.isHidden(mnemonics.count <= idxLeftColumn)
 						}
-					}
-				}
-				.padding(.trailing, 4) // boost spacing a wee bit
-				
-				VStack {
-					ForEach(6..<12, id: \.self) { idx in
-						Text("#\(idx + 1) ")
+						.padding(.trailing, 8)
+						
+						Text("#\(idxRightColumn + 1) ")
 							.font(.headline)
 							.foregroundColor(.secondary)
-							.padding(.bottom, 2)
-					}
-				}
-				.padding(.trailing, 2)
-				
-				VStack(alignment: .leading) {
-					ForEach(6..<12, id: \.self) { idx in
+							.padding(.trailing, 2)
+						
 						HStack {
-							Text(mnemonic(idx))
+							Text(mnemonic(idxRightColumn ))
 								.font(.headline)
 								.frame(maxWidth: .infinity, alignment: .leading)
-								.padding(.bottom, 2)
 							
 							Button {
-								mnemonics.removeSubrange(idx..<mnemonics.count)
+								mnemonics.removeSubrange(idxRightColumn..<mnemonics.count)
 							} label: {
 								Image("ic_cross")
 									.resizable()
 									.frame(width: 24, height: 24)
 									.foregroundColor(Color.appRed)
 							}
-							.isHidden(mnemonics.count <= idx)
+							.isHidden(mnemonics.count <= idxRightColumn)
 						}
-					}
-				}
-				
-			} // </HStack>
-			.padding([.leading, .trailing], 16)
+						
+					} // </HStack>
+					.padding([.leading, .trailing], 16)
+					
+				} // </VStack>
+			} // </ForEach>
 
 			if model is RestoreWallet.ModelInvalidMnemonics {
 				Text(
