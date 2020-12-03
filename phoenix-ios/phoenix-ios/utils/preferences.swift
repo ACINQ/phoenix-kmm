@@ -175,17 +175,12 @@ class CurrencyPrefs: ObservableObject {
 		}.store(in: &cancellables)
 		
 		let business = PhoenixApplicationDelegate.get().business
-		let refreshFiatExchangeRates = {[weak self] in
+		fiatExchangeRates = business.currencyManager.getBitcoinRates()
+		
+		unsubscribe = business.eventBus.subscribe {[weak self](event: Event) in
 
-			let rates = business.currencyManager.getBitcoinRates()
-			self?.fiatExchangeRates = rates
-		}
-
-		refreshFiatExchangeRates()
-		unsubscribe = business.eventBus.subscribe {(event: Event) in
-
-			if let _ = event as? FiatExchangeRatesUpdated {
-				refreshFiatExchangeRates()
+			if let event = event as? FiatExchangeRatesUpdated {
+				self?.fiatExchangeRates = event.rates
 			}
 		}
 	}

@@ -18,7 +18,7 @@ import org.kodein.log.newLogger
 import kotlin.time.ExperimentalTime
 import kotlin.time.minutes
 
-object FiatExchangeRatesUpdated : Event()
+data class FiatExchangeRatesUpdated(val rates: List<BitcoinPriceRate>) : Event()
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class, ExperimentalStdlibApi::class)
 class CurrencyManager(
@@ -79,7 +79,7 @@ class CurrencyManager(
                 }
             }
 
-            eventBus.send(FiatExchangeRatesUpdated)
+            eventBus.send(FiatExchangeRatesUpdated(exchangeRates))
             yield()
             delay(5.minutes)
         }
