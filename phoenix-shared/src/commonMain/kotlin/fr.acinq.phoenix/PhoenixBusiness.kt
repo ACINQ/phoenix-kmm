@@ -143,8 +143,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val appHistoryManager by lazy { AppHistoryManager(appDB, peer) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
-    val eventBus by lazy { EventBus(loggerFactory) }
-    val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient, eventBus) }
+    val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient) }
 
     fun start() {
         AppConnectionsDaemon(

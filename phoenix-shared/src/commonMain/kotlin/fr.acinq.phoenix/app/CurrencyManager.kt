@@ -1,6 +1,5 @@
 package fr.acinq.phoenix.app
 
-import fr.acinq.phoenix.ctrl.Event
 import fr.acinq.phoenix.ctrl.EventBus
 import fr.acinq.phoenix.data.BitcoinPriceRate
 import fr.acinq.phoenix.data.FiatCurrency
@@ -20,17 +19,19 @@ import org.kodein.log.newLogger
 import kotlin.time.ExperimentalTime
 import kotlin.time.minutes
 
-data class FiatExchangeRatesUpdated(val rates: List<BitcoinPriceRate>) : Event()
+sealed class CurrencyEvent
+data class FiatExchangeRatesUpdated(val rates: List<BitcoinPriceRate>) : CurrencyEvent()
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class, ExperimentalStdlibApi::class)
 class CurrencyManager(
     loggerFactory: LoggerFactory,
     private val appDB: DB,
-    private val httpClient: HttpClient,
-    private val eventBus: EventBus
+    private val httpClient: HttpClient
 ) : CoroutineScope by MainScope() {
 
     private val logger = newLogger(loggerFactory)
+
+    val events = EventBus<CurrencyEvent>()
 
     init {
         launchUpdateRates() // Do we need to manage cancellation ?
@@ -81,7 +82,7 @@ class CurrencyManager(
                 }
             }
 
-            eventBus.send(FiatExchangeRatesUpdated(exchangeRates))
+            events.send(FiatExchangeRatesUpdated(exchangeRates))
             yield()
             delay(5.minutes)
         }
