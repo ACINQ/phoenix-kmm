@@ -150,7 +150,7 @@ class AppConfigurationManager(
                     }
 
             appDB.execBatch {
-                logger.verbose { "Saving price rates: $exchangeRates" }
+                logger.debug { "Saving price rates: $exchangeRates" }
                 exchangeRates.forEach {
                     appDB.put(it)
                 }
