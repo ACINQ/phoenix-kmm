@@ -96,7 +96,6 @@ struct TransactionView : View {
     }
 	
 	func toggleCurrencyType() -> Void {
-		print("toggleCurrencyType()")
 		currencyPrefs.toggleCurrencyType()
 	}
 }
