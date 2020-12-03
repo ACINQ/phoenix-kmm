@@ -12,6 +12,8 @@ import kotlinx.coroutines.*
 import org.kodein.db.DB
 import org.kodein.db.execBatch
 import org.kodein.db.find
+import org.kodein.db.get
+import org.kodein.db.key
 import org.kodein.db.useModels
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
@@ -38,12 +40,12 @@ class CurrencyManager(
         return appDB.find<BitcoinPriceRate>().all().useModels { it.toList() }
     }
 
+    // Returns the exchange rate, if it exists in the database.
+    // Otherwise, returns a rate with a negative value.
     fun getBitcoinRate(fiatCurrency: FiatCurrency): BitcoinPriceRate {
 
-        // Todo: What happens here if there aren't any entries in the database ?
-        //       Does it actually crash ?!?!
-        //
-        return appDB.find<BitcoinPriceRate>().byId(fiatCurrency.name).model()
+        val key = appDB.key<BitcoinPriceRate>(fiatCurrency.name)
+        return appDB[key] ?: BitcoinPriceRate(fiatCurrency, -1.0)
     }
 
     private fun launchUpdateRates() = launch {
