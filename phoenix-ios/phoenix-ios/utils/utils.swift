@@ -136,6 +136,11 @@ class Utils {
 		let formatter = NumberFormatter()
 		formatter.numberStyle = .currency
 		
+		// Fiat amount should be rounded up.
+		// Otherwise 1 sat (or 1msat...) = $0.00 which is not really correct.
+		// It's better to display $0.01 instead.
+		formatter.roundingMode = .ceiling
+		
 		var digits = formatter.string(from: NSNumber(value: fiat)) ?? fiat.description
 		
 		// digits has the currencySymbol embedded in it:
