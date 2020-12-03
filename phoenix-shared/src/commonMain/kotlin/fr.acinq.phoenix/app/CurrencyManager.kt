@@ -1,20 +1,18 @@
 package fr.acinq.phoenix.app
 
-import fr.acinq.eclair.blockchain.electrum.ElectrumClient
-import fr.acinq.eclair.blockchain.electrum.HeaderSubscriptionResponse
-import fr.acinq.phoenix.ctrl.EventBus
 import fr.acinq.phoenix.ctrl.Event
-import fr.acinq.phoenix.data.*
+import fr.acinq.phoenix.ctrl.EventBus
+import fr.acinq.phoenix.data.BitcoinPriceRate
+import fr.acinq.phoenix.data.FiatCurrency
+import fr.acinq.phoenix.data.MxnApiResponse
+import fr.acinq.phoenix.data.PriceRate
 import io.ktor.client.*
 import io.ktor.client.request.*
-import io.ktor.utils.io.errors.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.filterIsInstance
-import org.kodein.db.*
+import org.kodein.db.DB
+import org.kodein.db.execBatch
+import org.kodein.db.find
+import org.kodein.db.useModels
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 import kotlin.time.ExperimentalTime
@@ -32,22 +30,23 @@ class CurrencyManager(
 
     private val logger = newLogger(loggerFactory)
 
-	init {
+    init {
         launchUpdateRates() // Do we need to manage cancellation ?
     }
 
-	public fun getBitcoinRates(): List<BitcoinPriceRate> {
-		return appDB.find<BitcoinPriceRate>().all().useModels { it.toList() }
-	}
-    public fun getBitcoinRate(fiatCurrency: FiatCurrency): BitcoinPriceRate {
+    fun getBitcoinRates(): List<BitcoinPriceRate> {
+        return appDB.find<BitcoinPriceRate>().all().useModels { it.toList() }
+    }
 
-		// Todo: What happens here if there aren't any entries in the database ?
-		//       Does it actually crash ?!?!
-		// 
-		return appDB.find<BitcoinPriceRate>().byId(fiatCurrency.name).model()
-	}
+    fun getBitcoinRate(fiatCurrency: FiatCurrency): BitcoinPriceRate {
 
-	private fun launchUpdateRates() = launch {
+        // Todo: What happens here if there aren't any entries in the database ?
+        //       Does it actually crash ?!?!
+        //
+        return appDB.find<BitcoinPriceRate>().byId(fiatCurrency.name).model()
+    }
+
+    private fun launchUpdateRates() = launch {
         while (isActive) {
             val priceRates = buildMap<String, Double> {
                 try {

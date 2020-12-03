@@ -1,7 +1,6 @@
 package fr.acinq.phoenix.ctrl
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
 import org.kodein.log.LoggerFactory
@@ -12,20 +11,20 @@ abstract class Event
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventBus(
     loggerFactory: LoggerFactory,
-): CoroutineScope {
+) : CoroutineScope {
 
-	private val job = Job()
+    private val job = Job()
     override val coroutineContext = MainScope().coroutineContext + job
 
-	private val logger = newLogger(loggerFactory)
+    private val logger = newLogger(loggerFactory)
 
-	private val channel = BroadcastChannel<Event>(10)
+    private val channel = BroadcastChannel<Event>(10)
 
-	suspend fun send(event: Event) {
-		channel.send(event)
+    suspend fun send(event: Event) {
+        channel.send(event)
     }
 
-	fun subscribe(onEvent: (Event) -> Unit): () -> Unit {
+    fun subscribe(onEvent: (Event) -> Unit): () -> Unit {
         val subscription = launch {
             channel.openSubscription().consumeEach { onEvent(it) }
         }
@@ -33,7 +32,7 @@ class EventBus(
         return ({ subscription.cancel() })
     }
 
-	fun stop() {
+    fun stop() {
         job.cancel()
     }
 }
