@@ -5,12 +5,16 @@ struct RestoreWalletView: View {
 
 	@State var acceptedWarning = false
 	@State var mnemonics = [String]()
+	@State var autocomplete = [String]()
 	
     var body: some View {
         MVIView({ $0.restoreWallet() },
 			onModel: { change in
 			
-				if change.newModel is RestoreWallet.ModelValidMnemonics {
+				if let model = change.newModel as? RestoreWallet.ModelFilteredWordlist {
+					autocomplete = model.words
+				}
+				else if change.newModel is RestoreWallet.ModelValidMnemonics {
 					finishAndRestoreWallet()
 				}
 				
@@ -35,8 +39,13 @@ struct RestoreWalletView: View {
 				.zIndex(1)
 				.transition(.move(edge: .bottom))
 		} else {
-			RestoreView(model: model, postIntent: postIntent, mnemonics: $mnemonics)
-				.zIndex(0)
+			RestoreView(
+				model: model,
+				postIntent: postIntent,
+				mnemonics: $mnemonics,
+				autocomplete: $autocomplete
+			)
+			.zIndex(0)
 		}
 	}
 	
@@ -112,6 +121,8 @@ struct RestoreView: View {
 	let postIntent: (RestoreWallet.Intent) -> Void
 
 	@Binding var mnemonics: [String]
+	@Binding var autocomplete: [String]
+	
 	@State var wordInput: String = ""
 	
 	var body: some View {
@@ -134,10 +145,8 @@ struct RestoreView: View {
 			// Autocomplete suggestions for mnemonics
 			ScrollView(.horizontal) {
 				LazyHStack {
-					if let model = model as? RestoreWallet.ModelFilteredWordlist,
-					   mnemonics.count < 12
-					{
-						ForEach(model.words, id: \.self) { word in
+					if autocomplete.count < 12 {
+						ForEach(autocomplete, id: \.self) { word in
 							
 							Text(word)
 								.underline()
@@ -262,6 +271,9 @@ struct RestoreView: View {
 			.padding(.bottom, 20)
 		}
 		.frame(maxHeight: .infinity)
+		.onChange(of: autocomplete) { _ in
+			onAutocompleteChanged()
+		}
 	}
 	
 	func mnemonic(_ idx: Int) -> String {
@@ -271,15 +283,60 @@ struct RestoreView: View {
 	func onInput(_ input: String) -> Void {
 		
 		// When the user hits space, we auto-accept the first mnemonic in the autocomplete list
-		if input.hasSuffix(" "),
-		   let model = model as? RestoreWallet.ModelFilteredWordlist,
-		   let acceptedWord = model.words.first
+		if maybeSelectMnemonic() {
+			return
+		}
+		
+		// Some keyboards will inject the entire word plus a space.
+		//
+		// For example, if using a sliding keyboard (e.g. SwiftKey),
+		// then after sliding from key to key, and lifting your finger,
+		// the entire word will be injected plus a space.
+		//
+		// So we need to trim the input.
+		
+		let predicate = input.trimmingCharacters(in: .whitespaces)
+		postIntent(RestoreWallet.IntentFilterWordList(predicate: predicate))
+	}
+	
+	func onAutocompleteChanged() {
+		
+		// Example flow that gets us here:
+		//
+		// - user is using fancy keyboard (e.g. SwiftKey)
+		// - user slides on keyboard to type word
+		// - the completed work is injected, plus a space: "Bacon "
+		// - onInput("Bacon ") is called, but autocomplete list is empty
+		// - we ask the business library for an updated autocomplete list
+		// - the library responds with: ["bacon"]
+		// - this function is called
+		
+		maybeSelectMnemonic()
+	}
+	
+	@discardableResult
+	func maybeSelectMnemonic() -> Bool {
+		
+		// Example:
+		// The input is "Bacon ", and the autocomplete list is ["bacon"],
+		// so we should automatically select the mnemonic.
+		//
+		// This needs to happen if:
+		//
+		// - the user hits space when typing, so we want to automatically accept
+		//   the first entry in the autocomplete list
+		//
+		// - the user is using a fancy keyboard (e.g. SwiftKey),
+		//   and the input was injected at one time as a word plus space: "Bacon "
+		
+		if wordInput.hasSuffix(" "),
+		   let acceptedWord = autocomplete.first
 		{
 			selectMnemonic(acceptedWord)
+			return true
 		}
-		else {
-			postIntent(RestoreWallet.IntentFilterWordList(predicate: input))
-		}
+		
+		return false
 	}
 	
 	func selectMnemonic(_ word: String) -> Void {
