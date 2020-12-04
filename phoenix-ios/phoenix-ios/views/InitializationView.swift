@@ -3,13 +3,11 @@ import PhoenixShared
 
 struct InitializationView: View {
 	
-	@State var mnemonics: [String]? = nil
-	
 	var body: some View {
 		MVIView({ $0.initialization() }, onModel: { change in
 			
-			if let model = change.newModel as? Initialization.ModelGeneratedMnemonics {
-				mnemonics = model.mnemonics
+			if let model = change.newModel as? Initialization.ModelGeneratedWallet {
+				createWallet(model: model)
 			}
 			
 		}) { model, postIntent in
@@ -112,9 +110,6 @@ struct InitializationView: View {
 			.navigationBarHidden(true)
 				
 		} // </ZStack>
-		.onChange(of: mnemonics) { _ in
-			createWallet(postIntent)
-		}
 	}
 	
 	func createMnemonics(
@@ -124,21 +119,15 @@ struct InitializationView: View {
 		let swiftEntropy = AppSecurity.shared.generateEntropy()
 		let kotlinEntropy = KotlinByteArray.fromSwiftData(swiftEntropy)
 		
-		let intent = Initialization.IntentGenerateMnemonics(seed: kotlinEntropy)
+		let intent = Initialization.IntentGenerateWallet(entropy: kotlinEntropy)
 		postIntent(intent)
 	}
 	
-	func createWallet(
-		_ postIntent: @escaping (Initialization.Intent) -> Void
-	) -> Void {
+	func createWallet(model: Initialization.ModelGeneratedWallet) -> Void {
 		
-		guard let mnemonics = mnemonics else {
-			return
-		}
-		
-		AppSecurity.shared.addKeychainEntry(mnemonics: mnemonics) { (error: Error?) in
+		AppSecurity.shared.addKeychainEntry(mnemonics: model.mnemonics) { (error: Error?) in
 			if error == nil {
-				PhoenixApplicationDelegate.get().loadWallet(mnemonics: mnemonics)
+				PhoenixApplicationDelegate.get().loadWallet(seed: model.seed)
 			}
 		}
 	}

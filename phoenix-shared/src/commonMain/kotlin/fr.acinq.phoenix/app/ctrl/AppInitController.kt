@@ -16,10 +16,11 @@ class AppInitController(
 
     override fun process(intent: Initialization.Intent) {
         when (intent) {
-            is Initialization.Intent.GenerateMnemonics -> {
+            is Initialization.Intent.GenerateWallet -> {
                 launch {
-                    val mnemonics = MnemonicCode.toMnemonics(entropy = intent.seed)
-                    model(Initialization.Model.GeneratedMnemonics(mnemonics))
+                    val mnemonics = MnemonicCode.toMnemonics(intent.entropy)
+                    val seed = MnemonicCode.toSeed(mnemonics, "")
+                    model(Initialization.Model.GeneratedWallet(mnemonics, seed))
                 }
             }
         }

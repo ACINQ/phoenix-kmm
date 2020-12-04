@@ -14,8 +14,8 @@ struct RestoreWalletView: View {
 				if let model = change.newModel as? RestoreWallet.ModelFilteredWordlist {
 					autocomplete = model.words
 				}
-				else if change.newModel is RestoreWallet.ModelValidMnemonics {
-					finishAndRestoreWallet()
+				else if let model = change.newModel as? RestoreWallet.ModelValidMnemonics {
+					finishAndRestoreWallet(model: model)
 				}
 				
 			}) { model, postIntent in
@@ -49,14 +49,11 @@ struct RestoreWalletView: View {
 		}
 	}
 	
-	func finishAndRestoreWallet() -> Void {
-		print("finishAndRestoreWallet()")
+	func finishAndRestoreWallet(model: RestoreWallet.ModelValidMnemonics) -> Void {
 		
-		let _mnemonics = mnemonics // snapshot
-		
-		AppSecurity.shared.addKeychainEntry(mnemonics: _mnemonics) { (error: Error?) in
+		AppSecurity.shared.addKeychainEntry(mnemonics: mnemonics) { (error: Error?) in
 			if error == nil {
-				PhoenixApplicationDelegate.get().loadWallet(mnemonics: _mnemonics)
+				PhoenixApplicationDelegate.get().loadWallet(seed: model.seed)
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 package fr.acinq.phoenix
 
 import fr.acinq.bitcoin.Block
+import fr.acinq.bitcoin.MnemonicCode
 import fr.acinq.bitcoin.PublicKey
 import fr.acinq.eclair.*
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
@@ -139,7 +140,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val peer by lazy { buildPeer() }
 
-    private val walletManager by lazy { WalletManager(appDB) }
+    private val walletManager by lazy { WalletManager() }
     private val appHistoryManager by lazy { AppHistoryManager(appDB, peer) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
@@ -160,10 +161,15 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         }
     }
 
-    fun loadWallet(mnemonics: List<String>): Unit {
+    fun loadWallet(seed: ByteArray): Unit {
         if (walletManager.getWallet() == null) {
-            walletManager.loadWallet(mnemonics)
+            walletManager.loadWallet(seed)
         }
+    }
+
+    fun prepWallet(mnemonics: List<String>, passphrase: String = ""): ByteArray {
+        MnemonicCode.validate(mnemonics)
+        return MnemonicCode.toSeed(mnemonics, passphrase)
     }
 
     val controllers: ControllerFactory = object : ControllerFactory {

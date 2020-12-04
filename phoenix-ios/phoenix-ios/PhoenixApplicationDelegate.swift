@@ -40,8 +40,14 @@ class PhoenixApplicationDelegate: UIResponder, UIApplicationDelegate {
 	
 	func loadWallet(mnemonics: [String]) -> Void {
 		
+		let seed = business.prepWallet(mnemonics: mnemonics, passphrase: "")
+		loadWallet(seed: seed)
+	}
+	
+	func loadWallet(seed: KotlinByteArray) -> Void {
+		
 		if !walletLoaded {
-			business.loadWallet(mnemonics: mnemonics)
+			business.loadWallet(seed: seed)
 			walletLoaded = true
 		}
 	}
