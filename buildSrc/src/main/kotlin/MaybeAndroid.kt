@@ -2,6 +2,7 @@ import org.gradle.api.Plugin
 import org.gradle.api.Project
 import com.android.build.gradle.LibraryExtension
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.provideDelegate
 
 class MaybeAndroid : Plugin<Project> {
 
@@ -16,7 +17,10 @@ class MaybeAndroid : Plugin<Project> {
         val localProperties = getLocalProperties(rootDir.absolutePath)
         extensions.add("localProperties", localProperties)
 
-        val android = if (!localProperties.skipAndroid()) {
+        val skipAndroid: String? by project
+        val loadAndroid = skipAndroid != "true" && localProperties["skip.android"] != "true"
+
+        val android = if (loadAndroid) {
             apply { plugin("com.android.library") }
             extensions["android"] as LibraryExtension
         } else null

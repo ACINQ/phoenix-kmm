@@ -14,5 +14,3 @@ fun getLocalProperties(rootDir: String): Properties {
 
     return properties
 }
-
-fun Properties.skipAndroid() = this["skip.android"] == "true"
