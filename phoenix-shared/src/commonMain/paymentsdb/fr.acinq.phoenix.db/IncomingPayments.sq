@@ -1,0 +1,29 @@
+import fr.acinq.eclair.MilliSatoshi;
+
+-- incoming payments
+CREATE TABLE IF NOT EXISTS incoming_payments (
+    created_at INTEGER NOT NULL,
+    preimage BLOB NOT NULL,
+    -- origin
+    payment_type TEXT NOT NULL,
+    payment_request TEXT DEFAULT NULL,
+    swap_amount INTEGER AS MilliSatoshi DEFAULT NULL,
+    swap_address TEXT DEFAULT NULL,
+    -- status
+    status_type TEXT DEFAULT NULL,
+    received_amount_msat INTEGER DEFAULT NULL,
+    received_at INTEGER DEFAULT NULL,
+    -- received with
+    received_with TEXT DEFAULT NULL,
+    received_with_fees INTEGER DEFAULT NULL,
+    received_with_channel_id BLOB DEFAULT NULL
+);
+
+-- queries
+
+addIncomingInvoice:
+INSERT INTO incoming_payments (preimage, payment_type, payment_request, created_at) VALUES (?, ?, ?, ?);
+addIncomingKeysend:
+INSERT INTO incoming_payments (preimage, payment_type, created_at) VALUES (?, ?, ?);
+addIncomingSwapin:
+INSERT INTO incoming_payments (preimage, payment_type, swap_amount, swap_address, created_at) VALUES (?, ?, ?, ?, ?);

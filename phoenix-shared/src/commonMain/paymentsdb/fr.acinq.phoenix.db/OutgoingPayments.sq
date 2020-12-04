@@ -1,0 +1,40 @@
+import fr.acinq.eclair.db.HopDesc;
+import kotlin.collections.List;
+
+PRAGMA foreign_keys = 1;
+
+-- outgoing payments
+-- Stores an outgoing payment in a flat row. Some columns can be null.
+CREATE TABLE IF NOT EXISTS outgoing_payments (
+    id TEXT NOT NULL PRIMARY KEY,
+    recipient_amount_msat INTEGER NOT NULL,
+    recipient_node_id BLOB NOT NULL,
+    payment_hash BLOB NOT NULL,
+    created_at INTEGER NOT NULL,
+    -- details
+    payment_type TEXT NOT NULL,
+    normal_payment_request TEXT DEFAULT NULL,
+    keysend_preimage BLOB DEFAULT NULL,
+    swapout_address TEXT DEFAULT NULL,
+    -- status
+    final_failure TEXT DEFAULT NULL,
+    preimage BLOB DEFAULT NULL,
+    completed_at INTEGER DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS outgoing_payment_parts (
+    part_id TEXT NOT NULL PRIMARY KEY,
+    parent_id TEXT NOT NULL,
+    amount_msat INTEGER NOT NULL,
+    route TEXT AS List<HopDesc> NOT NULL,
+    created_at INTEGER NOT NULL,
+    -- status
+    preimage BLOB DEFAULT NULL,
+    err_type TEXT DEFAULT NULL,
+    err_failure_message BLOB DEFAULT NULL,
+    err_channelex_channel_id BLOB DEFAULT NULL,
+    err_channelex_message TEXT DEFAULT NULL,
+    completed_at INTEGER DEFAULT NULL,
+
+    FOREIGN KEY(parent_id) REFERENCES outgoing_payments(id)
+);

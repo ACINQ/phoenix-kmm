@@ -11,7 +11,6 @@ import fr.acinq.eclair.blockchain.fee.OnChainFeeConf
 import fr.acinq.eclair.crypto.LocalKeyManager
 import fr.acinq.eclair.db.ChannelsDb
 import fr.acinq.eclair.db.Databases
-import fr.acinq.eclair.db.InMemoryPaymentsDb
 import fr.acinq.eclair.db.PaymentsDb
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.TcpSocket
@@ -31,7 +30,9 @@ import fr.acinq.phoenix.ctrl.config.DisplayConfigurationController
 import fr.acinq.phoenix.ctrl.config.ElectrumConfigurationController
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.db.SqliteChannelsDb
+import fr.acinq.phoenix.db.SqlitePaymentsDb
 import fr.acinq.phoenix.db.createChannelsDbDriver
+import fr.acinq.phoenix.db.createPaymentsDbDriver
 import fr.acinq.phoenix.utils.NetworkMonitor
 import fr.acinq.phoenix.utils.PlatformContext
 import fr.acinq.phoenix.utils.getApplicationFilesDirectoryPath
@@ -118,7 +119,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
         val databases = object : Databases {
             override val channels: ChannelsDb get() = channelsDb
-            override val payments: PaymentsDb get() = paymentsDB
+            override val payments: PaymentsDb get() = paymentsDb
         }
 
         val peer = Peer(tcpSocketBuilder, params, electrumWatcher, databases, MainScope())
@@ -142,7 +143,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
     private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) }
-    private val paymentsDB by lazy { InMemoryPaymentsDb() }
+    private val paymentsDb by lazy { SqlitePaymentsDb(createPaymentsDbDriver(ctx)) }
 
     // TestNet
     private val acinqNodeUri = NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735)
