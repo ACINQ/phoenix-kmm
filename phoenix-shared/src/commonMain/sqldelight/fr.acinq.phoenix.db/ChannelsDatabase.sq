@@ -1,3 +1,5 @@
+PRAGMA foreign_keys = 1;
+
 -- channels table
 -- note: boolean are stored as INTEGER, with 0=false
 CREATE TABLE IF NOT EXISTS local_channels (

@@ -82,6 +82,7 @@ kotlin {
                 implementation("com.squareup.sqldelight:android-driver:$sqldelightVersion")
             }
         }
+
         val androidTest by getting {
             dependencies {
                 implementation(kotlin("test-junit"))
@@ -95,6 +96,7 @@ kotlin {
                     else -> error("UnsupportedmOS $currentOs")
                 }
                 implementation("fr.acinq.secp256k1:secp256k1-kmp-jni-jvm-$target:$secp256k1Version")
+                implementation("com.squareup.sqldelight:sqlite-driver:$sqldelightVersion")
             }
         }
 
@@ -104,6 +106,7 @@ kotlin {
                 implementation("com.squareup.sqldelight:native-driver:$sqldelightVersion")
             }
         }
+
         val iosTest by getting {}
 
         all {

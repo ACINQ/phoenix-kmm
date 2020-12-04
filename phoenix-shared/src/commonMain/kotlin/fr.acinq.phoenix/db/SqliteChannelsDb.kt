@@ -31,12 +31,13 @@ internal class SqliteChannelsDb(driver: SqlDriver) : ChannelsDb {
 
     override suspend fun addOrUpdateChannel(state: ChannelStateWithCommitments) {
         withContext(Dispatchers.Default) {
+            val channelId = state.channelId.toByteArray()
+            val data = ChannelStateWithCommitments.serialize(state)
             queries.transaction {
-                val channelId = state.channelId.toByteArray()
                 queries.getChannel(channelId).executeAsOneOrNull()?.run {
-                    queries.updateChannel(channel_id = this.channel_id, data = ChannelStateWithCommitments.serialize(state))
+                    queries.updateChannel(channel_id = this.channel_id, data = data)
                 } ?: run {
-                    queries.insertChannel(channel_id = channelId, data = ChannelStateWithCommitments.serialize(state))
+                    queries.insertChannel(channel_id = channelId, data = data)
                 }
             }
         }

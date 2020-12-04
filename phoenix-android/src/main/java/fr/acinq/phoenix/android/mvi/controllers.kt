@@ -37,6 +37,9 @@ val MockControllers = object : ControllerFactory {
     override fun displayConfiguration(): DisplayConfigurationController = MVI.Controller.Mock(TODO())
     override fun electrumConfiguration(): ElectrumConfigurationController = MVI.Controller.Mock(TODO())
     override fun channelsConfiguration(): ChannelsConfigurationController = MVI.Controller.Mock(TODO())
+    override fun recoveryPhraseConfiguration(): RecoveryPhraseConfigurationController {
+        TODO("Not yet implemented")
+    }
 }
 
 @Composable
