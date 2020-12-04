@@ -24,7 +24,7 @@ import fr.acinq.eclair.db.ChannelsDb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-internal class SqliteChannelsDb(driver: SqlDriver) : ChannelsDb {
+internal class SqliteChannelsDb(private val driver: SqlDriver) : ChannelsDb {
 
     private val database = ChannelsDatabase(driver)
     private val queries = database.channelsDatabaseQueries
@@ -75,6 +75,6 @@ internal class SqliteChannelsDb(driver: SqlDriver) : ChannelsDb {
     }
 
     override fun close() {
-        TODO("Not yet implemented")
+        driver.close()
     }
 }
