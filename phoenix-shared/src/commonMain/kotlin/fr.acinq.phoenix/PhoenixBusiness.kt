@@ -10,6 +10,7 @@ import fr.acinq.eclair.blockchain.fee.OnChainFeeConf
 import fr.acinq.eclair.crypto.LocalKeyManager
 import fr.acinq.eclair.db.ChannelsDb
 import fr.acinq.eclair.db.Databases
+import fr.acinq.eclair.db.InMemoryPaymentsDb
 import fr.acinq.eclair.db.PaymentsDb
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.TcpSocket
