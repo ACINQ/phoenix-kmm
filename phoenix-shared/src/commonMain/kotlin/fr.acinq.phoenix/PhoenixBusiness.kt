@@ -206,5 +206,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun  electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
         override fun channelsConfiguration(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peer, chain)
         override fun logsConfiguration(): LogsConfigurationController = AppLogsConfigurationController(ctx, loggerFactory, logMemory)
+
+        override fun closeChannelsConfiguration(): CloseChannelsConfigurationController =
+            AppCloseChannelsConfigurationController(loggerFactory, peer, util)
     }
 }
