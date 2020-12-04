@@ -160,9 +160,9 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         }
     }
 
-    fun importWallet(mnemonics: List<String>): Unit {
+    fun loadWallet(mnemonics: List<String>): Unit {
         if (walletManager.getWallet() == null) {
-            walletManager.importWallet(mnemonics)
+            walletManager.loadWallet(mnemonics)
         }
     }
 

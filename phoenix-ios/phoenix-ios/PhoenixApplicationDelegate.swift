@@ -5,7 +5,7 @@ import PhoenixShared
 class PhoenixApplicationDelegate: UIResponder, UIApplicationDelegate {
 
     let business: PhoenixBusiness
-	private var walletImported = false
+	private var walletLoaded = false
 
     override init() {
         setenv("CFNETWORK_DIAGNOSTICS", "3", 1);
@@ -38,11 +38,11 @@ class PhoenixApplicationDelegate: UIResponder, UIApplicationDelegate {
 	
 	// MARK: PhoenixBusiness
 	
-	func importWallet(mnemonics: [String]) -> Void {
+	func loadWallet(mnemonics: [String]) -> Void {
 		
-		if !walletImported {
-			business.importWallet(mnemonics: mnemonics)
-			walletImported = true
+		if !walletLoaded {
+			business.loadWallet(mnemonics: mnemonics)
+			walletLoaded = true
 		}
 	}
 

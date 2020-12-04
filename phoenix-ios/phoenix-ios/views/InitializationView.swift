@@ -138,7 +138,7 @@ struct InitializationView: View {
 		
 		AppSecurity.shared.addKeychainEntry(mnemonics: mnemonics) { (error: Error?) in
 			if error == nil {
-				PhoenixApplicationDelegate.get().importWallet(mnemonics: mnemonics)
+				PhoenixApplicationDelegate.get().loadWallet(mnemonics: mnemonics)
 			}
 		}
 	}

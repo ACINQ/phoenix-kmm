@@ -18,12 +18,12 @@ class WalletManager (private val appDb: DB) : CoroutineScope by MainScope() {
 
     fun openWalletUpdatesSubscription(): ReceiveChannel<Wallet> = walletUpdates.openSubscription()
 
-    fun importWallet(entropy: ByteArray): Unit {
+    fun loadWallet(entropy: ByteArray): Unit {
         val mnemonics = MnemonicCode.toMnemonics(entropy = entropy)
-        importWallet(mnemonics = mnemonics)
+        loadWallet(mnemonics = mnemonics)
     }
 
-    fun importWallet(mnemonics: List<String>): Unit {
+    fun loadWallet(mnemonics: List<String>): Unit {
         MnemonicCode.validate(mnemonics)
         val newWallet = Wallet(mnemonics = mnemonics)
         wallet = newWallet

@@ -94,7 +94,7 @@ struct ContentView: View {
 			
 			if let mnemonics = mnemonics {
 				// wallet is unlocked
-				PhoenixApplicationDelegate.get().importWallet(mnemonics: mnemonics)
+				PhoenixApplicationDelegate.get().loadWallet(mnemonics: mnemonics)
 				self.isUnlocked = true
 			
 			} else if enabledSecurity.isEmpty {
