@@ -1,14 +1,17 @@
 plugins {
-//    id("com.android.library")
-    `maybe-android`
+    val withAndroid = System.getProperty("withAndroid")!!.toBoolean()
+    if (withAndroid) id("com.android.library")
     kotlin("multiplatform")
     kotlin("plugin.serialization") version "1.4.10"
 }
 
 val currentOs = org.gradle.internal.os.OperatingSystem.current()
 
-maybeAndroid {
-    android {
+val withAndroid = System.getProperty("withAndroid")!!.toBoolean()
+
+if (withAndroid) {
+    // The `android` extension function is not in classpath if android plugin is not applied
+    extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
         compileSdkVersion(30)
         defaultConfig {
             minSdkVersion(24)
@@ -29,7 +32,7 @@ maybeAndroid {
 }
 
 kotlin {
-    if (maybeAndroid.enabled) {
+    if (withAndroid) {
         android {
             compilations.all {
                 kotlinOptions.jvmTarget = "1.8"
@@ -75,7 +78,7 @@ kotlin {
             }
         }
 
-        if (maybeAndroid.enabled) {
+        if (withAndroid) {
             val androidMain by getting {
                 dependencies {
                     api("androidx.core:core-ktx:1.3.2")
