@@ -212,9 +212,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun configuration(): ConfigurationController =
             AppConfigurationController(loggerFactory, walletManager)
 
-        override fun displayConfiguration(): DisplayConfigurationController =
-            AppDisplayConfigurationController(loggerFactory, appConfigurationManager)
-
         override fun electrumConfiguration(): ElectrumConfigurationController =
             AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
 
