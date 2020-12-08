@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS outgoing_payments (
 );
 
 CREATE TABLE IF NOT EXISTS outgoing_payment_parts (
-    part_id TEXT NOT NULL PRIMARY KEY,
+    id TEXT NOT NULL PRIMARY KEY,
     parent_id TEXT NOT NULL,
     amount_msat INTEGER NOT NULL,
     route TEXT AS List<HopDesc> NOT NULL,
@@ -38,3 +38,22 @@ CREATE TABLE IF NOT EXISTS outgoing_payment_parts (
 
     FOREIGN KEY(parent_id) REFERENCES outgoing_payments(id)
 );
+
+-- queries
+
+addOutgoingPaymentNormal:
+INSERT INTO outgoing_payments (id, recipient_amount_msat, recipient_node_id, payment_hash, created_at, payment_type, normal_payment_request) VALUES (?, ?, ?, ?, ?, ?, ?);
+addOutgoingPaymentKeysend:
+INSERT INTO outgoing_payments (id, recipient_amount_msat, recipient_node_id, payment_hash, created_at, payment_type, keysend_preimage) VALUES (?, ?, ?, ?, ?, ?, ?);
+addOutgoingPaymentSwapOut:
+INSERT INTO outgoing_payments (id, recipient_amount_msat, recipient_node_id, payment_hash, created_at, payment_type, swapout_address) VALUES (?, ?, ?, ?, ?, ?, ?);
+
+addOutgoingPart:
+INSERT INTO outgoing_payment_parts (id, parent_id, amount_msat, route, created_at) VALUES (?, ?, ?, ?, ?);
+
+succeedOutgoingPart:
+UPDATE outgoing_payment_parts SET preimage=?, completed_at=? WHERE id=?;
+succeedOutgoingPayment:
+UPDATE outgoing_payments SET preimage=?, completed_at=? WHERE id=?;
+
+

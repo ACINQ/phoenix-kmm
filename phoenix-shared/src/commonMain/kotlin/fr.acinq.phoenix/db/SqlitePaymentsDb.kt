@@ -29,7 +29,6 @@ import fr.acinq.eclair.utils.Either
 import fr.acinq.eclair.utils.UUID
 import fr.acinq.eclair.utils.currentTimestampMillis
 import fr.acinq.eclair.wire.FailureMessage
-import fracinqphoenixdb.Incoming_payments
 import fracinqphoenixdb.Outgoing_payment_parts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,33 +56,64 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     private val database = PaymentsDatabase(
         driver = driver,
-        incoming_paymentsAdapter = Incoming_payments.Adapter(swap_amountAdapter = milliSatoshiAdapter),
         outgoing_payment_partsAdapter = Outgoing_payment_parts.Adapter(routeAdapter = hopDescAdapter)
     )
     private val inQueries = database.incomingPaymentsQueries
     private val outQueries = database.outgoingPaymentsQueries
 
-    override suspend fun addIncomingPayment(preimage: ByteVector32, origin: IncomingPayment.Origin, createdAt: Long) {
+    // ---- create outgoing payment
+
+    override suspend fun addOutgoingParts(parentId: UUID, parts: List<OutgoingPayment.Part>) {
         withContext(Dispatchers.Default) {
-            when(origin) {
-                is IncomingPayment.Origin.KeySend -> inQueries.addIncomingKeysend(preimage.toByteArray(), origin::class.platformSimpleName, currentTimestampMillis())
-                is IncomingPayment.Origin.Invoice -> inQueries.addIncomingInvoice(preimage.toByteArray(), origin::class.platformSimpleName, origin.paymentRequest.write(), currentTimestampMillis())
-                is IncomingPayment.Origin.SwapIn ->inQueries.addIncomingSwapin(preimage.toByteArray(), origin::class.platformSimpleName, origin.amount, origin.address, currentTimestampMillis())
+            outQueries.transaction {
+                parts.map {
+                    outQueries.addOutgoingPart(
+                        id = it.id.toString(),
+                        parent_id = parentId.toString(),
+                        amount_msat = it.amount.msat,
+                        route = it.route,
+                        created_at = currentTimestampMillis())
+                }
             }
         }
     }
 
-    override suspend fun addOutgoingParts(parentId: UUID, parts: List<OutgoingPayment.Part>) {
-        TODO("Not yet implemented")
-    }
-
     override suspend fun addOutgoingPayment(outgoingPayment: OutgoingPayment) {
+        withContext(Dispatchers.Default) {
+            when (outgoingPayment.details) {
+                is OutgoingPayment.Details.Normal -> outQueries.addOutgoingPaymentNormal(outgoingPayment.id.toString(), outgoingPayment.recipientAmount.msat, outgoingPayment.recipient.toUncompressedBin(),
+                    outgoingPayment.details.paymentHash.toByteArray(), currentTimestampMillis(), outgoingPayment.details::class.platformSimpleName, (outgoingPayment.details as OutgoingPayment.Details.Normal).paymentRequest.write())
+                is OutgoingPayment.Details.KeySend -> outQueries.addOutgoingPaymentKeysend(outgoingPayment.id.toString(), outgoingPayment.recipientAmount.msat, outgoingPayment.recipient.toUncompressedBin(),
+                    outgoingPayment.details.paymentHash.toByteArray(), currentTimestampMillis(), outgoingPayment.details::class.platformSimpleName, (outgoingPayment.details as OutgoingPayment.Details.KeySend).preimage.toByteArray())
+                is OutgoingPayment.Details.SwapOut -> outQueries.addOutgoingPaymentSwapOut(outgoingPayment.id.toString(), outgoingPayment.recipientAmount.msat, outgoingPayment.recipient.toUncompressedBin(),
+                    outgoingPayment.details.paymentHash.toByteArray(), currentTimestampMillis(), outgoingPayment.details::class.platformSimpleName, (outgoingPayment.details as OutgoingPayment.Details.SwapOut).address)
+            }
+        }
+    }
+
+    // ---- successful outgoing payment
+
+    override suspend fun updateOutgoingPart(partId: UUID, preimage: ByteVector32, completedAt: Long) {
+        withContext(Dispatchers.Default) {
+            outQueries.succeedOutgoingPart(id = partId.toString(), preimage = preimage.toByteArray(), completed_at = completedAt)
+        }
+    }
+
+    override suspend fun updateOutgoingPayment(id: UUID, preimage: ByteVector32, completedAt: Long) {
         TODO("Not yet implemented")
     }
 
-    override suspend fun getIncomingPayment(paymentHash: ByteVector32): IncomingPayment? {
+    // ---- fail outgoing payment
+
+    override suspend fun updateOutgoingPayment(id: UUID, failure: FinalFailure, completedAt: Long) {
         TODO("Not yet implemented")
     }
+
+    override suspend fun updateOutgoingPart(partId: UUID, failure: Either<ChannelException, FailureMessage>, completedAt: Long) {
+        TODO("Not yet implemented")
+    }
+
+    // ---- get outgoing payment details
 
     override suspend fun getOutgoingPart(partId: UUID): OutgoingPayment? {
         TODO("Not yet implemented")
@@ -93,6 +123,8 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         TODO("Not yet implemented")
     }
 
+    // ---- list outgoing
+
     override suspend fun listOutgoingPayments(paymentHash: ByteVector32): List<OutgoingPayment> {
         TODO("Not yet implemented")
     }
@@ -101,7 +133,19 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         TODO("Not yet implemented")
     }
 
-    override suspend fun listPayments(count: Int, skip: Int, filters: Set<PaymentTypeFilter>): List<WalletPayment> {
+    // ---- incoming payments
+
+    override suspend fun addIncomingPayment(preimage: ByteVector32, origin: IncomingPayment.Origin, createdAt: Long) {
+        withContext(Dispatchers.Default) {
+            when (origin) {
+                is IncomingPayment.Origin.KeySend -> inQueries.addIncomingKeysend(preimage.toByteArray(), origin::class.platformSimpleName, currentTimestampMillis())
+                is IncomingPayment.Origin.Invoice -> inQueries.addIncomingInvoice(preimage.toByteArray(), origin::class.platformSimpleName, origin.paymentRequest.write(), currentTimestampMillis())
+                is IncomingPayment.Origin.SwapIn -> inQueries.addIncomingSwapin(preimage.toByteArray(), origin::class.platformSimpleName, origin.amount.msat, origin.address, currentTimestampMillis())
+            }
+        }
+    }
+
+    override suspend fun receivePayment(paymentHash: ByteVector32, amount: MilliSatoshi, receivedWith: IncomingPayment.ReceivedWith, receivedAt: Long) {
         TODO("Not yet implemented")
     }
 
@@ -109,23 +153,13 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         TODO("Not yet implemented")
     }
 
-    override suspend fun receivePayment(paymentHash: ByteVector32, amount: MilliSatoshi, receivedWith: IncomingPayment.ReceivedWith, receivedAt: Long) {
+    override suspend fun getIncomingPayment(paymentHash: ByteVector32): IncomingPayment? {
         TODO("Not yet implemented")
     }
 
-    override suspend fun updateOutgoingPart(partId: UUID, preimage: ByteVector32, completedAt: Long) {
-        TODO("Not yet implemented")
-    }
+    // ---- list all payments
 
-    override suspend fun updateOutgoingPart(partId: UUID, failure: Either<ChannelException, FailureMessage>, completedAt: Long) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun updateOutgoingPayment(id: UUID, preimage: ByteVector32, completedAt: Long) {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun updateOutgoingPayment(id: UUID, failure: FinalFailure, completedAt: Long) {
+    override suspend fun listPayments(count: Int, skip: Int, filters: Set<PaymentTypeFilter>): List<WalletPayment> {
         TODO("Not yet implemented")
     }
 }
