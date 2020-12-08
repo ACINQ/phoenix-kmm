@@ -117,7 +117,11 @@ kotlin {
             }
         }
 
-        val iosTest by getting {}
+        val iosTest by getting {
+            dependencies {
+                implementation("com.squareup.sqldelight:native-driver:$sqldelightVersion")
+            }
+        }
 
         all {
             languageSettings.useExperimentalAnnotation("kotlin.RequiresOptIn")
