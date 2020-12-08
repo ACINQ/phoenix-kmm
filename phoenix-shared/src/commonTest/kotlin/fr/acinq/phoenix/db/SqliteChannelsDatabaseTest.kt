@@ -26,7 +26,6 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
-import kotlin.test.expect
 
 class SqliteChannelsDatabaseTest {
     private val db = SqliteChannelsDb(testDriver())
