@@ -1,32 +1,53 @@
 import SwiftUI
+import PhoenixShared
 
 struct CloseChannelsView : View {
 	
-	@State var hasZeroChannels: Bool
-	
-	init() {
-		_hasZeroChannels = State(initialValue: false)
-	}
-	
-#if DEBUG
-	// For PreviewProvider(s)
-	init(hasZeroChannels: Bool) {
-		_hasZeroChannels = State(initialValue: hasZeroChannels)
-	}
-#endif
-	
 	var body: some View {
 		
-		Group {
-			if hasZeroChannels {
-				EmptyWalletView()
-			} else {
-				StandardWalletView()
-			}
+		MVIView({ $0.closeChannelsConfiguration() }) { model, postIntent in
+			
+			main(model, postIntent)
 		}
 		.padding(.top, 40)
 		.padding([.leading, .trailing, .bottom])
 		.navigationBarTitle("Close channels", displayMode: .inline)
+	}
+	
+	@ViewBuilder func main(
+		_ model: CloseChannelsConfiguration.Model,
+		_ postIntent: @escaping (CloseChannelsConfiguration.Intent) -> Void
+	) -> some View {
+		
+		if let model = model as? CloseChannelsConfiguration.ModelReady {
+	
+			if model.channelCount == 0 {
+				EmptyWalletView()
+			} else {
+				StandardWalletView(model: model)
+			}
+	
+		} else {
+			
+			LoadingWalletView()
+		}
+	}
+}
+
+fileprivate struct LoadingWalletView : View {
+	
+	var body: some View {
+		
+		VStack(alignment: .center) {
+		
+			ProgressView()
+				.progressViewStyle(CircularProgressViewStyle())
+				.padding(.bottom, 5)
+			
+			Text("Checking channel state...")
+			
+			Spacer()
+		}
 	}
 }
 
@@ -60,39 +81,24 @@ fileprivate struct EmptyWalletView : View {
 
 fileprivate struct StandardWalletView : View {
 	
-	@State var channelCount: Int
-	@State var numChannels: Int
-	@State var msat: Int64 = 199_800
+	let model: CloseChannelsConfiguration.ModelReady
 	
 	@State var bitcoinAddress: String = ""
-	
-	init() {
-		_channelCount = State(initialValue: 0)
-		_numChannels = State(initialValue: 0)
-	}
-	
-#if DEBUG
-	// For PreviewProvider(s)
-	init(channelCount: Int, numChannels: Int) {
-		_channelCount = State(initialValue: channelCount)
-		_numChannels = State(initialValue: numChannels)
-	}
-#endif
 	
 	var body: some View {
 		
 		VStack(alignment: .leading) {
 			
-			let formattedSats = Utils.formatBitcoin(msat: msat, bitcoinUnit: .satoshi)
+			let formattedSats = Utils.formatBitcoin(sat: model.sats, bitcoinUnit: .satoshi)
 			
-			if channelCount == 1 {
+			if model.channelCount == 1 {
 				Text(
 					"You currenly have 1 Lightning channel" +
 					" with a balance of \(formattedSats.string)."
 				)
 			} else {
 				Text(
-					"You currently have \(String(numChannels)) Lightning channels" +
+					"You currently have \(String(model.channelCount)) Lightning channels" +
 					" with an aggragated balance of \(formattedSats.string)."
 				)
 			}
@@ -115,7 +121,7 @@ fileprivate struct StandardWalletView : View {
 			.padding(.bottom, 10)
 			
 			Button {
-				// Todo...
+				drainWallet()
 			} label: {
 				HStack {
 					Image(systemName: "bitcoinsign.circle")
@@ -130,6 +136,12 @@ fileprivate struct StandardWalletView : View {
 			
 			FooterView()
 		}
+	}
+	
+	func drainWallet() -> Void {
+		print("drainWallet()")
+		
+		// Todo...
 	}
 }
 
@@ -159,15 +171,18 @@ fileprivate struct FooterView : View {
 	
 	var body: some View {
 		
+		// The "send to bitcoin address" functionality isn't available in eclair-kmp yet.
+		// When added, and integrated into Send screen, the code below should be uncommented.
+		// 
 		Group {
 			Text("Use this feature to transfer ") +
 			Text("all").italic() +
-			Text(" your funds to a Bitcoin address. ") +
-			Text("If you only want to send ") +
-			Text("some").italic() +
-			Text(" of your funds, then you can use the ") +
-			Text("Send").bold().italic() +
-			Text(" screen. Just scan/enter a Bitcoin address and Phoenix does the rest.")
+			Text(" your funds to a Bitcoin address. ") // +
+		//	Text("If you only want to send ") +
+		//	Text("some").italic() +
+		//	Text(" of your funds, then you can use the ") +
+		//	Text("Send").bold().italic() +
+		//	Text(" screen. Just scan/enter a Bitcoin address and Phoenix does the rest.")
 		}
 		.font(.footnote)
 		.foregroundColor(.secondary)
@@ -176,25 +191,32 @@ fileprivate struct FooterView : View {
 
 class CloseChannelsView_Previews: PreviewProvider {
 	
+	static let model_1 = CloseChannelsConfiguration.ModelLoading()
+	static let model_2 = CloseChannelsConfiguration.ModelReady(channelCount: 0, sats: 0)
+	static let model_3 = CloseChannelsConfiguration.ModelReady(channelCount: 1, sats: 500_000)
+	static let model_4 = CloseChannelsConfiguration.ModelReady(channelCount: 3, sats: 1_500_000)
+	
+	static let mockModel = model_1
+	
 	static var previews: some View {
 		
 		NavigationView {
-			CloseChannelsView(hasZeroChannels: true)
+			CloseChannelsView()
 		}
 		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")
 		
-		NavigationView {
-			CloseChannelsView(hasZeroChannels: true)
-		}
-		.preferredColorScheme(.dark)
-		.previewDevice("iPhone 11")
-		
-		NavigationView {
-			CloseChannelsView(hasZeroChannels: false)
-		}
-		.preferredColorScheme(.light)
-		.previewDevice("iPhone 8")
-		.environmentObject(CurrencyPrefs.mockEUR())
+//		NavigationView {
+//			CloseChannelsView()
+//		}
+//		.preferredColorScheme(.dark)
+//		.previewDevice("iPhone 11")
+//
+//		NavigationView {
+//			CloseChannelsView()
+//		}
+//		.preferredColorScheme(.light)
+//		.previewDevice("iPhone 8")
+//		.environmentObject(CurrencyPrefs.mockEUR())
 	}
 }

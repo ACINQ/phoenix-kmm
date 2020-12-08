@@ -217,5 +217,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
         override fun channelsConfiguration(): ChannelsConfigurationController =
             AppChannelsConfigurationController(loggerFactory, peer, chain)
+
+        override fun closeChannelsConfiguration(): CloseChannelsConfigurationController =
+            AppCloseChannelsConfigurationController(loggerFactory, peer)
     }
 }
