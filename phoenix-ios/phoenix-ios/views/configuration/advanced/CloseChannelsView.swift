@@ -20,15 +20,12 @@ struct CloseChannelsView : View {
 	) -> some View {
 		
 		if let model = model as? CloseChannelsConfiguration.ModelReady {
-	
 			if model.channelCount == 0 {
 				EmptyWalletView()
 			} else {
-				StandardWalletView(model: model)
+				StandardWalletView(model: model, postIntent: postIntent)
 			}
-	
 		} else {
-			
 			LoadingWalletView()
 		}
 	}
@@ -82,8 +79,11 @@ fileprivate struct EmptyWalletView : View {
 fileprivate struct StandardWalletView : View {
 	
 	let model: CloseChannelsConfiguration.ModelReady
+	let postIntent: (CloseChannelsConfiguration.Intent) -> Void
 	
 	@State var bitcoinAddress: String = ""
+	@State var isValidAddress: Bool = false
+	@State var detailedErrorMsg: String? = nil
 	
 	var body: some View {
 		
@@ -113,24 +113,41 @@ fileprivate struct StandardWalletView : View {
 			.padding(.bottom, 10)
 			
 			HStack {
-				TextField("Bitcoin address)", text: $bitcoinAddress)
-					.padding([.top, .bottom], 8)
-					.padding([.leading, .trailing], 16)
+				TextField("Bitcoin address", text: $bitcoinAddress)
+					.onChange(of: bitcoinAddress) { _ in
+						checkBitcoinAddress()
+					}
+				
+				Button {
+					bitcoinAddress = ""
+				} label: {
+					Image(systemName: "multiply.circle.fill")
+						.foregroundColor(.secondary)
+				}
+				.isHidden(bitcoinAddress == "")
 			}
+			.padding([.top, .bottom], 8)
+			.padding([.leading, .trailing], 16)
 			.background(Capsule().stroke(Color(UIColor.separator)))
 			.padding(.bottom, 10)
 			
-			Button {
-				drainWallet()
-			} label: {
-				HStack {
-					Image(systemName: "bitcoinsign.circle")
-						.imageScale(.small)
-
-					Text("Drain my wallet")
+			if let detailedErrorMsg = detailedErrorMsg {
+				Text(detailedErrorMsg)
+					.foregroundColor(Color.appRed)
+			} else {
+				Button {
+					drainWallet()
+				} label: {
+					HStack {
+						Image(systemName: "bitcoinsign.circle")
+							.imageScale(.small)
+						
+						Text("Drain my wallet")
+					}
 				}
+				.buttonStyle(ScaleButtonStyle())
+				.disabled(!isValidAddress)
 			}
-			.buttonStyle(ScaleButtonStyle())
 			
 			Spacer()
 			
@@ -138,32 +155,68 @@ fileprivate struct StandardWalletView : View {
 		}
 	}
 	
+	func checkBitcoinAddress() -> Void {
+		print("checkBitcoinAddress()")
+		
+		let business = PhoenixApplicationDelegate.get().business
+		let result = business.util.isValidBitcoinAddress(addr: bitcoinAddress)
+		
+		if result.isValid {
+			isValidAddress = true
+			detailedErrorMsg = nil
+			
+		} else if let addrChain = result.addrChain {
+			// The address is "valid", but it's for a different chain.
+			// This can be a confusing error, so let's tell them about it.
+			isValidAddress = false
+			detailedErrorMsg = NSLocalizedString(
+				"The entered address is for \(addrChain.name), but you're on \(result.myChain.name)",
+				comment: "Error message"
+			)
+			
+		} else {
+			isValidAddress = false
+			detailedErrorMsg = nil
+		}
+	}
+	
 	func drainWallet() -> Void {
 		print("drainWallet()")
 		
-		// Todo...
+		postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
 	}
 }
 
 struct ScaleButtonStyle: ButtonStyle {
 
-	var scaleAmount: CGFloat = 0.98
+	let scaleAmount: CGFloat = 0.98
 	
-	@Environment(\.isEnabled) var isEnabled
-
 	func makeBody(configuration: Self.Configuration) -> some View {
-		return configuration.label
-			.opacity(configuration.isPressed ? 0.65 : 1.0)
-			.scaleEffect(configuration.isPressed ? scaleAmount : 1.0)
-			.padding([.top, .bottom], 8)
-			.padding([.leading, .trailing], 16)
-			.cornerRadius(16)
-			.background(
-				Capsule().stroke(
-					isEnabled ? Color.appHorizon : Color(UIColor.separator),
-					lineWidth: 1.5
+		ScaleButtonStyleView(configuration: configuration, scaleAmount: scaleAmount)
+	}
+	
+	// Subclass of View is required to properly use @Environment variable
+	struct ScaleButtonStyleView: View {
+		
+		let configuration: ButtonStyle.Configuration
+		let scaleAmount: CGFloat
+		
+		@Environment(\.isEnabled) private var isEnabled: Bool
+		
+		var body: some View {
+			configuration.label
+				.opacity(isEnabled ? 1.0 : 0.65)
+				.scaleEffect(configuration.isPressed ? scaleAmount : 1.0)
+				.padding([.top, .bottom], 8)
+				.padding([.leading, .trailing], 16)
+				.cornerRadius(16)
+				.background(
+					Capsule().stroke(
+						isEnabled ? Color.appHorizon : Color(UIColor.separator),
+						lineWidth: 1.5
+					)
 				)
-			)
+		}
 	}
 }
 
