@@ -46,7 +46,7 @@ internal class SqliteChannelsDb(private val driver: SqlDriver) : ChannelsDb {
     override suspend fun removeChannel(channelId: ByteVector32) {
         withContext(Dispatchers.Default) {
             queries.deleteHtlcInfo(channel_id = channelId.toByteArray())
-            queries.deleteLocalChannels(channel_id = channelId.toByteArray())
+            queries.closeLocalChannel(channel_id = channelId.toByteArray())
         }
     }
 
