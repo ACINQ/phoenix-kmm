@@ -1,6 +1,7 @@
 package fr.acinq.phoenix.app.ctrl.config
 
 import fr.acinq.eclair.io.Peer
+import fr.acinq.phoenix.app.Utilities
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.CloseChannelsConfiguration
 import fr.acinq.phoenix.utils.localCommitmentSpec
@@ -10,7 +11,8 @@ import org.kodein.log.LoggerFactory
 
 class AppCloseChannelsConfigurationController(
     loggerFactory: LoggerFactory,
-    private val peer: Peer
+    private val peer: Peer,
+    private val util: Utilities
 ) : AppController<CloseChannelsConfiguration.Model, CloseChannelsConfiguration.Intent>(
     loggerFactory,
     CloseChannelsConfiguration.Model.Loading

@@ -85,7 +85,16 @@ fileprivate struct StandardWalletView : View {
 	@State var isValidAddress: Bool = false
 	@State var detailedErrorMsg: String? = nil
 	
+	@Environment(\.popoverState) var popoverState: PopoverState
+	
 	var body: some View {
+		
+		ZStack {
+			main()
+		}
+	}
+	
+	@ViewBuilder func main() -> some View {
 		
 		VStack(alignment: .leading) {
 			
@@ -181,9 +190,11 @@ fileprivate struct StandardWalletView : View {
 	}
 	
 	func drainWallet() -> Void {
-		print("drainWallet()")
 		
-		postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
+		popoverState.dismissable.send(false)
+		popoverState.displayContent.send(
+			ConfirmationPopover(postIntent: postIntent).anyView
+		)
 	}
 }
 
@@ -241,6 +252,53 @@ fileprivate struct FooterView : View {
 		.foregroundColor(.secondary)
 	}
 }
+
+fileprivate struct ConfirmationPopover : View {
+	
+	let postIntent: (CloseChannelsConfiguration.Intent) -> Void
+	
+	@Environment(\.popoverState) var popoverState: PopoverState
+	
+	var body: some View {
+		
+		VStack(alignment: .trailing) {
+		
+			VStack(alignment: .leading) {
+				Text("Are you sure you want to proceed?")
+			}
+			.padding(.bottom, 20)
+			
+			HStack {
+				Button {
+					cancel()
+				} label : {
+					Text("Cancel")
+				}
+				.padding(.trailing, 10)
+				
+				Button {
+					confirm()
+				} label : {
+					Text("Send Funds")
+				}
+			}
+		}
+	}
+	
+	func cancel() -> Void {
+		print("cancel()")
+		popoverState.close.send()
+	}
+	
+	func confirm() -> Void {
+		print("confirm()")
+		popoverState.close.send()
+		
+	//	postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
+	}
+}
+
+// MARK: -
 
 class CloseChannelsView_Previews: PreviewProvider {
 	

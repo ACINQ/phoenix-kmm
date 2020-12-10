@@ -20,12 +20,12 @@ import fr.acinq.phoenix.app.*
 import fr.acinq.phoenix.app.ctrl.*
 import fr.acinq.phoenix.app.ctrl.config.AppChannelsConfigurationController
 import fr.acinq.phoenix.app.ctrl.config.AppConfigurationController
-import fr.acinq.phoenix.app.ctrl.config.AppDisplayConfigurationController
+import fr.acinq.phoenix.app.ctrl.config.AppCloseChannelsConfigurationController
 import fr.acinq.phoenix.app.ctrl.config.AppElectrumConfigurationController
 import fr.acinq.phoenix.ctrl.*
 import fr.acinq.phoenix.ctrl.config.ChannelsConfigurationController
 import fr.acinq.phoenix.ctrl.config.ConfigurationController
-import fr.acinq.phoenix.ctrl.config.DisplayConfigurationController
+import fr.acinq.phoenix.ctrl.config.CloseChannelsConfigurationController
 import fr.acinq.phoenix.ctrl.config.ElectrumConfigurationController
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.db.SqliteChannelsDb
@@ -218,6 +218,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             AppChannelsConfigurationController(loggerFactory, peer, chain)
 
         override fun closeChannelsConfiguration(): CloseChannelsConfigurationController =
-            AppCloseChannelsConfigurationController(loggerFactory, peer)
+            AppCloseChannelsConfigurationController(loggerFactory, peer, util)
     }
 }
