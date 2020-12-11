@@ -1,6 +1,10 @@
 package fr.acinq.phoenix.app.ctrl.config
 
+import fr.acinq.bitcoin.ByteVector
+import fr.acinq.eclair.channel.CMD_CLOSE
+import fr.acinq.eclair.channel.ChannelEvent
 import fr.acinq.eclair.io.Peer
+import fr.acinq.eclair.io.WrappedChannelEvent
 import fr.acinq.phoenix.app.Utilities
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.CloseChannelsConfiguration
@@ -30,6 +34,25 @@ class AppCloseChannelsConfigurationController(
     }
 
     override fun process(intent: CloseChannelsConfiguration.Intent) {
-        TODO("Not yet implemented")
+        when (intent) {
+            is CloseChannelsConfiguration.Intent.CloseAllChannels -> {
+                val scriptPubKey = util.addressToPublicKeyScript(address = intent.address)
+                if (scriptPubKey == null) {
+                    throw IllegalArgumentException(
+                        "Address is invalid. Caller MUST validate user input via parseBitcoinAddress"
+                    )
+                }
+                launch {
+                    val channelIds = peer.channels.keys
+                    channelIds.forEach { channelId ->
+                        val command = CMD_CLOSE(scriptPubKey = ByteVector(scriptPubKey))
+                        val channelEvent = ChannelEvent.ExecuteCommand(command)
+                        val peerEvent = WrappedChannelEvent(channelId, channelEvent)
+                        peer.send(peerEvent)
+                    }
+                    model(CloseChannelsConfiguration.Model.ChannelsClosed)
+                }
+            }
+        }
     }
 }

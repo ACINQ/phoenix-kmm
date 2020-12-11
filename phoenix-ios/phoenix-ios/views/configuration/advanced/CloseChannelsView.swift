@@ -168,33 +168,55 @@ fileprivate struct StandardWalletView : View {
 		print("checkBitcoinAddress()")
 		
 		let business = PhoenixApplicationDelegate.get().business
-		let result = business.util.isValidBitcoinAddress(addr: bitcoinAddress)
+		let result = business.util.parseBitcoinAddress(addr: bitcoinAddress)
 		
-		if result.isValid {
-			isValidAddress = true
-			detailedErrorMsg = nil
+		if let error = result.right {
 			
-		} else if let addrChain = result.addrChain {
-			// The address is "valid", but it's for a different chain.
-			// This can be a confusing error, so let's tell them about it.
+			if let error = error as? Utilities.BitcoinAddressErrorChainMismatch {
+				detailedErrorMsg = NSLocalizedString(
+					"The address is for \(error.addrChain.name)," +
+					" but you're on \(error.myChain.name)",
+					comment: "Error message - parsing bitcoin address"
+				)
+			}
+			else if error is Utilities.BitcoinAddressErrorUnknownBech32Version {
+				detailedErrorMsg = NSLocalizedString(
+					"Unknown Bech32 version",
+					comment: "Error message - parsing bitcoin address"
+				)
+			}
+			else {
+				detailedErrorMsg = nil
+			}
+			
 			isValidAddress = false
-			detailedErrorMsg = NSLocalizedString(
-				"The entered address is for \(addrChain.name), but you're on \(result.myChain.name)",
-				comment: "Error message"
-			)
 			
 		} else {
-			isValidAddress = false
+			isValidAddress = true
 			detailedErrorMsg = nil
 		}
 	}
 	
 	func drainWallet() -> Void {
+		print("drainWallet()")
 		
 		popoverState.dismissable.send(false)
 		popoverState.displayContent.send(
-			ConfirmationPopover(postIntent: postIntent).anyView
+			ConfirmationPopover(confirmAction: confirmDrainWallet).anyView
 		)
+	}
+	
+	func confirmDrainWallet() -> Void {
+		print("confirmDrainWallet()")
+		
+	//	postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
+	}
+}
+
+fileprivate struct FundsSentView : View {
+	
+	var body: some View {
+		Text("Todo...")
 	}
 }
 
@@ -206,7 +228,12 @@ struct ScaleButtonStyle: ButtonStyle {
 		ScaleButtonStyleView(configuration: configuration, scaleAmount: scaleAmount)
 	}
 	
-	// Subclass of View is required to properly use @Environment variable
+	// Subclass of View is required to properly use @Environment variable.
+	// To be more specific:
+	//   You can put the @Environment variable directly within ButtonStyle,
+	//   and reference it within `makeBody`. And it will compile fine.
+	//   It just won't work, because it won't be updated properly.
+	//
 	struct ScaleButtonStyleView: View {
 		
 		let configuration: ButtonStyle.Configuration
@@ -255,7 +282,7 @@ fileprivate struct FooterView : View {
 
 fileprivate struct ConfirmationPopover : View {
 	
-	let postIntent: (CloseChannelsConfiguration.Intent) -> Void
+	let confirmAction: () -> Void
 	
 	@Environment(\.popoverState) var popoverState: PopoverState
 	
@@ -270,14 +297,14 @@ fileprivate struct ConfirmationPopover : View {
 			
 			HStack {
 				Button {
-					cancel()
+					didTapCancel()
 				} label : {
 					Text("Cancel")
 				}
 				.padding(.trailing, 10)
 				
 				Button {
-					confirm()
+					didTapConfirm()
 				} label : {
 					Text("Send Funds")
 				}
@@ -285,16 +312,15 @@ fileprivate struct ConfirmationPopover : View {
 		}
 	}
 	
-	func cancel() -> Void {
+	func didTapCancel() -> Void {
 		print("cancel()")
 		popoverState.close.send()
 	}
 	
-	func confirm() -> Void {
+	func didTapConfirm() -> Void {
 		print("confirm()")
 		popoverState.close.send()
-		
-	//	postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
+		confirmAction()
 	}
 }
 

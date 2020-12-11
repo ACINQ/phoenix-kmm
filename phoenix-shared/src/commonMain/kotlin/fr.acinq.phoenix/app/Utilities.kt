@@ -1,8 +1,7 @@
 package fr.acinq.phoenix.app
 
-import fr.acinq.bitcoin.Base58
-import fr.acinq.bitcoin.Base58Check
-import fr.acinq.bitcoin.Bech32
+import fr.acinq.bitcoin.*
+import fr.acinq.eclair.utils.Either
 import fr.acinq.phoenix.data.Chain
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
@@ -16,55 +15,117 @@ class Utilities(
 
     private val logger = newLogger(loggerFactory)
 
-    data class BitcoinAddressValidationResult(
-        val myChain: Chain,
-        val addrChain: Chain?
-    ) {
-        val isValid = myChain == addrChain
+    enum class BitcoinAddressType {
+        Base58PubKeyHash,
+        Base58ScriptHash,
+        SegWitPubKeyHash,
+        SegWitScriptHash
     }
 
-    fun isValidBitcoinAddress(addr: String): BitcoinAddressValidationResult {
+    data class BitcoinAddressInfo(
+        val chain: Chain,
+        val type: BitcoinAddressType,
+        val hash: ByteArray
+    )
+
+    sealed class BitcoinAddressError {
+        data class ChainMismatch(val myChain: Chain, val addrChain: Chain): BitcoinAddressError()
+        data class UnknownBase58Prefix(val prefix: Byte): BitcoinAddressError()
+        data class UnknownBech32Prefix(val hrp: String): BitcoinAddressError()
+        data class UnknownBech32Version(val version: Byte): BitcoinAddressError()
+        object UnknownFormat: BitcoinAddressError()
+    }
+
+    fun parseBitcoinAddress(
+        addr: String
+    ): Either<BitcoinAddressInfo, BitcoinAddressError> {
 
         try { // is Base58 ?
-            val (prefix, _) = Base58Check.decode(addr)
-            val addrChain = when (prefix) {
-                Base58.Prefix.PubkeyAddress -> Chain.MAINNET
-                Base58.Prefix.ScriptAddress -> Chain.MAINNET
-                Base58.Prefix.SecretKey -> Chain.MAINNET
-                Base58.Prefix.PubkeyAddressTestnet -> Chain.TESTNET
-                Base58.Prefix.ScriptAddressTestnet -> Chain.TESTNET
-                Base58.Prefix.SecretKeyTestnet -> Chain.TESTNET
-                Base58.Prefix.PubkeyAddressSegnet -> Chain.REGTEST
-                Base58.Prefix.ScriptAddressSegnet -> Chain.REGTEST
-                Base58.Prefix.SecretKeySegnet -> Chain.REGTEST
-                else -> null
+            val (prefix, bin) = Base58Check.decode(addr)
+
+            // BUG in Kotlin ?!?! :
+            //
+            // val tuple = when (foo) {
+            //   "bar" -> Pair("a", "b")
+            //   else -> null
+            // }
+            //
+            // The type of `tuple` should be: `Pair<String, String>?` - an OPTIONAL Pair
+            // But it's NOT ! It's actually: `Pair<String, String>`
+            //
+            // That `else` case is seemingly ignored by the compiler.
+
+            val (addrChain, type) = when (prefix) {
+                Base58.Prefix.PubkeyAddress -> Pair(Chain.MAINNET, BitcoinAddressType.Base58PubKeyHash)
+                Base58.Prefix.ScriptAddress -> Pair(Chain.MAINNET, BitcoinAddressType.Base58ScriptHash)
+                Base58.Prefix.PubkeyAddressTestnet -> Pair(Chain.TESTNET, BitcoinAddressType.Base58PubKeyHash)
+                Base58.Prefix.ScriptAddressTestnet -> Pair(Chain.TESTNET, BitcoinAddressType.Base58ScriptHash)
+                Base58.Prefix.PubkeyAddressSegnet -> Pair(Chain.REGTEST, BitcoinAddressType.Base58PubKeyHash)
+                Base58.Prefix.ScriptAddressSegnet -> Pair(Chain.REGTEST, BitcoinAddressType.Base58ScriptHash)
+                else -> Pair(null, null)
             }
-
-            return BitcoinAddressValidationResult(chain, addrChain)
-
+            if (addrChain == null || type == null) {
+                return Either.Right(BitcoinAddressError.UnknownBase58Prefix(prefix))
+            }
+            if (addrChain != chain) {
+                return Either.Right(BitcoinAddressError.ChainMismatch(chain, addrChain))
+            }
+            return Either.Left(BitcoinAddressInfo(addrChain, type, bin))
         } catch (e: Throwable) {
             // Not Base58Check
         }
 
         try { // is Bech32 ?
-            val (hrp, version, _) = Bech32.decodeWitnessAddress(addr)
-            if (version != 0.toByte()) {
-                // Unknown version - we don't have any validation logic in place for it
-                return BitcoinAddressValidationResult(chain, null)
-            }
+            val (hrp, version, bin) = Bech32.decodeWitnessAddress(addr)
             val addrChain = when (hrp) {
                 "bc" -> Chain.MAINNET
                 "tb" -> Chain.TESTNET
                 "bcrt" -> Chain.REGTEST
                 else -> null
             }
-
-            return BitcoinAddressValidationResult(chain, addrChain)
-
+            if (addrChain == null) {
+                return Either.Right(BitcoinAddressError.UnknownBech32Prefix(hrp))
+            }
+            if (addrChain != chain) {
+                return Either.Right(BitcoinAddressError.ChainMismatch(chain, addrChain))
+            }
+            if (version == 0.toByte()) {
+                val type = when (bin.size) {
+                    20 -> BitcoinAddressType.SegWitPubKeyHash
+                    32 -> BitcoinAddressType.SegWitScriptHash
+                    else -> null
+                }
+                if (type == null) {
+                    return Either.Right(BitcoinAddressError.UnknownFormat)
+                }
+                return Either.Left(BitcoinAddressInfo(addrChain, type, bin))
+            } else {
+                // Unknown version - we don't have any validation logic in place for it
+                return Either.Right(BitcoinAddressError.UnknownBech32Version(version))
+            }
         } catch (e: Throwable) {
             // Not Bech32
         }
 
-        return BitcoinAddressValidationResult(chain, null)
+        return Either.Right(BitcoinAddressError.UnknownFormat)
+    }
+
+    fun addressToPublicKeyScript(address: String): ByteArray? {
+        val info = parseBitcoinAddress(address).left ?: return null
+        val script = when (info.type) {
+            BitcoinAddressType.Base58PubKeyHash -> Script.pay2pkh(pubKeyHash = info.hash)
+            BitcoinAddressType.Base58ScriptHash -> {
+                // We cannot use Script.pay2sh() here, because that function expects a script.
+                // And what we have is a script hash.
+                listOf(OP_HASH160, OP_PUSHDATA(info.hash), OP_EQUAL)
+            }
+            BitcoinAddressType.SegWitPubKeyHash -> Script.pay2wpkh(pubKeyHash = info.hash)
+            BitcoinAddressType.SegWitScriptHash -> {
+                // We cannot use Script.pay2wsh() here, because that function expects a script.
+                // And what we have is a script hash.
+                listOf(OP_0, OP_PUSHDATA(info.hash))
+            }
+        }
+        return Script.write(script)
     }
 }
