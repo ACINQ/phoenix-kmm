@@ -27,13 +27,24 @@ class AppReceiveController(loggerFactory: LoggerFactory, private val peer: Peer)
             is Receive.Intent.Ask -> {
                 launch {
                     model(Receive.Model.Generating)
-                    val deferred = CompletableDeferred<PaymentRequest>()
-                    val preimage = ByteVector32(Random.secure().nextBytes(32)) // must be different everytime
-                    peer.send(ReceivePayment(preimage, intent.paymentAmountMsat, intent.paymentDescription, deferred))
-                    val request = deferred.await()
-                    check(request.amount == intent.paymentAmountMsat) { "Payment request amount not corresponding to expected" }
-                    check(request.description == intent.paymentDescription) { "Payment request description not corresponding to expected" }
-                    model(Receive.Model.Generated(request.write(), intent.amount, intent.unit, intent.desc))
+                    try {
+                        val deferred = CompletableDeferred<PaymentRequest>()
+                        val preimage = ByteVector32(Random.secure().nextBytes(32)) // must be different everytime
+                        peer.send(
+                            ReceivePayment(
+                                preimage,
+                                intent.paymentAmountMsat,
+                                intent.paymentDescription,
+                                deferred
+                            )
+                        )
+                        val request = deferred.await()
+                        check(request.amount == intent.paymentAmountMsat) { "Payment request amount not corresponding to expected" }
+                        check(request.description == intent.paymentDescription) { "Payment request description not corresponding to expected" }
+                        model(Receive.Model.Generated(request.write(), intent.amount, intent.unit, intent.desc))
+                    } catch (e: Throwable) {
+                        logger.error(e) { "failed to process intent=$intent" }
+                    }
                 }
             }
         }
