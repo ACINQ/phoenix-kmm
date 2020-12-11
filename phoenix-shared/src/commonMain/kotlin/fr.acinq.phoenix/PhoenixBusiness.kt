@@ -25,6 +25,8 @@ import fr.acinq.phoenix.app.ctrl.config.*
 import fr.acinq.phoenix.ctrl.*
 import fr.acinq.phoenix.ctrl.config.*
 import fr.acinq.phoenix.data.Chain
+import fr.acinq.phoenix.db.SqliteChannelsDb
+import fr.acinq.phoenix.db.createChannelsDbDriver
 import fr.acinq.phoenix.utils.LogMemory
 import fr.acinq.phoenix.utils.NetworkMonitor
 import fr.acinq.phoenix.utils.PlatformContext
@@ -60,7 +62,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         }
 
         val keyManager = LocalKeyManager(wallet.seed.toByteVector32(), genesisBlock.hash)
-        newLogger(loggerFactory).info { "NodeId: ${keyManager.nodeId}" }
+        newLogger(loggerFactory).info { "nodeid=${keyManager.nodeId}" }
 
         val params = NodeParams(
             keyManager = keyManager,
@@ -74,14 +76,14 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
                     ActivatedFeature(Feature.Wumbo, FeatureSupport.Optional),
                     ActivatedFeature(Feature.StaticRemoteKey, FeatureSupport.Optional),
                     ActivatedFeature(Feature.TrampolinePayment, FeatureSupport.Optional),
+                    ActivatedFeature(Feature.AnchorOutputs, FeatureSupport.Optional),
                 )
             ),
             dustLimit = 546.sat,
             onChainFeeConf = OnChainFeeConf(
-//                maxFeerateMismatch = 10_000.0,
                 closeOnOfflineMismatch = true,
                 updateFeeMinDiffRatio = 0.1,
-                feerateTolerance = FeerateTolerance(ratioLow = 0.5, ratioHigh = 2.0)
+                feerateTolerance = FeerateTolerance(ratioLow = 0.01, ratioHigh = 100.0)
             ),
             maxHtlcValueInFlightMsat = 150000000L,
             maxAcceptedHtlcs = 30,
@@ -115,8 +117,10 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             enableTrampolinePayment = true
         )
 
+        newLogger(loggerFactory).info { "params=$params" }
+
         val databases = object : Databases {
-            override val channels: ChannelsDb get() = channelsDB
+            override val channels: ChannelsDb get() = channelsDb
             override val payments: PaymentsDb get() = paymentsDB
         }
 
@@ -146,12 +150,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
     private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
-    private val channelsDB by lazy { AppChannelsDB(dbFactory) }
+    private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) }
     private val paymentsDB by lazy { InMemoryPaymentsDb() }
-
-    // RegTest
-//    val acinqNodeUri = NodeUri(PublicKey.fromHex("039dc0e0b1d25905e44fdf6f8e89755a5e219685840d0bc1d28d3308f9628a3585"), "localhost", 48001)
-//    val chain = Chain.REGTEST
 
     // TestNet
     private val acinqNodeUri = NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735)
@@ -212,6 +212,5 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
         override fun channelsConfiguration(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peer, chain)
         override fun logsConfiguration(): LogsConfigurationController = AppLogsConfigurationController(ctx, loggerFactory, logMemory)
-//        override fun logsViewConfiguration(fileName: String): LogsViewConfigurationController = AppLogsViewConfigurationController(fileName, loggerFactory, logMemory)
     }
 }
