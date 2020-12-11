@@ -25,6 +25,8 @@ struct CloseChannelsView : View {
 			} else {
 				StandardWalletView(model: model, postIntent: postIntent)
 			}
+		} else if let model = model as? CloseChannelsConfiguration.ModelChannelsClosed {
+			FundsSentView(model: model)
 		} else {
 			LoadingWalletView()
 		}
@@ -209,14 +211,44 @@ fileprivate struct StandardWalletView : View {
 	func confirmDrainWallet() -> Void {
 		print("confirmDrainWallet()")
 		
-	//	postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
+		postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
 	}
 }
 
 fileprivate struct FundsSentView : View {
 	
+	let model: CloseChannelsConfiguration.ModelChannelsClosed
+	
 	var body: some View {
-		Text("Todo...")
+		
+		ScrollView {
+			VStack {
+				Image(systemName: "paperplane.fill")
+					.renderingMode(.template)
+					.resizable()
+					.aspectRatio(contentMode: .fit)
+					.frame(width: 64, height: 64)
+					.foregroundColor(Color.appGreen)
+				
+				Text("Funds sent")
+					.font(.title)
+			}
+			.padding(.bottom, 30)
+			
+			VStack(alignment: .leading) {
+				
+				if model.channelCount > 1 {
+					Text("Expect to receive \(model.channelCount) separate payments.")
+						.padding(.bottom, 10)
+				}
+				
+				Text("The closing transaction(s) are in your transactions list on the ") +
+				Text("main").italic() +
+				Text(" screen. And you can view the status of your channels in the ") +
+				Text("channels list").italic() +
+				Text(" screen.")
+			}
+		}
 	}
 }
 
@@ -332,28 +364,28 @@ class CloseChannelsView_Previews: PreviewProvider {
 	static let model_2 = CloseChannelsConfiguration.ModelReady(channelCount: 0, sats: 0)
 	static let model_3 = CloseChannelsConfiguration.ModelReady(channelCount: 1, sats: 500_000)
 	static let model_4 = CloseChannelsConfiguration.ModelReady(channelCount: 3, sats: 1_500_000)
+	static let model_5 = CloseChannelsConfiguration.ModelChannelsClosed(channelCount: 3, sats: 1_500_500)
 	
-	static let mockModel = model_1
+	static let mockModel = model_5
 	
 	static var previews: some View {
 		
 		NavigationView {
-			CloseChannelsView()
+			mockView(CloseChannelsView())
 		}
 		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")
 		
-//		NavigationView {
-//			CloseChannelsView()
-//		}
-//		.preferredColorScheme(.dark)
-//		.previewDevice("iPhone 11")
-//
-//		NavigationView {
-//			CloseChannelsView()
-//		}
-//		.preferredColorScheme(.light)
-//		.previewDevice("iPhone 8")
-//		.environmentObject(CurrencyPrefs.mockEUR())
+		NavigationView {
+			mockView(CloseChannelsView())
+		}
+		.preferredColorScheme(.dark)
+		.previewDevice("iPhone 8")
+		
+		NavigationView {
+			mockView(CloseChannelsView())
+		}
+		.preferredColorScheme(.light)
+		.previewDevice("iPhone 11")
 	}
 }

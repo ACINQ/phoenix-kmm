@@ -11,7 +11,7 @@ object CloseChannelsConfiguration {
 
         object Loading : Model()
         data class Ready(val channelCount: Int, val sats: Long) : Model()
-        object ChannelsClosed : Model()
+        data class ChannelsClosed(val channelCount: Int, val sats: Long) : Model()
     }
 
     sealed class Intent : MVI.Intent() {

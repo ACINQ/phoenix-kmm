@@ -1,8 +1,10 @@
 package fr.acinq.phoenix.app.ctrl.config
 
 import fr.acinq.bitcoin.ByteVector
+import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.channel.CMD_CLOSE
 import fr.acinq.eclair.channel.ChannelEvent
+import fr.acinq.eclair.channel.ChannelState
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.WrappedChannelEvent
 import fr.acinq.phoenix.app.Utilities
@@ -24,13 +26,17 @@ class AppCloseChannelsConfigurationController(
     init {
         launch {
             peer.channelsFlow.collect { channels ->
-                val sats = channels.values.sumOf { it.localCommitmentSpec?.toLocal?.truncateToSatoshi()?.toLong() ?: 0 }
+                val sats = totalSatsFromChannels(channels)
                 model(CloseChannelsConfiguration.Model.Ready(
                     channelCount = channels.size,
                     sats = sats
                 ))
             }
         }
+    }
+
+    fun totalSatsFromChannels(channels: Map<ByteVector32, ChannelState>): Long {
+        return channels.values.sumOf { it.localCommitmentSpec?.toLocal?.truncateToSatoshi()?.toLong() ?: 0 }
     }
 
     override fun process(intent: CloseChannelsConfiguration.Intent) {
@@ -43,14 +49,15 @@ class AppCloseChannelsConfigurationController(
                     )
                 }
                 launch {
-                    val channelIds = peer.channels.keys
-                    channelIds.forEach { channelId ->
+                    val channels = peer.channels
+                    val sats = totalSatsFromChannels(channels)
+                    channels.keys.forEach { channelId ->
                         val command = CMD_CLOSE(scriptPubKey = ByteVector(scriptPubKey))
                         val channelEvent = ChannelEvent.ExecuteCommand(command)
                         val peerEvent = WrappedChannelEvent(channelId, channelEvent)
                         peer.send(peerEvent)
                     }
-                    model(CloseChannelsConfiguration.Model.ChannelsClosed)
+                    model(CloseChannelsConfiguration.Model.ChannelsClosed(channels.size, sats))
                 }
             }
         }
