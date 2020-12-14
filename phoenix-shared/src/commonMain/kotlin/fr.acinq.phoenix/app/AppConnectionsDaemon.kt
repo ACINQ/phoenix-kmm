@@ -1,10 +1,11 @@
 package fr.acinq.phoenix.app
 
-import fr.acinq.eclair.NodeUri
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.utils.Connection
-import fr.acinq.phoenix.data.*
+import fr.acinq.phoenix.data.ElectrumServer
+import fr.acinq.phoenix.data.address
+import fr.acinq.phoenix.data.asServerAddress
 import fr.acinq.phoenix.utils.NetworkMonitor
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -25,7 +26,6 @@ class AppConnectionsDaemon(
     private val walletManager: WalletManager,
     private val monitor: NetworkMonitor,
     private val electrumClient: ElectrumClient,
-    private val acinqNodeUri: NodeUri,
     loggerFactory: LoggerFactory,
     private val getPeer: () -> Peer // peer is lazy as it may not exist yet.
 ) : CoroutineScope by MainScope() {
@@ -88,6 +88,7 @@ class AppConnectionsDaemon(
                     }
                     else -> {
                         peerConnectionJob?.cancel()
+                        getPeer().disconnect()
                     }
                 }
             }
@@ -121,7 +122,7 @@ class AppConnectionsDaemon(
     }
 
     private fun connectionLoop(name: String, statusStateFlow: StateFlow<Connection>, connect: () -> Unit) = launch {
-        var retryDelay = 1.seconds
+        var retryDelay = 0.5.seconds
         statusStateFlow.collect {
             logger.debug { "New $name status $it" }
 
@@ -130,7 +131,7 @@ class AppConnectionsDaemon(
                 delay(retryDelay) ; retryDelay = increaseDelay(retryDelay)
                 connect()
             } else if (it == Connection.ESTABLISHED) {
-                retryDelay = 1.seconds
+                retryDelay = 0.5.seconds
             }
         }
     }

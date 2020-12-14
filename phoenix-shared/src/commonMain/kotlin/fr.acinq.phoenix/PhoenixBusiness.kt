@@ -170,7 +170,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             walletManager,
             networkMonitor,
             electrumClient,
-            acinqNodeUri,
             loggerFactory
         ) {
             // initialize lazy variables
