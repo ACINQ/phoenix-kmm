@@ -13,6 +13,7 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 import kotlin.time.Duration
@@ -95,7 +96,7 @@ class AppConnectionsDaemon(
         }
         // Internet connection
         launch {
-            walletManager.openWalletUpdatesSubscription().consumeEach {
+            walletManager.walletState.filter { it != null }.collect {
                 if (networkMonitorJob == null) networkMonitorJob = networkStateMonitoring()
             }
         }
