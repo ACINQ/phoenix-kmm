@@ -11,6 +11,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.filter
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 import kotlin.time.Duration
@@ -101,8 +102,7 @@ class AppConnectionsDaemon(
 
     private fun networkStateMonitoring() = launch {
         monitor.start()
-        monitor.openNetworkStateSubscription().consumeEach {
-            if (networkStatus == it) return@consumeEach
+        monitor.networkState.filter { it != networkStatus }.collect {
             logger.info { "New internet status: $it" }
 
             when(it) {
