@@ -168,14 +168,11 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         AppConnectionsDaemon(
             appConfigurationManager,
             walletManager,
+            currencyManager,
             networkMonitor,
             electrumClient,
             loggerFactory
-        ) {
-            // initialize lazy variables
-            currencyManager
-            peer
-        }
+        ) { peer }
     }
 
     fun loadWallet(seed: ByteArray): Unit {
