@@ -17,13 +17,12 @@
 package fr.acinq.phoenix.db
 
 import com.squareup.sqldelight.db.SqlDriver
-import com.squareup.sqldelight.sqlite.driver.JdbcSqliteDriver
+import com.squareup.sqldelight.drivers.native.NativeSqliteDriver
 
 actual fun testDriver(): SqlDriver {
-    // use ":memory:" to make the database be stored in memory
-    TODO("not implemented yet...")
+    return NativeSqliteDriver(ChannelsDatabase.Schema, ":memory:")
 }
 
 actual fun testPaymentsDriver(): SqlDriver {
-    TODO()
+    return NativeSqliteDriver(PaymentsDatabase.Schema, ":memory:")
 }

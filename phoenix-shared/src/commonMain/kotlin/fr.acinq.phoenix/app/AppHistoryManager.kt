@@ -46,7 +46,7 @@ class AppHistoryManager(
                         appDb.put(
                             Transaction(
                                 id = UUID.randomUUID().toString(),
-                                amountSat = it.received.amount.msat,
+                                amountMsat = it.received.amount.msat,
                                 desc = when (val origin = it.incomingPayment.origin) {
                                     is IncomingPayment.Origin.Invoice -> origin.paymentRequest.description ?: ""
                                     is IncomingPayment.Origin.KeySend -> ""
@@ -62,7 +62,7 @@ class AppHistoryManager(
                         appDb.put(
                             Transaction(
                                 id = it.request.paymentId.toString(),
-                                amountSat = -totalAmount.toLong(), // storing value in MilliSatoshi
+                                amountMsat = -totalAmount.toLong(),
                                 desc = it.request.details.paymentRequest.description ?: "",
                                 status = Transaction.Status.Pending,
                                 timestamp = currentTimestampMillis()
@@ -76,7 +76,7 @@ class AppHistoryManager(
                         appDb.put(
                             Transaction(
                                 id = it.payment.id.toString(),
-                                amountSat = -totalAmount.toLong(), // storing value in MilliSatoshi
+                                amountMsat = -totalAmount.toLong(),
                                 desc = when (val details = it.payment.details) {
                                     is OutgoingPayment.Details.Normal -> details.paymentRequest.description ?: ""
                                     is OutgoingPayment.Details.KeySend -> ""
@@ -91,7 +91,7 @@ class AppHistoryManager(
                         appDb.put(
                             Transaction(
                                 id = it.request.paymentId.toString(),
-                                amountSat = -it.request.amount.msat, // storing value in MilliSatoshi
+                                amountMsat = -it.request.amount.msat,
                                 desc = it.reason.message(),
                                 status = Transaction.Status.Failure,
                                 timestamp = currentTimestampMillis()

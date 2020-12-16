@@ -16,8 +16,8 @@
 
 package fr.acinq.phoenix.db
 
-import TestConstants.channel1
-import TestConstants.channel2
+import fr.acinq.phoenix.TestConstants.channel1
+import fr.acinq.phoenix.TestConstants.channel2
 import com.squareup.sqldelight.db.SqlDriver
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.CltvExpiry
