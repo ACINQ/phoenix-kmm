@@ -36,6 +36,8 @@ class LogMemory(val directory: Path) : LogFrontend {
     init {
         directory.createDirs()
 
+        preventFreeze()
+
         MainScope().launch {
             while (true) {
                 delay(every)
