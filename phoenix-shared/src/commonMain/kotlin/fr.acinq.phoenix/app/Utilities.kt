@@ -38,7 +38,7 @@ class Utilities(
 
     fun parseBitcoinAddress(
         addr: String
-    ): Either<BitcoinAddressInfo, BitcoinAddressError> {
+    ): Either<BitcoinAddressError, BitcoinAddressInfo> {
 
         try { // is Base58 ?
             val (prefix, bin) = Base58Check.decode(addr)
@@ -65,12 +65,12 @@ class Utilities(
                 else -> Pair(null, null)
             }
             if (addrChain == null || type == null) {
-                return Either.Right(BitcoinAddressError.UnknownBase58Prefix(prefix))
+                return Either.Left(BitcoinAddressError.UnknownBase58Prefix(prefix))
             }
             if (addrChain != chain) {
-                return Either.Right(BitcoinAddressError.ChainMismatch(chain, addrChain))
+                return Either.Left(BitcoinAddressError.ChainMismatch(chain, addrChain))
             }
-            return Either.Left(BitcoinAddressInfo(addrChain, type, bin))
+            return Either.Right(BitcoinAddressInfo(addrChain, type, bin))
         } catch (e: Throwable) {
             // Not Base58Check
         }
@@ -84,10 +84,10 @@ class Utilities(
                 else -> null
             }
             if (addrChain == null) {
-                return Either.Right(BitcoinAddressError.UnknownBech32Prefix(hrp))
+                return Either.Left(BitcoinAddressError.UnknownBech32Prefix(hrp))
             }
             if (addrChain != chain) {
-                return Either.Right(BitcoinAddressError.ChainMismatch(chain, addrChain))
+                return Either.Left(BitcoinAddressError.ChainMismatch(chain, addrChain))
             }
             if (version == 0.toByte()) {
                 val type = when (bin.size) {
@@ -96,22 +96,22 @@ class Utilities(
                     else -> null
                 }
                 if (type == null) {
-                    return Either.Right(BitcoinAddressError.UnknownFormat)
+                    return Either.Left(BitcoinAddressError.UnknownFormat)
                 }
-                return Either.Left(BitcoinAddressInfo(addrChain, type, bin))
+                return Either.Right(BitcoinAddressInfo(addrChain, type, bin))
             } else {
                 // Unknown version - we don't have any validation logic in place for it
-                return Either.Right(BitcoinAddressError.UnknownBech32Version(version))
+                return Either.Left(BitcoinAddressError.UnknownBech32Version(version))
             }
         } catch (e: Throwable) {
             // Not Bech32
         }
 
-        return Either.Right(BitcoinAddressError.UnknownFormat)
+        return Either.Left(BitcoinAddressError.UnknownFormat)
     }
 
     fun addressToPublicKeyScript(address: String): ByteArray? {
-        val info = parseBitcoinAddress(address).left ?: return null
+        val info = parseBitcoinAddress(address).right ?: return null
         val script = when (info.type) {
             BitcoinAddressType.Base58PubKeyHash -> Script.pay2pkh(pubKeyHash = info.hash)
             BitcoinAddressType.Base58ScriptHash -> {
