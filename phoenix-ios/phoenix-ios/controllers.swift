@@ -17,7 +17,6 @@ class MockControllerFactory : ControllerFactory {
     func scan() -> MVIController<Scan.Model, Scan.Intent> { MVIControllerMock(model: ScanView_Previews.mockModel) }
     func restoreWallet() -> MVIController<RestoreWallet.Model, RestoreWallet.Intent> { MVIControllerMock(model: RestoreWalletView_Previews.mockModel) }
     func configuration() -> MVIController<Configuration.Model, Configuration.Intent> { MVIControllerMock(model: ConfigurationView_Previews.mockModel) }
-    func displayConfiguration() -> MVIController<DisplayConfiguration.Model, DisplayConfiguration.Intent> { MVIControllerMock(model: DisplayConfigurationView_Previews.mockModel) }
     func electrumConfiguration() -> MVIController<ElectrumConfiguration.Model, ElectrumConfiguration.Intent> { MVIControllerMock(model: ElectrumConfigurationView_Previews.mockModel) }
     func channelsConfiguration() -> MVIController<ChannelsConfiguration.Model, ChannelsConfiguration.Intent> { MVIControllerMock(model: ChannelsConfigurationView_Previews.mockModel) }
     func logsConfiguration() -> MVIController<LogsConfiguration.Model, LogsConfiguration.Intent> { MVIControllerMock(model: LogsConfigurationView_Previews.mockModel) }
