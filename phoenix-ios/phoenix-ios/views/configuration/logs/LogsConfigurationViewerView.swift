@@ -13,7 +13,7 @@ struct LogsConfigurationViewerView: View {
         VStack {
             if let text = text {
                 ScrollView {
-                    Text(text)
+                    Text(text.prefix(250000)) // SwiftUI Text seems to have issues displaying very large texts
                             .font(.system(.callout, design: .monospaced))
                             .frame(maxWidth: .infinity, alignment: .leading)
                 }

@@ -13,7 +13,7 @@ struct LogsConfigurationView: View {
                         .foregroundColor(Color.primary)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(UIColor.systemBackground))
+                        .background(Color.primaryBackground)
                 List {
                     if let m = model as? LogsConfiguration.ModelReady {
                         Button {
