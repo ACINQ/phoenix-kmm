@@ -1,5 +1,8 @@
 package fr.acinq.phoenix.app.ctrl
 
+import fr.acinq.bitcoin.ByteVector
+import fr.acinq.eclair.Feature
+import fr.acinq.eclair.Features
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.SendPayment
@@ -16,13 +19,19 @@ class AppScanController(loggerFactory: LoggerFactory, private val peer: Peer) : 
         when (intent) {
             is Scan.Intent.Parse -> launch {
                 readPaymentRequest(intent.request)?.run {
-                    if (amount != null)
-                        validatePaymentRequest(intent.request, this)
+                    var isDangerous = if (amount != null) {
+                        false
+                    } else {
+                        // amountless invoice -> dangerous unless full trampoline is in effect
+                        !Features(features ?: ByteVector.empty).hasFeature(Feature.TrampolinePayment)
+                    }
+                    if (isDangerous)
+                        model(Scan.Model.DangerousRequest(intent.request))
                     else
-                        model(Scan.Model.RequestWithoutAmount(intent.request))
+                        validatePaymentRequest(intent.request, this)
                 }
             }
-            is Scan.Intent.ConfirmEmptyAmount -> launch {
+            is Scan.Intent.ConfirmDangerousRequest -> launch {
                 readPaymentRequest(intent.request)?.run {
                     validatePaymentRequest(intent.request, this)
                 }

@@ -45,7 +45,7 @@ struct ScanView: View {
 		switch model {
 		case _ as Scan.ModelReady,
 		     _ as Scan.ModelBadRequest,
-			 _ as Scan.ModelRequestWithoutAmount:
+			 _ as Scan.ModelDangerousRequest:
 			
 			ReadyView(
 				model: model,
@@ -221,7 +221,7 @@ struct PopupAlert : View {
 					
 				Button("Confirm") {
 					isShowing = false
-					postIntent(Scan.IntentConfirmEmptyAmount(request: paymentRequest))
+					postIntent(Scan.IntentConfirmDangerousRequest(request: paymentRequest))
 					popoverState.close.send()
 				}
 				.font(.title3)
