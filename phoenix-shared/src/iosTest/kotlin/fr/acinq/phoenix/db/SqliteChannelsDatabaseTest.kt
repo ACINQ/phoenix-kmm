@@ -23,3 +23,7 @@ actual fun testDriver(): SqlDriver {
     // use ":memory:" to make the database be stored in memory
     TODO("not implemented yet...")
 }
+
+actual fun testPaymentsDriver(): SqlDriver {
+    TODO()
+}

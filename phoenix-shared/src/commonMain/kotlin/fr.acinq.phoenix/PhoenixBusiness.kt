@@ -157,7 +157,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val peer by lazy { buildPeer() }
 
     private val walletManager by lazy { WalletManager() }
-    private val appHistoryManager by lazy { AppHistoryManager(appDB, peer) }
+    private val appHistoryManager by lazy { AppHistoryManager(loggerFactory, appDB, peer) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient) }
