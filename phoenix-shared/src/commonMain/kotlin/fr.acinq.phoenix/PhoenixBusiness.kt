@@ -1,8 +1,6 @@
 package fr.acinq.phoenix
 
-import fr.acinq.bitcoin.Block
-import fr.acinq.bitcoin.MnemonicCode
-import fr.acinq.bitcoin.PublicKey
+import fr.acinq.bitcoin.*
 import fr.acinq.eclair.*
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.blockchain.electrum.ElectrumWatcher
@@ -53,7 +51,7 @@ import org.kodein.memory.file.resolve
 class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private fun buildPeer(): Peer {
-        val wallet = walletManager.getWallet() ?: error("Wallet must be initialized.")
+        val wallet = walletManager.wallet ?: error("Wallet must be initialized.")
 
         val genesisBlock = when (chain) {
             Chain.MAINNET -> Block.LivenetGenesisBlock
@@ -169,6 +167,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient) }
+    val util by lazy { Utilities(loggerFactory, chain) }
 
     init {
         setEclairLoggerFactory(loggerFactory)
@@ -178,19 +177,15 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         AppConnectionsDaemon(
             appConfigurationManager,
             walletManager,
+            currencyManager,
             networkMonitor,
             electrumClient,
-            acinqNodeUri,
             loggerFactory
-        ) {
-            // initialize lazy variables
-            currencyManager
-            peer
-        }
+        ) { peer }
     }
 
     fun loadWallet(seed: ByteArray): Unit {
-        if (walletManager.getWallet() == null) {
+        if (walletManager.wallet == null) {
             walletManager.loadWallet(seed)
         }
     }
