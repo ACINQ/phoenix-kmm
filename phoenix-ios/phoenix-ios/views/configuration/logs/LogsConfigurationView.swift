@@ -10,7 +10,7 @@ struct LogsConfigurationView: View {
         MVIView({ $0.logsConfiguration() }) { model, postIntent in
             VStack {
                 Text("Here you can extract and visualize application logs, as well as share them.")
-                        .foregroundColor(Color.primaryBackground)
+                        .foregroundColor(Color.primary)
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background(Color(UIColor.systemBackground))
