@@ -20,7 +20,7 @@ struct ScanView: View {
 				if change.newModel is Scan.ModelBadRequest {
 					toast.toast(text: "Unexpected request format!")
 				}
-				else if let model = change.newModel as? Scan.ModelRequestWithoutAmount {
+				else if let model = change.newModel as? Scan.ModelDangerousRequest {
 					paymentRequest = model.request
 					isWarningDisplayed = true
 				}
@@ -106,13 +106,7 @@ struct ReadyView: View {
 				.font(.title2)
 
 			QrCodeScannerView { request in
-				if ignoreScanner {
-					print("ignoring: ignoreScanner")
-				} else if isWarningDisplayed {
-					print("ignoring: isWarningDisplayed")
-				}
-				else {
-					print("postIntent(Scan.Parse(...))")
+				if !isWarningDisplayed && !ignoreScanner {
 					postIntent(Scan.IntentParse(request: request))
 				}
 			}
@@ -149,21 +143,14 @@ struct ReadyView: View {
 			)
 		)
 		.onChange(of: isWarningDisplayed) { newValue in
-			print("========== ReadyView.onChange(isWarningDisplayed)  ==========")
 			if newValue {
-				print("isWarningDisplayed = true")
 				showWarning()
-			} else {
-				print("isWarningDisplayed = false")
 			}
-		}
-		.onAppear() {
-			print("========== ReadyView.onAppear()  ==========")
 		}
 	}
 	
 	func showWarning() -> Void {
-		print("========== showWarning() ==========")
+		
 		ignoreScanner = true
 		
 		popoverState.dismissable.send(false)
@@ -365,7 +352,6 @@ struct ValidateView: View {
 	}
 	
 	func onAppear() -> Void {
-		print("ValidateView.onAppear()")
 		
 		unit = CurrencyUnit(bitcoinUnit: currencyPrefs.bitcoinUnit)
 		
@@ -407,16 +393,17 @@ struct ValidateView: View {
 		
 		isInvalidAmount = false
 		
+		var msat: Int64? = nil
+		var alt: FormattedAmount? = nil
+		
 		if let bitcoinUnit = unit.bitcoinUnit {
 			// amt    => bitcoinUnit
 			// altAmt => fiatCurrency
 			
 			if let exchangeRate = currencyPrefs.fiatExchangeRate() {
 				
-				let msat = Utils.toMsat(from: amt, bitcoinUnit: bitcoinUnit)
-				let alt = Utils.formatFiat(msat: msat, exchangeRate: exchangeRate)
-				
-				altAmount = "≈ \(alt.string)"
+				msat = Utils.toMsat(from: amt, bitcoinUnit: bitcoinUnit)
+				alt = Utils.formatFiat(msat: msat!, exchangeRate: exchangeRate)
 				
 			} else {
 				// We don't know the exchange rate, so we can't display fiat value.
@@ -429,10 +416,8 @@ struct ValidateView: View {
 			
 			if let exchangeRate = currencyPrefs.fiatExchangeRate(fiatCurrency: fiatCurrency) {
 				
-				let msat = Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate)
-				let alt = Utils.formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
-				
-				altAmount = "≈ \(alt.string)"
+				msat = Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate)
+				alt = Utils.formatBitcoin(msat: msat!, bitcoinUnit: currencyPrefs.bitcoinUnit)
 				
 			} else {
 				// We don't know the exchange rate !
@@ -440,6 +425,17 @@ struct ValidateView: View {
 				altAmount = ""
 			}
 		}
+		
+		if let msat = msat {
+			if msat > model.balanceMsat {
+				isInvalidAmount = true
+				altAmount = "Amount exceeds your balance"
+				
+			} else {
+				altAmount = "≈ \(alt!.string)"
+			}
+		}
+		
 	}
 	
 	func sendPayment() -> Void {
@@ -481,8 +477,9 @@ class ScanView_Previews: PreviewProvider {
 
 	static let model_validate = Scan.ModelValidate(
 		request: "lntb15u1p0hxs84pp5662ywy9px43632le69s5am03m6h8uddgln9cx9l8v524v90ylmesdq4xysyymr0vd4kzcmrd9hx7cqp2xqrrss9qy9qsqsp5xr4khzu3xter2z7dldnl3eqggut200vzth6cj8ppmqvx29hzm30q0as63ks9zddk3l5vf46lmkersynge3fy9nywwn8z8ttfdpak5ka9dvcnfrq95e6s06jacnsdryq8l8mrjkrfyd3vxgyv4axljvplmwsqae7yl9",
-		amountMsat: 1500,
-		requestDescription: "1 Blockaccino"
+		amountMsat: 1_500,
+		requestDescription: "1 Blockaccino",
+		balanceMsat: 300_000_000
 	)
 	static let model_sending = Scan.ModelSending()
 	
