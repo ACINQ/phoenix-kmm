@@ -65,6 +65,39 @@ class Utils {
 	private static var Millisatoshis_Per_Millibitcoin =     100_000_000.0
 	private static var Millisatoshis_Per_Bitcoin      = 100_000_000_000.0
 	
+	static func toMsat(fromFiat amount: Double, exchangeRate: BitcoinPriceRate) -> Int64 {
+		
+		let btc = amount / exchangeRate.price
+		return toMsat(from: btc, bitcoinUnit: .bitcoin)
+	}
+	
+	static func toMsat(from amount: Double, bitcoinUnit: BitcoinUnit) -> Int64 {
+		
+		var msat: Double
+		switch bitcoinUnit {
+			case .satoshi      : msat = amount * Millisatoshis_Per_Satoshi
+			case .bits         : msat = amount * Millisatoshis_Per_Bit
+			case .millibitcoin : msat = amount * Millisatoshis_Per_Millibitcoin
+			default/*.bitcoin*/: msat = amount * Millisatoshis_Per_Bitcoin
+		}
+		
+		if let result = Int64(exactly: msat.rounded(.towardZero)) {
+			return result
+		} else {
+			return (msat > 0) ? Int64.max : Int64.min
+		}
+	}
+	
+	static func convertBitcoin(msat: Int64, bitcoinUnit: BitcoinUnit) -> Double {
+		
+		switch bitcoinUnit {
+			case .satoshi      : return Double(msat) / Millisatoshis_Per_Satoshi
+			case .bits         : return Double(msat) / Millisatoshis_Per_Bit
+			case .millibitcoin : return Double(msat) / Millisatoshis_Per_Millibitcoin
+			default/*.bitcoin*/: return Double(msat) / Millisatoshis_Per_Bitcoin
+		}
+	}
+	
 	static func format(_ currencyPrefs: CurrencyPrefs, sat: Int64) -> FormattedAmount {
 		return format(currencyPrefs, msat: (sat * 1_000))
 	}
@@ -93,13 +126,7 @@ class Utils {
 	
 	static func formatBitcoin(msat: Int64, bitcoinUnit: BitcoinUnit) -> FormattedAmount {
 		
-		let targetAmount: Double
-		switch bitcoinUnit {
-			case .satoshi      : targetAmount = Double(msat) / Millisatoshis_Per_Satoshi
-			case .bits         : targetAmount = Double(msat) / Millisatoshis_Per_Bit
-			case .millibitcoin : targetAmount = Double(msat) / Millisatoshis_Per_Millibitcoin
-			default/*.bitcoin*/: targetAmount = Double(msat) / Millisatoshis_Per_Bitcoin
-		}
+		let targetAmount: Double = convertBitcoin(msat: msat, bitcoinUnit: bitcoinUnit)
 		
 		let formatter = NumberFormatter()
 		formatter.numberStyle = .decimal

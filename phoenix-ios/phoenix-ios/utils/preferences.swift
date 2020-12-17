@@ -276,6 +276,22 @@ class CurrencyPrefs: ObservableObject {
 		}
 	}
 	
+	/// Returns the exchangeRate for the currently set fiatCurrency.
+	///
+	func fiatExchangeRate() -> BitcoinPriceRate? {
+		
+		return fiatExchangeRate(fiatCurrency: self.fiatCurrency)
+	}
+	
+	/// Returns the exchangeRate for the given fiatCurrency.
+	/// 
+	func fiatExchangeRate(fiatCurrency: FiatCurrency) -> BitcoinPriceRate? {
+		
+		return self.fiatExchangeRates.first { rate -> Bool in
+			return (rate.fiatCurrency == fiatCurrency)
+		}
+	}
+	
 	static func mockUSD() -> CurrencyPrefs {
 		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .usd, bitcoinUnit: .satoshi, exchangeRate: 20_000.00)
 	}
