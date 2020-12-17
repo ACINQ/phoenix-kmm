@@ -42,6 +42,7 @@
 		C8D7AFF5BC5754DBBEEB2688 /* ElectrumConfigurationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A1F8A123C59199C182C2 /* ElectrumConfigurationView.swift */; };
 		DC18C418256FE22300A2D083 /* preferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC18C417256FE22300A2D083 /* preferences.swift */; };
 		DC18C41D256FF91100A2D083 /* utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC18C41C256FF91100A2D083 /* utils.swift */; };
+		DC49DA8E258BB882005BC4BC /* ScaledButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC49DA8D258BB882005BC4BC /* ScaledButtonStyle.swift */; };
 		DC649FDC2577002300853C46 /* kotlin.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC649FDB2577002300853C46 /* kotlin.swift */; };
 		DC67654525655CA0004D4263 /* about.html in Resources */ = {isa = PBXBuildFile; fileRef = DC67654225655CA0004D4263 /* about.html */; };
 		DC67654625655CA0004D4263 /* stylesheet.css in Resources */ = {isa = PBXBuildFile; fileRef = DC67654425655CA0004D4263 /* stylesheet.css */; };
@@ -142,6 +143,7 @@
 		C8D7AFF1A7C09789C6CF2D06 /* ConfigurationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ConfigurationView.swift; sourceTree = "<group>"; };
 		DC18C417256FE22300A2D083 /* preferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = preferences.swift; sourceTree = "<group>"; };
 		DC18C41C256FF91100A2D083 /* utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = utils.swift; sourceTree = "<group>"; };
+		DC49DA8D258BB882005BC4BC /* ScaledButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScaledButtonStyle.swift; sourceTree = "<group>"; };
 		DC649FDB2577002300853C46 /* kotlin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = kotlin.swift; sourceTree = "<group>"; };
 		DC67654325655CA0004D4263 /* Base */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = Base; path = Base.lproj/about.html; sourceTree = "<group>"; };
 		DC67654425655CA0004D4263 /* stylesheet.css */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.css; path = stylesheet.css; sourceTree = "<group>"; };
@@ -243,6 +245,7 @@
 				C8D7A44147508AA19378B739 /* RestoreWalletView.swift */,
 				53BEF4DAE061532668494988 /* TransactionView.swift */,
 				C8D7A7335040D755924F8FFC /* configuration */,
+				DC49DA8C258BB85F005BC4BC /* style */,
 			);
 			path = views;
 			sourceTree = "<group>";
@@ -337,6 +340,14 @@
 				53BEF0A8669F9379E4E4596F /* logs */,
 			);
 			path = configuration;
+			sourceTree = "<group>";
+		};
+		DC49DA8C258BB85F005BC4BC /* style */ = {
+			isa = PBXGroup;
+			children = (
+				DC49DA8D258BB882005BC4BC /* ScaledButtonStyle.swift */,
+			);
+			path = style;
 			sourceTree = "<group>";
 		};
 		DC67654125655CA0004D4263 /* about */ = {
@@ -651,6 +662,7 @@
 				53BEF1FBE4DE47D0E9864EF7 /* Popup.swift in Sources */,
 				53BEFBECABE13063AB28A4D6 /* publishers.swift in Sources */,
 				53BEFA633D95514CA5C0422A /* ChannelsConfigurationView.swift in Sources */,
+				DC49DA8E258BB882005BC4BC /* ScaledButtonStyle.swift in Sources */,
 				53BEFB1356C4F01D3F7A692F /* Toast.swift in Sources */,
 				C8D7A70EFE0F071ACA0AE246 /* QRCodeScanner.swift in Sources */,
 				53BEF2924096C8E7976D46E3 /* shapes.swift in Sources */,

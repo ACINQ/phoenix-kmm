@@ -283,7 +283,7 @@ struct ValidateView: View {
 	@State var exceedsWalletCapacity: Bool = false
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
-
+	
 	var body: some View {
 	
 		VStack {
@@ -327,7 +327,7 @@ struct ValidateView: View {
 				.padding([.top, .bottom])
 
 			Button {
-			//	postIntent(Scan.IntentSend(request: model.request, amount: Double(amount)!, unit: unit))
+				sendPayment()
 			} label: {
 				HStack {
 					Image("ic_send")
@@ -340,12 +340,14 @@ struct ValidateView: View {
 						.font(.title2)
 						.foregroundColor(Color.white)
 				}
-				.padding([.top, .bottom], 4)
-				.padding([.leading, .trailing], 16)
-				.background(Color.appHorizon)
-				.cornerRadius(100)
-			//	.opacity((amount.isEmpty || illegal) ? 0.4 : 1.0)
+				.padding(.top, 4)
+				.padding(.bottom, 5)
+				.padding([.leading, .trailing], 24)
 			}
+			.buttonStyle(ScaleButtonStyle(
+				backgroundFill: Color.appHorizon,
+				disabledBackgroundFill: Color.gray
+			))
 			.disabled(isInvalidAmount || exceedsWalletCapacity)
 		}
 		.navigationBarTitle("Validate payment", displayMode: .inline)
@@ -370,6 +372,8 @@ struct ValidateView: View {
 		if let msat_kotlin = model.amountMsat {
 			let msat = Int64(truncating: msat_kotlin)
 			
+			// Todo: Replace this hack with a proper TextField formatter
+			
 			let formatted = Utils.formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
 			let digits = "0123456789"
 			
@@ -388,7 +392,6 @@ struct ValidateView: View {
 	}
 	
 	func checkAmount() -> Void {
-		print("ValidateView.checkAmount(): \(amount)")
 		
 		if amount.count == 0 {
 			isInvalidAmount = true
@@ -396,7 +399,7 @@ struct ValidateView: View {
 			return
 		}
 		
-		guard let amt = Double(amount), amt >= 0 else {
+		guard let amt = Double(amount), amt > 0 else {
 			isInvalidAmount = true
 			altAmount = NSLocalizedString("Enter a valid amount", comment: "error message")
 			return
@@ -416,7 +419,7 @@ struct ValidateView: View {
 				altAmount = "≈ \(alt.string)"
 				
 			} else {
-				// We don't know the exchange rate !
+				// We don't know the exchange rate, so we can't display fiat value.
 				altAmount = ""
 			}
 			
@@ -429,12 +432,31 @@ struct ValidateView: View {
 				let msat = Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate)
 				let alt = Utils.formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
 				
-				altAmount = "= \(alt.string)"
+				altAmount = "≈ \(alt.string)"
 				
 			} else {
 				// We don't know the exchange rate !
+				// We shouldn't get into this state since CurrencyUnit.all() already filters for this.
 				altAmount = ""
 			}
+		}
+	}
+	
+	func sendPayment() -> Void {
+		
+		guard let amt = Double(amount), amt > 0 else {
+			return
+		}
+		if let bitcoinUnit = unit.bitcoinUnit {
+			postIntent(Scan.IntentSend(request: model.request, amount: amt, unit: bitcoinUnit))
+			
+		} else if let fiatCurrency = unit.fiatCurrency,
+		          let exchangeRate = currencyPrefs.fiatExchangeRate(fiatCurrency: fiatCurrency)
+		{
+			let msat = Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate)
+			let sat = Utils.convertBitcoin(msat: msat, bitcoinUnit: .satoshi)
+			
+			postIntent(Scan.IntentSend(request: model.request, amount: sat, unit: .satoshi))
 		}
 	}
 }
@@ -457,20 +479,37 @@ struct SendingView: View {
 
 class ScanView_Previews: PreviewProvider {
 
-    static let mockModel = Scan.ModelValidate(
-            request: "lntb15u1p0hxs84pp5662ywy9px43632le69s5am03m6h8uddgln9cx9l8v524v90ylmesdq4xysyymr0vd4kzcmrd9hx7cqp2xqrrss9qy9qsqsp5xr4khzu3xter2z7dldnl3eqggut200vzth6cj8ppmqvx29hzm30q0as63ks9zddk3l5vf46lmkersynge3fy9nywwn8z8ttfdpak5ka9dvcnfrq95e6s06jacnsdryq8l8mrjkrfyd3vxgyv4axljvplmwsqae7yl9",
-            amountMsat: 1500,
-            requestDescription: "1 Blockaccino"
-    )
+	static let model_validate = Scan.ModelValidate(
+		request: "lntb15u1p0hxs84pp5662ywy9px43632le69s5am03m6h8uddgln9cx9l8v524v90ylmesdq4xysyymr0vd4kzcmrd9hx7cqp2xqrrss9qy9qsqsp5xr4khzu3xter2z7dldnl3eqggut200vzth6cj8ppmqvx29hzm30q0as63ks9zddk3l5vf46lmkersynge3fy9nywwn8z8ttfdpak5ka9dvcnfrq95e6s06jacnsdryq8l8mrjkrfyd3vxgyv4axljvplmwsqae7yl9",
+		amountMsat: 1500,
+		requestDescription: "1 Blockaccino"
+	)
+	static let model_sending = Scan.ModelSending()
+	
+	
+	static let mockModel = model_validate
 
-    static var previews: some View {
-        mockView(ScanView(isShowing: .constant(true)))
-                .previewDevice("iPhone 11")
-    }
+	static var previews: some View {
+		
+	//	mockView(ScanView(isShowing: .constant(true)))
+	//		.previewDevice("iPhone 11")
+		
+		NavigationView {
+			SendingView(model: model_sending)
+		}
+		.preferredColorScheme(.light)
+		.previewDevice("iPhone 8")
+		
+		NavigationView {
+			SendingView(model: model_sending)
+		}
+		.preferredColorScheme(.dark)
+		.previewDevice("iPhone 8")
+	}
 
-    #if DEBUG
-    @objc class func injected() {
-        UIApplication.shared.windows.first?.rootViewController = UIHostingController(rootView: previews)
-    }
-    #endif
+	#if DEBUG
+	@objc class func injected() {
+		UIApplication.shared.windows.first?.rootViewController = UIHostingController(rootView: previews)
+	}
+	#endif
 }
