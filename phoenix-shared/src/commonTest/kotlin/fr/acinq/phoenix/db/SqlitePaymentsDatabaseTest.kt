@@ -40,8 +40,7 @@ class SqlitePaymentsDatabaseTest {
 
     val preimage1 = Eclair.randomBytes32()
     val paymentHash1 = Crypto.sha256(preimage1).toByteVector32()
-    val origin1 = IncomingPayment.Origin.Invoice(
-        PaymentRequest.read("lntb15u1p0ajq6ypp555262v6yge5hnjkpvdg3p380lvxka4qvs9sr49c8exd3etrwaddsdq4xysyymr0vd4kzcmrd9hx7cqp7xqrrss9qy9qsqsp5cl4m4nl4gzkeedlyzf99ry3ec99nfh4u3vag3ddfe02ce5pra4qqvwd4w8gtnwwz6gssqmqnz77jur39yejet23gjnn2rn0h4k7ysfjsrvae8zse7yfzla4e9nptqtqempsuv4a45g02uxxm5f82jdz7azqq80pnar"))
+    val origin1 = IncomingPayment.Origin.Invoice(createInvoice(preimage1))
     val receivedWith1 = IncomingPayment.ReceivedWith.LightningPayment
 
     val preimage2 = Eclair.randomBytes32()
@@ -252,7 +251,6 @@ class SqlitePaymentsDatabaseTest {
     fun outgoing__list_with_paging() = runTest {
 
     }
-
 
     @Test
     fun outgoing__list_all_payments() = runTest {
