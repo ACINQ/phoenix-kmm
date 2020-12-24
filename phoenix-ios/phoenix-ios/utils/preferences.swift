@@ -297,6 +297,6 @@ class CurrencyPrefs: ObservableObject {
 	}
 	
 	static func mockEUR() -> CurrencyPrefs {
-		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .usd, bitcoinUnit: .satoshi, exchangeRate: 17_000.00)
+		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .eur, bitcoinUnit: .satoshi, exchangeRate: 17_000.00)
 	}
 }

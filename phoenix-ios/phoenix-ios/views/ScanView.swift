@@ -1,8 +1,17 @@
 import SwiftUI
 import AVFoundation
 import PhoenixShared
-
 import UIKit
+import os.log
+
+#if DEBUG && false
+fileprivate var log = Logger(
+	subsystem: Bundle.main.bundleIdentifier!,
+	category: "ScanView"
+)
+#else
+fileprivate var log = Logger(OSLog.disabled)
+#endif
 
 struct ScanView: View {
 
@@ -217,76 +226,43 @@ struct PopupAlert : View {
 	}
 }
 
-struct CurrencyUnit: Hashable {
-	let bitcoinUnit: BitcoinUnit?
-	let fiatCurrency: FiatCurrency?
-	
-	init(bitcoinUnit: BitcoinUnit) {
-		self.bitcoinUnit = bitcoinUnit
-		self.fiatCurrency = nil
-	}
-	init(fiatCurrency: FiatCurrency) {
-		self.bitcoinUnit = nil
-		self.fiatCurrency = fiatCurrency
-	}
-	
-	var abbrev: String {
-		if let bitcoinUnit = bitcoinUnit {
-			return bitcoinUnit.abbrev
-		} else {
-			return fiatCurrency!.shortLabel
-		}
-	}
-	
-	static func all(currencyPrefs: CurrencyPrefs) -> [CurrencyUnit] {
-		
-		var all = [CurrencyUnit]()
-		
-		for bitcoinUnit in BitcoinUnit.default().values {
-			all.append(CurrencyUnit(bitcoinUnit: bitcoinUnit))
-		}
-		
-		if let _ = currencyPrefs.fiatExchangeRate() {
-			all.append(CurrencyUnit(fiatCurrency: currencyPrefs.fiatCurrency))
-		} else {
-			// We don't have the exchange rate for the user's selected fiat currency.
-			// So we won't be able to perform conversion to millisatoshi.
-		}
-		
-		return all
-	}
-}
-
 struct ValidateView: View {
 	
 	let model: Scan.ModelValidate
 	let postIntent: (Scan.Intent) -> Void
 
+	@State var number: Double = 0.0
+	
 	@State var unit: CurrencyUnit = CurrencyUnit(bitcoinUnit: BitcoinUnit.satoshi)
 	@State var amount: String = ""
-	@State var altAmount: String = ""
+	@State var parsedAmount: Result<Double, TextFieldCurrencyStylerError> = Result.failure(.emptyInput)
 	
+	@State var altAmount: String = ""
 	@State var isInvalidAmount: Bool = false
 	@State var exceedsWalletCapacity: Bool = false
 	
+	@Environment(\.colorScheme) var colorScheme
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
-	var body: some View {
+	func currencyStyler() -> TextFieldCurrencyStyler {
+		return TextFieldCurrencyStyler(unit: $unit, amount: $amount, parsedAmount: $parsedAmount)
+	}
 	
+	var body: some View {
+		
 		VStack {
 			
 			HStack(alignment: .firstTextBaseline) {
-				TextField("123", text: $amount)
+				TextField("123", text: currencyStyler().amountProxy)
 					.keyboardType(.decimalPad)
 					.disableAutocorrection(true)
 					.fixedSize()
 					.font(.title)
-					.foregroundColor(Color.appHorizon)
 					.multilineTextAlignment(.trailing)
 					.foregroundColor(isInvalidAmount ? Color.appRed : Color.primaryForeground)
 
 				Picker(selection: $unit, label: Text(unit.abbrev).frame(minWidth: 40)) {
-					let options = CurrencyUnit.all(currencyPrefs: currencyPrefs)
+					let options = CurrencyUnit.displayable(currencyPrefs: currencyPrefs)
 					ForEach(0 ..< options.count) {
 						let option = options[$0]
 						Text(option.abbrev).tag(option)
@@ -344,98 +320,106 @@ struct ValidateView: View {
 			onAppear()
 		}
 		.onChange(of: amount) { _ in
-			checkAmount()
+			amountDidChange()
 		}
 		.onChange(of: unit) { _  in
-			checkAmount()
+			unitDidChange()
 		}
 	}
 	
 	func onAppear() -> Void {
+		log.trace("(ValidateView) onAppear()")
 		
 		unit = CurrencyUnit(bitcoinUnit: currencyPrefs.bitcoinUnit)
 		
 		if let msat_kotlin = model.amountMsat {
 			let msat = Int64(truncating: msat_kotlin)
 			
-			// Todo: Replace this hack with a proper TextField formatter
+			let targetAmt = Utils.convertBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
+			let formattedAmt = Utils.formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
 			
-			let formatted = Utils.formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
-			let digits = "0123456789"
-			
-			let unformattedIntegerDigits = formatted.integerDigits.filter { digits.contains($0) }
-			let unformattedFractionDigits = formatted.fractionDigits.filter { digits.contains($0) }
-			
-			var unformattedAmount = unformattedIntegerDigits
-			if unformattedFractionDigits.count > 0 {
-				unformattedAmount += formatted.decimalSeparator
-				unformattedAmount += unformattedFractionDigits
-			}
-			
-			amount = unformattedAmount
-			checkAmount()
+			parsedAmount = Result.success(targetAmt) // do this first !
+			amount = formattedAmt.digits
 		}
 	}
 	
-	func checkAmount() -> Void {
+	func amountDidChange() -> Void {
+		log.trace("(ValidateView) amountDidChange()")
 		
-		if amount.count == 0 {
+		refreshAltAmount()
+	}
+	
+	func unitDidChange() -> Void {
+		log.trace("(ValidateView) unitDidChange()")
+		
+		// We might want to apply a different formatter
+		let result = TextFieldCurrencyStyler.format(input: amount, unit: unit)
+		parsedAmount = result.1
+		amount = result.0
+		
+		refreshAltAmount()
+	}
+	
+	func refreshAltAmount() -> Void {
+		log.trace("(ValidateView) refreshAltAmount()")
+		
+		switch parsedAmount {
+		case .failure(let error):
 			isInvalidAmount = true
-			altAmount = NSLocalizedString("Enter an amount", comment: "error message")
-			return
-		}
-		
-		guard let amt = Double(amount), amt > 0 else {
-			isInvalidAmount = true
-			altAmount = NSLocalizedString("Enter a valid amount", comment: "error message")
-			return
-		}
-		
-		isInvalidAmount = false
-		
-		var msat: Int64? = nil
-		var alt: FormattedAmount? = nil
-		
-		if let bitcoinUnit = unit.bitcoinUnit {
-			// amt    => bitcoinUnit
-			// altAmt => fiatCurrency
 			
-			if let exchangeRate = currencyPrefs.fiatExchangeRate() {
-				
-				msat = Utils.toMsat(from: amt, bitcoinUnit: bitcoinUnit)
-				alt = Utils.formatFiat(msat: msat!, exchangeRate: exchangeRate)
-				
-			} else {
-				// We don't know the exchange rate, so we can't display fiat value.
-				altAmount = ""
+			switch error {
+			case .emptyInput:
+				altAmount = NSLocalizedString("Enter an amount", comment: "error message")
+			case .invalidInput:
+				altAmount = NSLocalizedString("Enter a valid amount", comment: "error message")
 			}
 			
-		} else if let fiatCurrency = unit.fiatCurrency {
-			// amt    => fiatCurrency
-			// altAmt => bitcoinUnit
+		case .success(let amt):
+			isInvalidAmount = false
 			
-			if let exchangeRate = currencyPrefs.fiatExchangeRate(fiatCurrency: fiatCurrency) {
+			var msat: Int64? = nil
+			var alt: FormattedAmount? = nil
+			
+			if let bitcoinUnit = unit.bitcoinUnit {
+				// amt    => bitcoinUnit
+				// altAmt => fiatCurrency
 				
-				msat = Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate)
-				alt = Utils.formatBitcoin(msat: msat!, bitcoinUnit: currencyPrefs.bitcoinUnit)
+				if let exchangeRate = currencyPrefs.fiatExchangeRate() {
+					
+					msat = Utils.toMsat(from: amt, bitcoinUnit: bitcoinUnit)
+					alt = Utils.formatFiat(msat: msat!, exchangeRate: exchangeRate)
+					
+				} else {
+					// We don't know the exchange rate, so we can't display fiat value.
+					altAmount = ""
+				}
 				
-			} else {
-				// We don't know the exchange rate !
-				// We shouldn't get into this state since CurrencyUnit.all() already filters for this.
-				altAmount = ""
+			} else if let fiatCurrency = unit.fiatCurrency {
+				// amt    => fiatCurrency
+				// altAmt => bitcoinUnit
+				
+				if let exchangeRate = currencyPrefs.fiatExchangeRate(fiatCurrency: fiatCurrency) {
+					
+					msat = Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate)
+					alt = Utils.formatBitcoin(msat: msat!, bitcoinUnit: currencyPrefs.bitcoinUnit)
+					
+				} else {
+					// We don't know the exchange rate !
+					// We shouldn't get into this state since CurrencyUnit.displayable() already filters for this.
+					altAmount = ""
+				}
+			}
+			
+			if let msat = msat {
+				if msat > model.balanceMsat {
+					isInvalidAmount = true
+					altAmount = "Amount exceeds your balance"
+					
+				} else {
+					altAmount = "≈ \(alt!.string)"
+				}
 			}
 		}
-		
-		if let msat = msat {
-			if msat > model.balanceMsat {
-				isInvalidAmount = true
-				altAmount = "Amount exceeds your balance"
-				
-			} else {
-				altAmount = "≈ \(alt!.string)"
-			}
-		}
-		
 	}
 	
 	func sendPayment() -> Void {
