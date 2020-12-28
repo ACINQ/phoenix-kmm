@@ -424,9 +424,13 @@ struct ValidateView: View {
 	
 	func sendPayment() -> Void {
 		
-		guard let amt = Double(amount), amt > 0 else {
+		guard
+			let amt = try? parsedAmount.get(),
+			amt > 0
+		else {
 			return
 		}
+		
 		if let bitcoinUnit = unit.bitcoinUnit {
 			postIntent(Scan.IntentSend(request: model.request, amount: amt, unit: bitcoinUnit))
 			
