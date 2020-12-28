@@ -356,7 +356,9 @@ fileprivate struct ConfirmationPopover : View {
 					Text("Send Funds")
 				}
 			}
-		}
+			
+		} // </VStack>
+		.padding()
 	}
 	
 	func didTapCancel() -> Void {
@@ -395,7 +397,9 @@ fileprivate struct NotImplementedPopover: View {
 					Text("OK").font(.title2)
 				}
 			}
-		}
+		
+		}// </VStack>
+		.padding()
 	}
 	
 	func dismiss() -> Void {
