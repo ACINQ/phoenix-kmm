@@ -49,14 +49,19 @@ struct TextFieldCurrencyStyler {
 	@Binding private var amount: String
 	@Binding private var parsedAmount: Result<Double, TextFieldCurrencyStylerError>
 	
+	let hideMsats: Bool
+	
 	init(
 		unit: Binding<CurrencyUnit>,
 		amount: Binding<String>,
-		parsedAmount: Binding<Result<Double, TextFieldCurrencyStylerError>>
+		parsedAmount: Binding<Result<Double, TextFieldCurrencyStylerError>>,
+		hideMsats: Bool = true
 	) {
 		_unit = unit
 		_amount = amount
 		_parsedAmount = parsedAmount
+		
+		self.hideMsats = hideMsats
 	}
 
 	var amountProxy: Binding<String> {
@@ -68,8 +73,11 @@ struct TextFieldCurrencyStyler {
 			},
 			set: { (input: String) in
 				log.debug("-> set")
-				let (newAmount, result) = TextFieldCurrencyStyler.format(input: input, unit: unit)
-				
+				let (newAmount, result) = TextFieldCurrencyStyler.format(
+					input: input,
+					unit: unit,
+					hideMsats: hideMsats
+				)
 				self.parsedAmount = result
 				self.amount = newAmount // contract: always change parsedAmount before amount
 			}
@@ -77,8 +85,9 @@ struct TextFieldCurrencyStyler {
 	}
 	
 	static func format(
-		input : String,
-		unit  : CurrencyUnit
+		input: String,
+		unit: CurrencyUnit,
+		hideMsats: Bool = true
 	) -> (String, Result<Double, TextFieldCurrencyStylerError>)
 	{
 		let Fail = {(_ error: TextFieldCurrencyStylerError) ->
@@ -100,7 +109,7 @@ struct TextFieldCurrencyStyler {
 		let isFiatCurrency = unit.fiatCurrency != nil
 		let formatter: NumberFormatter = isFiatCurrency
 			? Utils.fiatFormatter()
-			: Utils.bitcoinFormatter(bitcoinUnit: unit.bitcoinUnit!)
+			: Utils.bitcoinFormatter(bitcoinUnit: unit.bitcoinUnit!, hideMsats: hideMsats)
 		
 		if isFiatCurrency {
 			// The fiatFormatter is configured with minimumFractionDigits set to 2.
@@ -164,8 +173,6 @@ struct TextFieldCurrencyStyler {
 		
 		log.debug("formattedInput: \"\(formattedInput)\"")
 		
-		let isBtcOrMbtc = (unit.bitcoinUnit == .bitcoin) || (unit.bitcoinUnit == .millibitcoin)
-		
 		// We can only use the formattedInput if it properly matches the rawInput.
 		//
 		// For example:
@@ -183,17 +190,23 @@ struct TextFieldCurrencyStyler {
 			log.debug("foiled !")
 			
 			// At this point we know that the rawInput is a parsable number.
-			// But it doesn't quite match up with formattedInput.
+			// But it doesn't quite match up with `formattedInput`.
 			//
-			// This almost always occurs because of trailing zeros in the fractional component:
-			// - input = 0.010
-			// - formattedInput = 0.01
+			// Sometimes this occurs because of trailing zeros in the fractional component:
+			// - input = "0.010"
+			// - formattedInput = "0.01"
+			//
+			// Other times it happens when the user is hitting backspace.
+			// For example, the text was "0.123 4", and then the user hit backspace.
+			//
+			// - input          = "0.123 " <- trailing space
+			// - formattedInput = "0.123"  <- no trailing space
 			//
 			// So to assist the user,
 			// we're going to automatically remove trailing fractionGroupingSeparator's.
 			
 			var output = input
-			if isBtcOrMbtc && input.contains(formatter.decimalSeparator) {
+			if (formatter.maximumFractionDigits > 3) && input.contains(formatter.decimalSeparator) {
 					
 				let separator = FormattedAmount.fractionGroupingSeparator
 				if input.hasSuffix(separator) {
@@ -209,7 +222,7 @@ struct TextFieldCurrencyStyler {
 		
 		log.debug("sweet !")
 		
-		if isBtcOrMbtc {
+		if formatter.maximumFractionDigits > 3 {
 			// The number may have a large fraction component.
 			// See discussion in: FormattedAmount.withFormattedFractionDigits()
 			//

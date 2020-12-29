@@ -67,7 +67,7 @@ class Utils {
 		}
 	}
 	
-	static func bitcoinFormatter(bitcoinUnit: BitcoinUnit) -> NumberFormatter {
+	static func bitcoinFormatter(bitcoinUnit: BitcoinUnit, hideMsats: Bool = true) -> NumberFormatter {
 		
 		let formatter = NumberFormatter()
 		formatter.numberStyle = .decimal
@@ -80,15 +80,23 @@ class Utils {
 			default/*.bitcoin*/: formatter.maximumFractionDigits = 8
 		}
 		
+		if !hideMsats {
+			formatter.maximumFractionDigits += 3
+		}
+		
 		formatter.roundingMode = .floor
 		
 		return formatter
 	}
 	
-	static func formatBitcoin(msat: Int64, bitcoinUnit: BitcoinUnit) -> FormattedAmount {
+	static func formatBitcoin(
+		msat: Int64,
+		bitcoinUnit: BitcoinUnit,
+		hideMsats: Bool = true
+	) -> FormattedAmount {
 		
 		let targetAmount: Double = convertBitcoin(msat: msat, bitcoinUnit: bitcoinUnit)
-		let formatter = bitcoinFormatter(bitcoinUnit: bitcoinUnit)
+		let formatter = bitcoinFormatter(bitcoinUnit: bitcoinUnit, hideMsats: hideMsats)
 		
 		let digits = formatter.string(from: NSNumber(value: targetAmount)) ?? targetAmount.description
 		let formattedAmount = FormattedAmount(
@@ -97,7 +105,7 @@ class Utils {
 			decimalSeparator: formatter.decimalSeparator
 		)
 		
-		if bitcoinUnit == .bitcoin || bitcoinUnit == .millibitcoin {
+		if formatter.maximumFractionDigits > 3 {
 			// The number may have a large fraction component.
 			// See discussion in: FormattedAmount.withFormattedFractionDigits()
 			//

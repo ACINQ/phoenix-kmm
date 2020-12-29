@@ -245,7 +245,12 @@ struct ValidateView: View {
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
 	func currencyStyler() -> TextFieldCurrencyStyler {
-		return TextFieldCurrencyStyler(unit: $unit, amount: $amount, parsedAmount: $parsedAmount)
+		return TextFieldCurrencyStyler(
+			unit: $unit,
+			amount: $amount,
+			parsedAmount: $parsedAmount,
+			hideMsats: false
+		)
 	}
 	
 	var body: some View {
@@ -330,13 +335,14 @@ struct ValidateView: View {
 	func onAppear() -> Void {
 		log.trace("(ValidateView) onAppear()")
 		
-		unit = CurrencyUnit(bitcoinUnit: currencyPrefs.bitcoinUnit)
+		let bitcoinUnit = currencyPrefs.bitcoinUnit
+		unit = CurrencyUnit(bitcoinUnit: bitcoinUnit)
 		
 		if let msat_kotlin = model.amountMsat {
 			let msat = Int64(truncating: msat_kotlin)
 			
-			let targetAmt = Utils.convertBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
-			let formattedAmt = Utils.formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
+			let targetAmt = Utils.convertBitcoin(msat: msat, bitcoinUnit: bitcoinUnit)
+			let formattedAmt = Utils.formatBitcoin(msat: msat, bitcoinUnit: bitcoinUnit, hideMsats: false)
 			
 			parsedAmount = Result.success(targetAmt) // do this first !
 			amount = formattedAmt.digits
@@ -353,7 +359,7 @@ struct ValidateView: View {
 		log.trace("(ValidateView) unitDidChange()")
 		
 		// We might want to apply a different formatter
-		let result = TextFieldCurrencyStyler.format(input: amount, unit: unit)
+		let result = TextFieldCurrencyStyler.format(input: amount, unit: unit, hideMsats: false)
 		parsedAmount = result.1
 		amount = result.0
 		
