@@ -221,12 +221,12 @@ fileprivate struct StandardWalletView : View {
 	func confirmDrainWallet() -> Void {
 		logger.trace("confirmDrainWallet()")
 	
-		popoverState.dismissable.send(true)
-		popoverState.displayContent.send(
-			NotImplementedPopover().anyView
-		)
+	//	popoverState.dismissable.send(true)
+	//	popoverState.displayContent.send(
+	//		NotImplementedPopover().anyView
+	//	)
 		
-	//	postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
+		postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
 	}
 }
 
@@ -257,7 +257,17 @@ fileprivate struct FundsSentView : View {
 						.padding(.bottom, 10)
 				}
 				
-				Text("The closing transaction(s) are in your transactions list on the ") +
+				let intro = (model.channelCount == 1)
+					? NSLocalizedString(
+						"The closing transaction is in your transactions list on the ",
+						comment: "label text"
+					)
+					: NSLocalizedString(
+						"The closing transactions are in your transactions list on the ",
+						comment: "label text"
+					)
+				
+				Text(intro) +
 				Text("main").italic() +
 				Text(" screen. And you can view the status of your channels in the ") +
 				Text("channels list").italic() +
@@ -411,13 +421,14 @@ fileprivate struct NotImplementedPopover: View {
 
 class CloseChannelsView_Previews: PreviewProvider {
 	
-	static let model_1 = CloseChannelsConfiguration.ModelLoading()
-	static let model_2 = CloseChannelsConfiguration.ModelReady(channelCount: 0, sats: 0)
-	static let model_3 = CloseChannelsConfiguration.ModelReady(channelCount: 1, sats: 500_000)
-	static let model_4 = CloseChannelsConfiguration.ModelReady(channelCount: 3, sats: 1_500_000)
-	static let model_5 = CloseChannelsConfiguration.ModelChannelsClosed(channelCount: 3, sats: 1_500_500)
+//	static let model_1 = CloseChannelsConfiguration.ModelLoading()
+//	static let model_2 = CloseChannelsConfiguration.ModelReady(channelCount: 0, sats: 0)
+//	static let model_3 = CloseChannelsConfiguration.ModelReady(channelCount: 1, sats: 500_000)
+//	static let model_4 = CloseChannelsConfiguration.ModelReady(channelCount: 3, sats: 1_500_000)
+	static let model_5 = CloseChannelsConfiguration.ModelChannelsClosed(channelCount: 1, sats: 500_000)
+	static let model_6 = CloseChannelsConfiguration.ModelChannelsClosed(channelCount: 3, sats: 1_500_500)
 	
-	static let mockModel = model_4
+	static let mockModel = model_5
 	
 	static var previews: some View {
 		

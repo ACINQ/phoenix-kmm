@@ -2,9 +2,7 @@ package fr.acinq.phoenix.app.ctrl.config
 
 import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
-import fr.acinq.eclair.channel.CMD_CLOSE
-import fr.acinq.eclair.channel.ChannelEvent
-import fr.acinq.eclair.channel.ChannelState
+import fr.acinq.eclair.channel.*
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.WrappedChannelEvent
 import fr.acinq.phoenix.app.Utilities
@@ -23,20 +21,40 @@ class AppCloseChannelsConfigurationController(
     loggerFactory,
     CloseChannelsConfiguration.Model.Loading
 ) {
+    var isClosing = false
+
     init {
         launch {
             peer.channelsFlow.collect { channels ->
-                val sats = totalSatsFromChannels(channels)
-                model(CloseChannelsConfiguration.Model.Ready(
-                    channelCount = channels.size,
-                    sats = sats
-                ))
+                if (!isClosing) {
+                    val filteredChannels = filteredChannels(channels)
+                    val sats = totalSats(filteredChannels)
+                    model(
+                        CloseChannelsConfiguration.Model.Ready(
+                            channelCount = filteredChannels.size,
+                            sats = sats
+                        )
+                    )
+                }
             }
         }
     }
 
-    fun totalSatsFromChannels(channels: Map<ByteVector32, ChannelState>): Long {
-        return channels.values.sumOf { it.localCommitmentSpec?.toLocal?.truncateToSatoshi()?.toLong() ?: 0 }
+    fun filteredChannels(channels: Map<ByteVector32, ChannelState>): Map<ByteVector32, ChannelState> {
+        return channels.filter {
+            when (it.value) {
+                is Closing -> false
+                is Closed -> false
+                is Aborted -> false
+                else -> true
+            }
+        }
+    }
+
+    fun totalSats(channels: Map<ByteVector32, ChannelState>): Long {
+        return channels.values.sumOf {
+            it.localCommitmentSpec?.toLocal?.truncateToSatoshi()?.toLong() ?: 0
+        }
     }
 
     override fun process(intent: CloseChannelsConfiguration.Intent) {
@@ -49,15 +67,16 @@ class AppCloseChannelsConfigurationController(
                     )
                 }
                 launch {
-                    val channels = peer.channels
-                    val sats = totalSatsFromChannels(channels)
-                    channels.keys.forEach { channelId ->
+                    isClosing = true
+                    val filteredChannels = filteredChannels(peer.channels)
+                    val sats = totalSats(filteredChannels)
+                    filteredChannels.keys.forEach { channelId ->
                         val command = CMD_CLOSE(scriptPubKey = ByteVector(scriptPubKey))
                         val channelEvent = ChannelEvent.ExecuteCommand(command)
                         val peerEvent = WrappedChannelEvent(channelId, channelEvent)
                         peer.send(peerEvent)
                     }
-                    model(CloseChannelsConfiguration.Model.ChannelsClosed(channels.size, sats))
+                    model(CloseChannelsConfiguration.Model.ChannelsClosed(filteredChannels.size, sats))
                 }
             }
         }
