@@ -41,14 +41,14 @@ class Utils {
 		}
 	}
 	
-	static func format(_ currencyPrefs: CurrencyPrefs, sat: Int64) -> FormattedAmount {
+	static func format(_ currencyPrefs: CurrencyPrefs, sat: Int64, hideMsats: Bool = true) -> FormattedAmount {
 		return format(currencyPrefs, msat: (sat * 1_000))
 	}
 	
-	static func format(_ currencyPrefs: CurrencyPrefs, msat: Int64) -> FormattedAmount {
+	static func format(_ currencyPrefs: CurrencyPrefs, msat: Int64, hideMsats: Bool = true) -> FormattedAmount {
 		
 		if currencyPrefs.currencyType == .bitcoin {
-			return formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit)
+			return formatBitcoin(msat: msat, bitcoinUnit: currencyPrefs.bitcoinUnit, hideMsats: hideMsats)
 		} else {
 			let selectedFiat = currencyPrefs.fiatCurrency
 			let exchangeRate = currencyPrefs.fiatExchangeRates.first { rate -> Bool in
