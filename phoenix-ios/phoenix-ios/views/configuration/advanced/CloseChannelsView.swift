@@ -165,8 +165,15 @@ fileprivate struct StandardWalletView : View {
 						
 						Text("Drain my wallet")
 					}
+					.padding([.top, .bottom], 8)
+					.padding([.leading, .trailing], 16)
 				}
-				.buttonStyle(ScaleButtonStyle())
+				.buttonStyle(
+					ScaleButtonStyle(
+						borderStroke: Color.appHorizon,
+						disabledBorderStroke: Color(UIColor.separator)
+					)
+				)
 				.disabled(!isValidAddress)
 			}
 			
@@ -273,44 +280,6 @@ fileprivate struct FundsSentView : View {
 				Text("channels list").italic() +
 				Text(" screen.")
 			}
-		}
-	}
-}
-
-struct ScaleButtonStyle: ButtonStyle {
-
-	let scaleAmount: CGFloat = 0.98
-	
-	func makeBody(configuration: Self.Configuration) -> some View {
-		ScaleButtonStyleView(configuration: configuration, scaleAmount: scaleAmount)
-	}
-	
-	// Subclass of View is required to properly use @Environment variable.
-	// To be more specific:
-	//   You can put the @Environment variable directly within ButtonStyle,
-	//   and reference it within `makeBody`. And it will compile fine.
-	//   It just won't work, because it won't be updated properly.
-	//
-	struct ScaleButtonStyleView: View {
-		
-		let configuration: ButtonStyle.Configuration
-		let scaleAmount: CGFloat
-		
-		@Environment(\.isEnabled) private var isEnabled: Bool
-		
-		var body: some View {
-			configuration.label
-				.opacity(isEnabled ? 1.0 : 0.65)
-				.scaleEffect(configuration.isPressed ? scaleAmount : 1.0)
-				.padding([.top, .bottom], 8)
-				.padding([.leading, .trailing], 16)
-				.cornerRadius(16)
-				.background(
-					Capsule().stroke(
-						isEnabled ? Color.appHorizon : Color(UIColor.separator),
-						lineWidth: 1.5
-					)
-				)
 		}
 	}
 }
