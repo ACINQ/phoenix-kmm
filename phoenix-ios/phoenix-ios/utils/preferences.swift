@@ -238,7 +238,7 @@ class CurrencyPrefs: ObservableObject {
 			self?.bitcoinUnit = newValue
 		}.store(in: &cancellables)
 		
-		let business = PhoenixApplicationDelegate.get().business
+		let business = AppDelegate.get().business
 		fiatExchangeRates = business.currencyManager.getBitcoinRates()
 		
 		unsubscribe = business.currencyManager.events.subscribe {[weak self] event in
