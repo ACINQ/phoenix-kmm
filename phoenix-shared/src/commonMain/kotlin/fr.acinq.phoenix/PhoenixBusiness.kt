@@ -17,6 +17,7 @@ import fr.acinq.eclair.utils.msat
 import fr.acinq.eclair.utils.sat
 import fr.acinq.eclair.utils.setEclairLoggerFactory
 import fr.acinq.eclair.utils.toByteVector32
+import fr.acinq.eclair.wire.FCMToken
 import fr.acinq.phoenix.app.*
 import fr.acinq.phoenix.app.ctrl.*
 import fr.acinq.phoenix.app.ctrl.config.*
@@ -31,6 +32,7 @@ import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.kodein.db.DB
 import org.kodein.db.impl.factory
@@ -191,15 +193,27 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         ) { peer }
     }
 
+    // Converts a mnemonics list to a seed.
+    // This is generally called with a mnemonics list that has been previously saved.
+    fun prepWallet(mnemonics: List<String>, passphrase: String = ""): ByteArray {
+        MnemonicCode.validate(mnemonics)
+        return MnemonicCode.toSeed(mnemonics, passphrase)
+    }
+
     fun loadWallet(seed: ByteArray): Unit {
         if (walletManager.wallet == null) {
             walletManager.loadWallet(seed)
         }
     }
 
-    fun prepWallet(mnemonics: List<String>, passphrase: String = ""): ByteArray {
-        MnemonicCode.validate(mnemonics)
-        return MnemonicCode.toSeed(mnemonics, passphrase)
+    fun nodeID(): String {
+        return peer.nodeParams.nodeId.toString()
+    }
+
+    // The (node_id, fcm_token) tuple only needs to be registered once.
+    // And after that, only if the tuple changes (e.g. different fcm_token).
+    fun registerFcmToken(token: String?) {
+        peer.registerFcmToken(token)
     }
 
     val controllers : ControllerFactory = object : ControllerFactory {
@@ -210,7 +224,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun scan(): ScanController = AppScanController(loggerFactory, peer)
         override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)
         override fun configuration(): ConfigurationController = AppConfigurationController(loggerFactory, walletManager)
-        override fun  electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
+        override fun electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
         override fun channelsConfiguration(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peer, chain)
         override fun logsConfiguration(): LogsConfigurationController = AppLogsConfigurationController(ctx, loggerFactory, logMemory)
 

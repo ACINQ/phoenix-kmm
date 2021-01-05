@@ -20,7 +20,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	}
 	
     let business: PhoenixBusiness
+	
 	private var walletLoaded = false
+	private var fcmToken: String? = nil
 	
 	private var badgeCount = 0
 
@@ -132,9 +134,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	}
 	
 	func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+		assertMainThread()
 		
 		log.trace("messaging(:didReceiveRegistrationToken:)")
 		log.debug("Firebase registration token: \(String(describing: fcmToken))")
+		
+		self.fcmToken = fcmToken
+		maybeRegisterFcmToken()
 	}
 	
 	// --------------------------------------------------
@@ -189,17 +195,61 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	// --------------------------------------------------
 	
 	func loadWallet(mnemonics: [String]) -> Void {
+		log.trace("loadWallet(mnemonics:)")
 		
 		let seed = business.prepWallet(mnemonics: mnemonics, passphrase: "")
 		loadWallet(seed: seed)
 	}
 	
 	func loadWallet(seed: KotlinByteArray) -> Void {
+		log.trace("loadWallet(seed:)")
+		assertMainThread()
 		
 		if !walletLoaded {
 			business.loadWallet(seed: seed)
 			walletLoaded = true
+			maybeRegisterFcmToken()
 		}
+	}
+	
+	func maybeRegisterFcmToken() -> Void {
+		log.trace("maybeRegisterFcmToken()")
+		assertMainThread()
+		
+		if walletLoaded && fcmToken != nil {
+
+			// Todo: What happens if the user disables "background app refresh" ?
+		//	if UIApplication.shared.backgroundRefreshStatus == .available {}
+			
+			let newTuple = FcmTokenInfo(
+				nodeID: business.nodeID(),
+				fcmToken: fcmToken  ?? ""
+			)
+			var needsRegister = true
+			
+			if let oldTuple = Prefs.shared.fcmTokenInfo {
+				needsRegister = oldTuple == newTuple
+			}
+			
+			if needsRegister {
+				business.registerFcmToken(token: self.fcmToken)
+				
+				// We cannot reliably do this here:
+			//	Prefs.shared.fcmTokenInfo = newTuple
+				//
+				// Why not ?
+				// We should wait until we know the server has received and processed our token.
+				// But currently the server doesn't send an ack for our message ...
+			}
+		}
+	}
+	
+	// --------------------------------------------------
+	// MARK: Utilities
+	// --------------------------------------------------
+	
+	func assertMainThread() -> Void {
+		assert(Thread.isMainThread, "Improper thread: expected main thread; Thread-unsafe code ahead")
 	}
 }
 

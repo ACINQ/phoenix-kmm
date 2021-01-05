@@ -52,6 +52,8 @@
 		DC682FE8258175CE00CA1114 /* Popover.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC682FE7258175CE00CA1114 /* Popover.swift */; };
 		DC72C2F125A3CBD6008A927A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DC72C2F025A3CBD6008A927A /* GoogleService-Info.plist */; };
 		DC72C31925A3CF87008A927A /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = DC72C31825A3CF87008A927A /* FirebaseMessaging */; };
+		DC72C32F25A51797008A927A /* UserDefaults+Codable.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC72C32E25A51797008A927A /* UserDefaults+Codable.swift */; };
+		DC72C33425A51AAC008A927A /* CurrencyPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC72C33325A51AAC008A927A /* CurrencyPrefs.swift */; };
 		DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */; };
 		DC89857F25914747007B253F /* UIApplicationState+Phoenix.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC89857E25914747007B253F /* UIApplicationState+Phoenix.swift */; };
 		DCACF6F02566D0A60009B01E /* Data+Hexadecimal.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCACF6EF2566D0A60009B01E /* Data+Hexadecimal.swift */; };
@@ -159,6 +161,8 @@
 		DC682FE7258175CE00CA1114 /* Popover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Popover.swift; sourceTree = "<group>"; };
 		DC72C2B925A3A450008A927A /* Phoenix.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Phoenix.entitlements; sourceTree = "<group>"; };
 		DC72C2F025A3CBD6008A927A /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		DC72C32E25A51797008A927A /* UserDefaults+Codable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UserDefaults+Codable.swift"; sourceTree = "<group>"; };
+		DC72C33325A51AAC008A927A /* CurrencyPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyPrefs.swift; sourceTree = "<group>"; };
 		DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverySeedView.swift; sourceTree = "<group>"; };
 		DC89857E25914747007B253F /* UIApplicationState+Phoenix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIApplicationState+Phoenix.swift"; sourceTree = "<group>"; };
 		DCACF6EF2566D0A60009B01E /* Data+Hexadecimal.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Data+Hexadecimal.swift"; sourceTree = "<group>"; };
@@ -243,6 +247,7 @@
 				DC649FDB2577002300853C46 /* kotlin.swift */,
 				DC1D2B4A2593EB850036AD38 /* CurrencyUnit.swift */,
 				DC1D2B4F2594CE900036AD38 /* FormattedAmount.swift */,
+				DC72C33325A51AAC008A927A /* CurrencyPrefs.swift */,
 			);
 			path = utils;
 			sourceTree = "<group>";
@@ -418,6 +423,7 @@
 			children = (
 				DCACF6EF2566D0A60009B01E /* Data+Hexadecimal.swift */,
 				DC89857E25914747007B253F /* UIApplicationState+Phoenix.swift */,
+				DC72C32E25A51797008A927A /* UserDefaults+Codable.swift */,
 			);
 			path = extensions;
 			sourceTree = "<group>";
@@ -690,11 +696,13 @@
 				DC18C418256FE22300A2D083 /* preferences.swift in Sources */,
 				53BEF3A684D4ADDE8F3DA8F9 /* mocks.swift in Sources */,
 				53BEF96EC93BBB4B6C9E0845 /* lang.swift in Sources */,
+				DC72C33425A51AAC008A927A /* CurrencyPrefs.swift in Sources */,
 				53BEF4D5663CD782DC63DF63 /* colors.swift in Sources */,
 				DCF360D02591018300E92031 /* CloseChannelsView.swift in Sources */,
 				C8D7ABC95B979B59AF5A7CA7 /* InitializationView.swift in Sources */,
 				DC89857F25914747007B253F /* UIApplicationState+Phoenix.swift in Sources */,
 				C8D7A84CCF914B08BDB03BE6 /* RestoreWalletView.swift in Sources */,
+				DC72C32F25A51797008A927A /* UserDefaults+Codable.swift in Sources */,
 				53BEFFEBEA9EBE7B27B53AF4 /* TransactionView.swift in Sources */,
 				C8D7A74B29EAFF2EBD73BC6B /* ConfigurationView.swift in Sources */,
 				C8D7ABB189B14D3104ABB50D /* AboutView.swift in Sources */,
