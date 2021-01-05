@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 50;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -50,6 +50,8 @@
 		DC67654625655CA0004D4263 /* stylesheet.css in Resources */ = {isa = PBXBuildFile; fileRef = DC67654425655CA0004D4263 /* stylesheet.css */; };
 		DC67654E25655D93004D4263 /* Colors.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC67654D25655D93004D4263 /* Colors.xcassets */; };
 		DC682FE8258175CE00CA1114 /* Popover.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC682FE7258175CE00CA1114 /* Popover.swift */; };
+		DC72C2F125A3CBD6008A927A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = DC72C2F025A3CBD6008A927A /* GoogleService-Info.plist */; };
+		DC72C31925A3CF87008A927A /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = DC72C31825A3CF87008A927A /* FirebaseMessaging */; };
 		DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */; };
 		DC89857F25914747007B253F /* UIApplicationState+Phoenix.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC89857E25914747007B253F /* UIApplicationState+Phoenix.swift */; };
 		DCACF6F02566D0A60009B01E /* Data+Hexadecimal.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCACF6EF2566D0A60009B01E /* Data+Hexadecimal.swift */; };
@@ -156,6 +158,7 @@
 		DC67654D25655D93004D4263 /* Colors.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Colors.xcassets; sourceTree = "<group>"; };
 		DC682FE7258175CE00CA1114 /* Popover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Popover.swift; sourceTree = "<group>"; };
 		DC72C2B925A3A450008A927A /* Phoenix.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Phoenix.entitlements; sourceTree = "<group>"; };
+		DC72C2F025A3CBD6008A927A /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverySeedView.swift; sourceTree = "<group>"; };
 		DC89857E25914747007B253F /* UIApplicationState+Phoenix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIApplicationState+Phoenix.swift"; sourceTree = "<group>"; };
 		DCACF6EF2566D0A60009B01E /* Data+Hexadecimal.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Data+Hexadecimal.swift"; sourceTree = "<group>"; };
@@ -177,6 +180,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DC72C31925A3CF87008A927A /* FirebaseMessaging in Frameworks */,
 				DCB0DB8A255AE42F005B29C8 /* PhoenixShared.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -276,6 +280,7 @@
 				7555FF9F242A565B00829871 /* phoenix-iosUITests */,
 				DCB0DB84255AE42F005B29C8 /* phoenix-ios-framework */,
 				7555FF7C242A565900829871 /* Products */,
+				DC72C31725A3CF87008A927A /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -293,7 +298,6 @@
 		7555FF7D242A565900829871 /* phoenix-ios */ = {
 			isa = PBXGroup;
 			children = (
-				DC72C2B925A3A450008A927A /* Phoenix.entitlements */,
 				7555FF7E242A565900829871 /* AppDelegate.swift */,
 				7555FF80242A565900829871 /* SceneDelegate.swift */,
 				7555FF82242A565900829871 /* ContentView.swift */,
@@ -301,6 +305,8 @@
 				DC67654D25655D93004D4263 /* Colors.xcassets */,
 				7555FF89242A565B00829871 /* LaunchScreen.storyboard */,
 				7555FF8C242A565B00829871 /* Info.plist */,
+				DC72C2F025A3CBD6008A927A /* GoogleService-Info.plist */,
+				DC72C2B925A3A450008A927A /* Phoenix.entitlements */,
 				7555FF86242A565B00829871 /* Preview Content */,
 				53BEFD3C3C84A395C4A66297 /* views */,
 				53BEFD8D34A66724B3ACFA01 /* MVI */,
@@ -370,6 +376,13 @@
 			);
 			name = about;
 			path = views/configuration/about;
+			sourceTree = "<group>";
+		};
+		DC72C31725A3CF87008A927A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 		DCACF6DF2566CEC40009B01E /* advanced */ = {
@@ -453,9 +466,13 @@
 			buildRules = (
 			);
 			dependencies = (
+				DC72C32725A3D043008A927A /* PBXTargetDependency */,
 				DCB0DBB0255AEE0E005B29C8 /* PBXTargetDependency */,
 			);
 			name = "phoenix-ios";
+			packageProductDependencies = (
+				DC72C31825A3CF87008A927A /* FirebaseMessaging */,
+			);
 			productName = "phoenix-ios";
 			productReference = 7555FF7B242A565900829871 /* Phoenix.app */;
 			productType = "com.apple.product-type.application";
@@ -512,6 +529,8 @@
 			dependencies = (
 			);
 			name = "phoenix-ios-framework";
+			packageProductDependencies = (
+			);
 			productName = "phoenix-ios-framework";
 			productReference = DCB0DB83255AE42F005B29C8 /* PhoenixShared.framework */;
 			productType = "com.apple.product-type.framework";
@@ -551,6 +570,9 @@
 				Base,
 			);
 			mainGroup = 7555FF72242A565900829871;
+			packageReferences = (
+				DC72C2EA25A3CADC008A927A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			productRefGroup = 7555FF7C242A565900829871 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -574,6 +596,7 @@
 				7555FF85242A565B00829871 /* Assets.xcassets in Resources */,
 				DC67654625655CA0004D4263 /* stylesheet.css in Resources */,
 				DC67654E25655D93004D4263 /* Colors.xcassets in Resources */,
+				DC72C2F125A3CBD6008A927A /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -728,6 +751,10 @@
 			isa = PBXTargetDependency;
 			target = 7555FF7A242A565900829871 /* phoenix-ios */;
 			targetProxy = 7555FF9D242A565B00829871 /* PBXContainerItemProxy */;
+		};
+		DC72C32725A3D043008A927A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			productRef = DC72C32625A3D043008A927A /* FirebaseMessaging */;
 		};
 		DCB0DBB0255AEE0E005B29C8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -887,7 +914,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.7.2;
-				OTHER_LDFLAGS = "\"-Xlinker -interposable\"";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"\"-Xlinker -interposable\"",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = co.acinq.phoenix;
 				PRODUCT_NAME = Phoenix;
 				SWIFT_VERSION = 5.0;
@@ -912,7 +942,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 0.7.2;
-				OTHER_LDFLAGS = "\"-Xlinker -interposable\"";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"\"-Xlinker -interposable\"",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = co.acinq.phoenix;
 				PRODUCT_NAME = Phoenix;
 				SWIFT_VERSION = 5.0;
@@ -1109,6 +1142,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		DC72C2EA25A3CADC008A927A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.3.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		DC72C31825A3CF87008A927A /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DC72C2EA25A3CADC008A927A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		DC72C32625A3D043008A927A /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DC72C2EA25A3CADC008A927A /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 7555FF73242A565900829871 /* Project object */;
 }

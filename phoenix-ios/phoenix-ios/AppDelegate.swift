@@ -1,6 +1,7 @@
 import UIKit
 import PhoenixShared
 import os.log
+import Firebase
 
 #if DEBUG && false
 fileprivate var log = Logger(
@@ -12,7 +13,7 @@ fileprivate var log = Logger(OSLog.disabled)
 #endif
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 
 	static func get() -> AppDelegate {
 		UIApplication.shared.delegate as! AppDelegate
@@ -44,6 +45,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 		#if !targetEnvironment(simulator) // push notifications don't work on iOS simulator
 			UIApplication.shared.registerForRemoteNotifications()
 		#endif
+		
+		FirebaseApp.configure()
+		Messaging.messaging().delegate = self
 
         #if DEBUG
             var injectionBundlePath = "/Applications/InjectionIII.app/Contents/Resources"
@@ -95,7 +99,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 		didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
 	) -> Void
 	{
-	//	let pushToken = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+		log.trace("application(didRegisterForRemoteNotificationsWithDeviceToken:)")
+		
+		let pushToken = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+		log.debug("pushToken: \(pushToken)")
+		
+		Messaging.messaging().apnsToken = deviceToken
+		
 	//	registerPushToken(pushToken)
 	//	requestPermissionForLocalNotifications()
 	}
@@ -105,6 +115,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 		didFailToRegisterForRemoteNotificationsWithError error: Error
 	) -> Void
 	{
+		log.trace("application(didFailToRegisterForRemoteNotificationsWithError:)")
+		
 		log.error("Remote notification support is unavailable due to error: \(error.localizedDescription)")
 	}
 
@@ -117,6 +129,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 		// Handle incoming remote notification
 		
 		log.debug("Received remote notification: \(userInfo)")
+	}
+	
+	func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+		
+		log.trace("messaging(:didReceiveRegistrationToken:)")
+		log.debug("Firebase registration token: \(String(describing: fcmToken))")
 	}
 	
 	// --------------------------------------------------
