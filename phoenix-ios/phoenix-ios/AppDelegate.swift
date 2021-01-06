@@ -107,9 +107,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		log.debug("pushToken: \(pushToken)")
 		
 		Messaging.messaging().apnsToken = deviceToken
-		
-	//	registerPushToken(pushToken)
-	//	requestPermissionForLocalNotifications()
 	}
 
 	func application(
@@ -131,6 +128,35 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		// Handle incoming remote notification
 		
 		log.debug("Received remote notification: \(userInfo)")
+		
+		var watcher: Ktor_ioCloseable? = nil
+		var isFinished = false
+		let Finish = {(result: UIBackgroundFetchResult) in
+			
+			if isFinished { return /* from block */ }
+			isFinished = true
+			
+			completionHandler(result)
+			if let watcher = watcher {
+				watcher.close()
+			}
+		}
+		
+		var isCurrentValue = true
+		let flow = SwiftFlow<Transaction>(origin: business.incomingTransactionFlow())
+		watcher = flow.watch { (transaction: Transaction?) in
+			if isCurrentValue {
+				isCurrentValue = false
+				return // from block
+			}
+			log.info("Background fetch: Payment received !")
+			Finish(.newData)
+		}
+		
+		DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
+			log.info("Background fetch: Didn't receive payment within 15 seconds - giving up")
+			Finish(.noData)
+		}
 	}
 	
 	func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
@@ -218,29 +244,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		
 		if walletLoaded && fcmToken != nil {
 
-			// Todo: What happens if the user disables "background app refresh" ?
-		//	if UIApplication.shared.backgroundRefreshStatus == .available {}
+			// It's possible for the user to disable "background app refresh".
+			// This is done via:
+			// Settings -> General -> Background App Refresh
+			//
+			// If the user turns this off for Phoenix,
+			// then the OS won't deliver silent push notifications.
+			// So in this case, we want to register a "null" with the server.
 			
-			let newTuple = FcmTokenInfo(
-				nodeID: business.nodeID(),
-				fcmToken: fcmToken  ?? ""
-			)
-			var needsRegister = true
-			
-			if let oldTuple = Prefs.shared.fcmTokenInfo {
-				needsRegister = oldTuple == newTuple
+			var token = self.fcmToken
+			if UIApplication.shared.backgroundRefreshStatus == .available {
+				token = nil
 			}
 			
-			if needsRegister {
-				business.registerFcmToken(token: self.fcmToken)
-				
-				// We cannot reliably do this here:
-			//	Prefs.shared.fcmTokenInfo = newTuple
-				//
-				// Why not ?
-				// We should wait until we know the server has received and processed our token.
-				// But currently the server doesn't send an ack for our message ...
-			}
+			business.registerFcmToken(token: token)
+			
+			// Future optimization:
+			//
+			// Technically, we only need to register the (node_id, fcm_token) with the server once.
+			// So we could store this tuple in the UserDefaults system,
+			// and then only register with the server if the tuple changes.
+			// We even have some code in place to support this.
+			// But the problem we currently have is:
+			//
+			// When do we know for sure that the server has registered our fcm_token ?
+			//
+			// Currently we send off the request to eclair-kmp, and it will perform the registration
+			// at some point. If the connection is currently established, it will send the
+			// LightningMessage right away. Otherwise, it will send the LightningMessage after
+			// establishing the connection.
+			//
+			// The ideal solution would be to have the server send some kind of Ack for the
+			// registration. Which we could then use to trigger a storage in UserDefaults.
 		}
 	}
 	

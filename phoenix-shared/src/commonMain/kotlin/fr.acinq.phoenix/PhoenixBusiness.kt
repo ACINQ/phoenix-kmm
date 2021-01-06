@@ -17,7 +17,6 @@ import fr.acinq.eclair.utils.msat
 import fr.acinq.eclair.utils.sat
 import fr.acinq.eclair.utils.setEclairLoggerFactory
 import fr.acinq.eclair.utils.toByteVector32
-import fr.acinq.eclair.wire.FCMToken
 import fr.acinq.phoenix.app.*
 import fr.acinq.phoenix.app.ctrl.*
 import fr.acinq.phoenix.app.ctrl.config.*
@@ -32,7 +31,7 @@ import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.serialization.json.Json
 import org.kodein.db.DB
 import org.kodein.db.impl.factory
@@ -215,6 +214,9 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     fun registerFcmToken(token: String?) {
         peer.registerFcmToken(token)
     }
+
+    fun incomingTransactionFlow() =
+        appHistoryManager.openIncomingTransactionSubscription().consumeAsFlow()
 
     val controllers : ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
