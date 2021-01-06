@@ -92,7 +92,7 @@ class AppHistoryManager(
                             Transaction(
                                 id = it.request.paymentId.toString(),
                                 amountMsat = -it.request.amount.msat,
-                                desc = it.reason.message(),
+                                desc = it.reason.details(),
                                 status = Transaction.Status.Failure,
                                 timestamp = currentTimestampMillis()
                             )

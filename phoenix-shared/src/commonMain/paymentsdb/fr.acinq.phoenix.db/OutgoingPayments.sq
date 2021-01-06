@@ -1,4 +1,6 @@
 import fr.acinq.eclair.db.HopDesc;
+import fr.acinq.phoenix.db.SqlitePaymentsDb.OutgoingFinalFailureDbEnum;
+import fr.acinq.phoenix.db.SqlitePaymentsDb.OutgoingPartFailureDbEnum;
 import kotlin.collections.List;
 
 PRAGMA foreign_keys = 1;
@@ -16,7 +18,7 @@ CREATE TABLE IF NOT EXISTS outgoing_payments (
     keysend_preimage BLOB DEFAULT NULL,
     swapout_address TEXT DEFAULT NULL,
     -- status
-    final_failure TEXT DEFAULT NULL,
+    final_failure TEXT AS OutgoingFinalFailureDbEnum DEFAULT NULL,
     preimage BLOB DEFAULT NULL,
     completed_at INTEGER DEFAULT NULL
 );
@@ -29,10 +31,8 @@ CREATE TABLE IF NOT EXISTS outgoing_payment_parts (
     created_at INTEGER NOT NULL,
     -- status
     preimage BLOB DEFAULT NULL,
-    err_type TEXT DEFAULT NULL,
-    err_failure_message BLOB DEFAULT NULL,
-    err_channelex_channel_id BLOB DEFAULT NULL,
-    err_channelex_message TEXT DEFAULT NULL,
+    err_code INTEGER DEFAULT NULL,
+    err_message TEXT DEFAULT NULL,
     completed_at INTEGER DEFAULT NULL,
 
     FOREIGN KEY(parent_id) REFERENCES outgoing_payments(id)
@@ -51,10 +51,8 @@ UPDATE outgoing_payment_parts SET preimage=?, completed_at=? WHERE part_id=?;
 succeedOutgoingPayment:
 UPDATE outgoing_payments SET preimage=?, completed_at=? WHERE id=?;
 
-failOutgoingPartWithChannelException:
-UPDATE outgoing_payment_parts SET err_type=?, err_channelex_channel_id=?, err_channelex_message=?, completed_at=? WHERE part_id=?;
-failOutgoingPartWithFailureMessage:
-UPDATE outgoing_payment_parts SET err_type=?, err_failure_message=?, completed_at=? WHERE part_id=?;
+failOutgoingPart:
+UPDATE outgoing_payment_parts SET err_code=?, err_message=?, completed_at=? WHERE part_id=?;
 failOutgoingPayment:
 UPDATE outgoing_payments SET final_failure=?, completed_at=? WHERE id=?;
 
@@ -63,24 +61,32 @@ SELECT *
 FROM outgoing_payment_parts
 WHERE part_id=?;
 
+deleteOutgoingPart:
+DELETE FROM outgoing_payment_parts
+WHERE part_id=?;
+
 getOutgoingPayment:
 SELECT parent.id, parent.recipient_amount_msat, parent.recipient_node_id, parent.payment_hash, parent.created_at, parent.normal_payment_request, parent.keysend_preimage, parent.swapout_address, parent.final_failure, parent.preimage, parent.completed_at,
-       parts.part_id, parts.amount_msat, parts.route, parts.created_at AS part_created_at, parts.preimage AS part_preimage, parts.completed_at AS part_completed_at, parts.err_type, parts.err_failure_message, parts.err_channelex_channel_id, parts.err_channelex_message
+       parts.part_id, parts.amount_msat, parts.route, parts.created_at AS part_created_at, parts.preimage AS part_preimage, parts.completed_at AS part_completed_at, parts.err_code, parts.err_message
 FROM outgoing_payments AS parent
-JOIN outgoing_payment_parts AS parts ON parts.parent_id = parent.id
+LEFT OUTER JOIN outgoing_payment_parts AS parts ON parts.parent_id = parent.id
 WHERE parent.id=?;
 
 listOutgoingForPaymentHash:
 SELECT parent.id, parent.recipient_amount_msat, parent.recipient_node_id, parent.payment_hash, parent.created_at, parent.normal_payment_request, parent.keysend_preimage, parent.swapout_address, parent.final_failure, parent.preimage, parent.completed_at,
-       parts.part_id, parts.amount_msat, parts.route, parts.created_at AS part_created_at, parts.preimage AS part_preimage, parts.completed_at AS part_completed_at, parts.err_type, parts.err_failure_message, parts.err_channelex_channel_id, parts.err_channelex_message
+       parts.part_id, parts.amount_msat, parts.route, parts.created_at AS part_created_at, parts.preimage AS part_preimage, parts.completed_at AS part_completed_at, parts.err_code, parts.err_message
 FROM outgoing_payments AS parent
-JOIN outgoing_payment_parts AS parts ON parts.parent_id = parent.id
+LEFT OUTER JOIN outgoing_payment_parts AS parts ON parts.parent_id = parent.id
 WHERE payment_hash=?;
 
 listOutgoingInOffset:
 SELECT parent.id, parent.recipient_amount_msat, parent.recipient_node_id, parent.payment_hash, parent.created_at, parent.normal_payment_request, parent.keysend_preimage, parent.swapout_address, parent.final_failure, parent.preimage, parent.completed_at,
-       parts.part_id, parts.amount_msat, parts.route, parts.created_at AS part_created_at, parts.preimage AS part_preimage, parts.completed_at AS part_completed_at, parts.err_type, parts.err_failure_message, parts.err_channelex_channel_id, parts.err_channelex_message
+       parts.part_id, parts.amount_msat, parts.route, parts.created_at AS part_created_at, parts.preimage AS part_preimage, parts.completed_at AS part_completed_at, parts.err_code, parts.err_message
 FROM outgoing_payments AS parent
-JOIN outgoing_payment_parts AS parts ON parts.parent_id = parent.id
+LEFT OUTER JOIN outgoing_payment_parts AS parts ON parts.parent_id = parent.id
 ORDER BY parent.completed_at DESC, parent.id DESC
 LIMIT ?, ?;
+
+-- use this in a `transaction` block to know how many rows were changed after an UPDATE
+changes:
+SELECT changes();
