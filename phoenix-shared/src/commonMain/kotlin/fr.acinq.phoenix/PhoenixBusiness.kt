@@ -20,24 +20,15 @@ import fr.acinq.eclair.utils.setEclairLoggerFactory
 import fr.acinq.eclair.utils.toByteVector32
 import fr.acinq.phoenix.app.*
 import fr.acinq.phoenix.app.ctrl.*
-import fr.acinq.phoenix.app.ctrl.config.AppChannelsConfigurationController
-import fr.acinq.phoenix.app.ctrl.config.AppConfigurationController
-import fr.acinq.phoenix.app.ctrl.config.AppElectrumConfigurationController
-import fr.acinq.phoenix.app.ctrl.config.AppLogsConfigurationController
+import fr.acinq.phoenix.app.ctrl.config.*
 import fr.acinq.phoenix.ctrl.*
-import fr.acinq.phoenix.ctrl.config.ChannelsConfigurationController
-import fr.acinq.phoenix.ctrl.config.ConfigurationController
-import fr.acinq.phoenix.ctrl.config.ElectrumConfigurationController
-import fr.acinq.phoenix.ctrl.config.LogsConfigurationController
+import fr.acinq.phoenix.ctrl.config.*
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.db.SqliteChannelsDb
 import fr.acinq.phoenix.db.SqlitePaymentsDb
 import fr.acinq.phoenix.db.createChannelsDbDriver
 import fr.acinq.phoenix.db.createPaymentsDbDriver
-import fr.acinq.phoenix.utils.LogMemory
-import fr.acinq.phoenix.utils.NetworkMonitor
-import fr.acinq.phoenix.utils.PlatformContext
-import fr.acinq.phoenix.utils.getApplicationFilesDirectoryPath
+import fr.acinq.phoenix.utils.*
 import io.ktor.client.*
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
@@ -143,9 +134,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             override val payments: PaymentsDb get() = paymentsDb
         }
 
-        val peer = Peer(tcpSocketBuilder, nodeParams, walletParams, electrumWatcher, databases, MainScope())
-
-        return peer
+        return Peer(tcpSocketBuilder, nodeParams, walletParams, electrumWatcher, databases, MainScope())
     }
 
     private val logMemory = LogMemory(Path(getApplicationFilesDirectoryPath(ctx)).resolve("logs"))
@@ -188,6 +177,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient) }
+    val connectionsMonitor by lazy { ConnectionsMonitor(peer, electrumClient, networkMonitor) }
     val util by lazy { Utilities(loggerFactory, chain) }
 
     init {
@@ -227,5 +217,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
         override fun channelsConfiguration(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peer, chain)
         override fun logsConfiguration(): LogsConfigurationController = AppLogsConfigurationController(ctx, loggerFactory, logMemory)
+        override fun closeChannelsConfiguration(): CloseChannelsConfigurationController = AppCloseChannelsConfigurationController(loggerFactory, peer, util)
     }
 }

@@ -1,4 +1,14 @@
 import SwiftUI
+import os.log
+
+#if DEBUG && false
+fileprivate var log = Logger(
+	subsystem: Bundle.main.bundleIdentifier!,
+	category: "LockView"
+)
+#else
+fileprivate var log = Logger(OSLog.disabled)
+#endif
 
 struct LockView : View {
 	
@@ -7,6 +17,8 @@ struct LockView : View {
 	@State var isTouchID = true
 	@State var isFaceID = false
 	@State var errorMsg: String? = nil
+	
+	@State var biometricsAttemptInProgress = false
 	
 	let willEnterForegroundPublisher = NotificationCenter.default.publisher(for:
 		UIApplication.willEnterForegroundNotification
@@ -68,34 +80,49 @@ struct LockView : View {
 			onAppear()
 		}
 		.onReceive(willEnterForegroundPublisher, perform: { _ in
-			onWillEnterForeground()
+			willEnterForeground()
 		})
 	}
 	
 	func onAppear() -> Void {
+		log.trace("onAppear()")
+		
+		// This function may be called when:
+		//
+		// - The application has just finished launching.
+		//   In this case: applicationState == .active
+		//
+		// - The user is backgrounding the app, so the ContentView is switching in the LockView for security.
+		//   In this case: applicationState == .background
+		
+		log.debug("UIApplication.shared.applicationState = \(UIApplication.shared.applicationState)")
+		let canPrompt = UIApplication.shared.applicationState != .background
+		
+		checkStatus(canPrompt: canPrompt)
+	}
+	
+	func willEnterForeground() -> Void {
+		log.trace("willEnterForeground()")
+		
+		// NB: At this moment in time: UIApplication.shared.applicationState == .background
+		
+		checkStatus(canPrompt: true)
+	}
+	
+	func checkStatus(canPrompt: Bool) -> Void {
+		log.trace("checkStatusAndMaybePrompt()")
 		
 		// This function is called when:
 		// - app is launched for the first time
-		// - app has just been backgrounded
-		
-		let status = AppSecurity.shared.biometricStatus()
-		updateBiometricsStatus(status)
-		
-		if (status != .notAvailable) && (UIApplication.shared.applicationState == .active) {
-			tryBiometricsLogin()
-		}
-	}
-	
-	func onWillEnterForeground() -> Void {
-		print("onWillEnterForeground()")
-		
-		// When the app returns from being in the background, the biometric status may have changed.
+		// - app returns from being in the background
+		//
+		// Note that after returning background, the biometric status may have changed.
 		// For example: .touchID_notEnrolled => .touchID_available
 		
 		let status = AppSecurity.shared.biometricStatus()
 		updateBiometricsStatus(status)
 		
-		if status != .notAvailable {
+		if (status != .notAvailable) && canPrompt {
 			tryBiometricsLogin()
 		}
 	}
@@ -107,6 +134,12 @@ struct LockView : View {
 			case .touchID_notEnrolled  : fallthrough
 			case .touchID_notAvailable : isTouchID = true
 			default                    : isTouchID = false
+		}
+		switch status {
+			case .faceID_available    : fallthrough
+			case .faceID_notEnrolled  : fallthrough
+			case .faceID_notAvailable : isFaceID = true
+			default                   : isFaceID = false
 		}
 		
 		switch status {
@@ -129,8 +162,17 @@ struct LockView : View {
 	}
 	
 	func tryBiometricsLogin() -> Void {
+		log.trace("tryBiometricsLogin()")
+		
+		if biometricsAttemptInProgress {
+			log.debug("tryBiometricsLogin(): ignoring - already in progress")
+			return
+		}
+		biometricsAttemptInProgress = true
 		
 		AppSecurity.shared.tryUnlockWithBiometrics {(result: Result<[String], Error>) in
+			
+			biometricsAttemptInProgress = false
 			
 			switch result {
 				case .success(let mnemonics):
@@ -139,7 +181,7 @@ struct LockView : View {
 						isUnlocked = true
 					}
 				case .failure(let error):
-					print("error: \(error)")
+					log.debug("tryUnlockWithBiometrics: error: \(String(describing: error))")
 			}
 		}
 	}
