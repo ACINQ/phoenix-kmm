@@ -173,16 +173,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	// MARK: Local Notifications
 	// --------------------------------------------------
 	
-	func requestPermissionForLocalNotifications() {
+	func requestPermissionForLocalNotifications(_ callback: @escaping (Bool) -> Void) {
 		
 		let center = UNUserNotificationCenter.current()
 		center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
 			
 			log.debug("UNUserNotificationCenter.requestAuthorization(): granted = \(granted)")
 			if let error = error {
-				// How can an error occur ?!? Apple doesn't tell us.
+				// How can an error possibly occur ?!?
+				// Apple doesn't tell us...
 				log.debug("UNUserNotificationCenter.requestAuthorization(): \(String(describing: error))")
 			}
+			
+			callback(granted)
 		}
 	}
 	

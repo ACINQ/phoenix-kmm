@@ -9,12 +9,13 @@ class Prefs {
 	
 	private init() {/* must use shared instance */}
 	
-	private enum UserDefaultsKey: String {
+	private enum Keys: String {
 		case currencyType
 		case fiatCurrency
 		case bitcoinUnit
 		case theme
 		case fcmTokenInfo
+		case pushPermissionQuery
 	}
 	
 	lazy private(set) var currencyTypePublisher: CurrentValueSubject<CurrencyType, Never> = {
@@ -24,12 +25,12 @@ class Prefs {
 	
 	var currencyType: CurrencyType {
 		get {
-			let key = UserDefaultsKey.currencyType.rawValue
+			let key = Keys.currencyType.rawValue
 			let saved: CurrencyType? = UserDefaults.standard.getCodable(forKey: key)
 			return saved ?? CurrencyType.bitcoin
 		}
 		set {
-			let key = UserDefaultsKey.currencyType.rawValue
+			let key = Keys.currencyType.rawValue
 			UserDefaults.standard.setCodable(value: newValue, forKey: key)
 			currencyTypePublisher.send(newValue)
 	  }
@@ -42,15 +43,17 @@ class Prefs {
 	
 	var fiatCurrency: FiatCurrency {
 		get {
+			let key = Keys.fiatCurrency.rawValue
 			var saved: FiatCurrency? = nil
-			if let str = UserDefaults.standard.string(forKey: UserDefaultsKey.fiatCurrency.rawValue) {
+			if let str = UserDefaults.standard.string(forKey: key) {
 				saved = FiatCurrency.deserialize(str)
 			}
 			return saved ?? FiatCurrency.localeDefault() ?? FiatCurrency.usd
 		}
 		set {
+			let key = Keys.fiatCurrency.rawValue
 			let str = newValue.serialize()
-			UserDefaults.standard.set(str, forKey: UserDefaultsKey.fiatCurrency.rawValue)
+			UserDefaults.standard.set(str, forKey: key)
 			fiatCurrencyPublisher.send(newValue)
 	  }
 	}
@@ -62,15 +65,17 @@ class Prefs {
 	
 	var bitcoinUnit: BitcoinUnit {
 		get {
+			let key = Keys.bitcoinUnit.rawValue
 			var saved: BitcoinUnit? = nil
-			if let str = UserDefaults.standard.string(forKey: UserDefaultsKey.bitcoinUnit.rawValue) {
+			if let str = UserDefaults.standard.string(forKey: key) {
 				saved = BitcoinUnit.deserialize(str)
 			}
 			return saved ?? BitcoinUnit.satoshi
 		}
 		set {
+			let key = Keys.bitcoinUnit.rawValue
 			let str = newValue.serialize()
-			UserDefaults.standard.set(str, forKey: UserDefaultsKey.bitcoinUnit.rawValue)
+			UserDefaults.standard.set(str, forKey: key)
 			bitcoinUnitPublisher.send(newValue)
 		}
 	}
@@ -82,12 +87,12 @@ class Prefs {
 	
 	var theme: Theme {
 		get {
-			let key = UserDefaultsKey.theme.rawValue
+			let key = Keys.theme.rawValue
 			let saved: Theme? = UserDefaults.standard.getCodable(forKey: key)
 			return saved ?? Theme.system
 		}
 		set {
-			let key = UserDefaultsKey.theme.rawValue
+			let key = Keys.theme.rawValue
 			UserDefaults.standard.setCodable(value: newValue, forKey: key)
 			themePublisher.send(newValue)
 		}
@@ -95,12 +100,24 @@ class Prefs {
 	
 	var fcmTokenInfo: FcmTokenInfo? {
 		get {
-			let key = UserDefaultsKey.fcmTokenInfo.rawValue
+			let key = Keys.fcmTokenInfo.rawValue
 			let result: FcmTokenInfo? = UserDefaults.standard.getCodable(forKey: key)
 			return result
 		}
 		set {
-			let key = UserDefaultsKey.fcmTokenInfo.rawValue
+			let key = Keys.fcmTokenInfo.rawValue
+			UserDefaults.standard.setCodable(value: newValue, forKey: key)
+		}
+	}
+	
+	var pushPermissionQuery: PushPermissionQuery {
+		get {
+			let key = Keys.pushPermissionQuery.rawValue
+			let saved: PushPermissionQuery? = UserDefaults.standard.getCodable(forKey: key)
+			return saved ?? .neverAskedUser
+		}
+		set {
+			let key = Keys.pushPermissionQuery.rawValue
 			UserDefaults.standard.setCodable(value: newValue, forKey: key)
 		}
 	}
@@ -194,6 +211,12 @@ enum Theme: String, CaseIterable, Codable {
 		case .system : return nil
 		}
 	}
+}
+
+enum PushPermissionQuery: String, Codable {
+	case neverAskedUser
+	case userDeclined
+	case userAccepted
 }
 
 struct FcmTokenInfo: Equatable, Codable {
