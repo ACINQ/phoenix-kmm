@@ -2,6 +2,7 @@ import UIKit
 import PhoenixShared
 import os.log
 import Firebase
+import Combine
 
 #if DEBUG && false
 fileprivate var log = Logger(
@@ -25,6 +26,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	private var fcmToken: String? = nil
 	
 	private var badgeCount = 0
+	private var cancellables = Set<AnyCancellable>()
 
     override init() {
         setenv("CFNETWORK_DIAGNOSTICS", "3", 1);
@@ -63,11 +65,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
             Bundle(path: injectionBundlePath)?.load()
         #endif
 
+		// Firebase broke `applicationDidBecomeActive(_:)` with their stupid swizzling stuff.
+		NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
+			.sink { _ in
+				log.trace("applicationDidBecomeActive(_:) (via publisher)")
+				
+				UIApplication.shared.applicationIconBadgeNumber = 0
+				self.badgeCount = 0
+			}
+			.store(in: &cancellables)
+		
         return true
     }
 	
 	func applicationDidBecomeActive(_ application: UIApplication) {
-		badgeCount = 0
+		log.trace("applicationDidBecomeActive(_:)")
+		
+		// This function isn't called, because Firebase broke it with their stupid swizzling stuff.
 	}
 	
 	// --------------------------------------------------
@@ -150,6 +164,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 				return // from block
 			}
 			log.info("Background fetch: Payment received !")
+			if let transaction = transaction {
+				self.displayLocalNotification(transaction)
+			}
 			Finish(.newData)
 		}
 		
@@ -189,32 +206,56 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		}
 	}
 	
-	func displayLocalNotification() {
+	func displayLocalNotification(_ transaction: Transaction) {
 		
-		UNUserNotificationCenter.current().getNotificationSettings { settings in
+		let handler = {(settings: UNNotificationSettings) -> Void in
+			
+			// We are having problems interacting with the Transaction instance outside the main thread.
+			
 			guard settings.authorizationStatus == .authorized else {
 				return
 			}
+			
+			let currencyPrefs = CurrencyPrefs()
+			let formattedAmt = Utils.format(currencyPrefs, msat: transaction.amountMsat)
 
+			var body: String
+			if transaction.desc.count > 0 {
+				body = "\(formattedAmt.string): \(transaction.desc)"
+			} else {
+				body = formattedAmt.string
+			}
+			
 			// The user can independently enabled/disable:
 			// - alerts
-			// - sounds
 			// - badges
-			//
 			// So we may only be able to badge the app icon, and that's it.
 			self.badgeCount += 1
 			
 			let content = UNMutableNotificationContent()
-			content.title = "Store Changed"
-			content.body = "20,000 sats for: Invoice name"
+			content.title = "Payment received"
+			content.body = body
+			content.badge = NSNumber(value: self.badgeCount)
 			
-			let uuidString = UUID().uuidString // maybe replace with paymentId ?
-			let request = UNNotificationRequest(identifier: uuidString, content: content, trigger: nil)
+			let request = UNNotificationRequest(
+				identifier: transaction.id,
+				content: content,
+				trigger: nil
+			)
 			
 			UNUserNotificationCenter.current().add(request) { error in
 				if let error = error {
 					log.error("NotificationCenter.add(request): error: \(String(describing: error))")
 				}
+			}
+		}
+		
+		UNUserNotificationCenter.current().getNotificationSettings { settings in
+			
+			if Thread.isMainThread {
+				handler(settings)
+			} else {
+				DispatchQueue.main.async { handler(settings) }
 			}
 		}
 	}
@@ -281,13 +322,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			// registration. Which we could then use to trigger a storage in UserDefaults.
 		}
 	}
-	
-	// --------------------------------------------------
-	// MARK: Utilities
-	// --------------------------------------------------
-	
-	func assertMainThread() -> Void {
-		assert(Thread.isMainThread, "Improper thread: expected main thread; Thread-unsafe code ahead")
-	}
 }
 
+func assertMainThread() -> Void {
+	assert(Thread.isMainThread, "Improper thread: expected main thread; Thread-unsafe code ahead")
+}

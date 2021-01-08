@@ -136,5 +136,5 @@ class AppHistoryManager(
     }
 
     fun openTransactionsSubscription() = transactions.openSubscription()
-    fun openIncomingTransactionSubscription() = transactions.openSubscription()
+    fun openIncomingTransactionSubscription() = incomingTransaction.openSubscription()
 }
