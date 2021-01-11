@@ -27,6 +27,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	
 	private var badgeCount = 0
 	private var cancellables = Set<AnyCancellable>()
+	
+	private var didIncrementDisconnectCount = false
 
     override init() {
         setenv("CFNETWORK_DIAGNOSTICS", "3", 1);
@@ -65,24 +67,69 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
             Bundle(path: injectionBundlePath)?.load()
         #endif
 
-		// Firebase broke `applicationDidBecomeActive(_:)` with their stupid swizzling stuff.
-		NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)
-			.sink { _ in
-				log.trace("applicationDidBecomeActive(_:) (via publisher)")
-				
-				UIApplication.shared.applicationIconBadgeNumber = 0
-				self.badgeCount = 0
-			}
-			.store(in: &cancellables)
+		let nc = NotificationCenter.default
+		
+		// Firebase broke application lifecycle functions with their stupid swizzling stuff.
+		nc.publisher(for: UIApplication.didBecomeActiveNotification).sink { _ in
+			self._applicationDidBecomeActive(application)
+		}.store(in: &cancellables)
+		
+		nc.publisher(for: UIApplication.willResignActiveNotification).sink { _ in
+			self._applicationWillResignActive(application)
+		}.store(in: &cancellables)
+		
+		nc.publisher(for: UIApplication.didEnterBackgroundNotification).sink { _ in
+			self._applicationDidEnterBackground(application)
+		}.store(in: &cancellables)
+		
+		nc.publisher(for: UIApplication.willEnterForegroundNotification).sink { _ in
+			self._applicationWillEnterForeground(application)
+		}.store(in: &cancellables)
 		
         return true
     }
 	
-	func applicationDidBecomeActive(_ application: UIApplication) {
-		log.trace("applicationDidBecomeActive(_:)")
+	/// This function isn't called, because Firebase broke it with their stupid swizzling stuff.
+	func applicationDidBecomeActive(_ application: UIApplication) {/* :( */}
+	
+	/// This function isn't called, because Firebase broke it with their stupid swizzling stuff.
+	func applicationWillResignActive(_ application: UIApplication) {/* :( */}
+	
+	/// This function isn't called, because Firebase broke it with their stupid swizzling stuff.
+	func applicationDidEnterBackground(_ application: UIApplication) {/* :( */}
+	
+	/// This function isn't called, because Firebase broke it with their stupid swizzling stuff.
+	func applicationWillEnterForeground(_ application: UIApplication) {/* :( */}
+	
+	func _applicationDidBecomeActive(_ application: UIApplication) {
+		log.trace("### applicationDidBecomeActive(_:)")
 		
-		// This function isn't called, because Firebase broke it with their stupid swizzling stuff.
+		UIApplication.shared.applicationIconBadgeNumber = 0
+		self.badgeCount = 0
 	}
+	
+	func _applicationWillResignActive(_ application: UIApplication) {
+		log.trace("### applicationWillResignActive(_:)")
+	}
+	
+	func _applicationDidEnterBackground(_ application: UIApplication) {
+		log.trace("### applicationDidEnterBackground(_:)")
+		
+		if !didIncrementDisconnectCount {
+			business.incrementDisconnectCount()
+			didIncrementDisconnectCount = true
+		}
+	}
+	
+	func _applicationWillEnterForeground(_ application: UIApplication) {
+		log.trace("### applicationWillEnterForeground(_:)")
+		
+		if didIncrementDisconnectCount {
+			business.decrementDisconnectCount()
+			didIncrementDisconnectCount = false
+		}
+	}
+	
 	
 	// --------------------------------------------------
 	// MARK: UISceneSession Lifecycle
@@ -143,36 +190,51 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		
 		log.debug("Received remote notification: \(userInfo)")
 		
+		business.decrementDisconnectCount() // allow network connection, even if app in background
+		
+		var didReceivePayment = false
+		var totalTimer: Timer? = nil
+		var postPaymentTimer: Timer? = nil
 		var watcher: Ktor_ioCloseable? = nil
+		
 		var isFinished = false
-		let Finish = {(result: UIBackgroundFetchResult) in
+		let Finish = { (_: Timer) -> Void in
 			
-			if isFinished { return /* from block */ }
-			isFinished = true
-			
-			completionHandler(result)
-			if let watcher = watcher {
-				watcher.close()
+			if !isFinished {
+				isFinished = true
+				self.business.incrementDisconnectCount() // balance previous call
+				
+				totalTimer?.invalidate()
+				postPaymentTimer?.invalidate()
+				watcher?.close()
+				
+				if didReceivePayment {
+					log.info("Background fetch: Cleaning up")
+				} else {
+					log.info("Background fetch: Didn't receive payment - giving up")
+				}
+				completionHandler(didReceivePayment ? .newData : .noData)
 			}
 		}
+		
+		totalTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: false, block: Finish)
 		
 		var isCurrentValue = true
 		let flow = SwiftFlow<Transaction>(origin: business.incomingTransactionFlow())
 		watcher = flow.watch { (transaction: Transaction?) in
+			assertMainThread()
 			if isCurrentValue {
 				isCurrentValue = false
 				return // from block
 			}
-			log.info("Background fetch: Payment received !")
 			if let transaction = transaction {
+				log.info("Background fetch: Payment received !")
+				
+				didReceivePayment = true
+				postPaymentTimer?.invalidate()
+				postPaymentTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: Finish)
 				self.displayLocalNotification(transaction)
 			}
-			Finish(.newData)
-		}
-		
-		DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
-			log.info("Background fetch: Didn't receive payment within 15 seconds - giving up")
-			Finish(.noData)
 		}
 	}
 	

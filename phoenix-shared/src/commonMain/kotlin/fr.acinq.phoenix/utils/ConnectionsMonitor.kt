@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import plus
 
 data class Connections(
     val internet: Connection = Connection.CLOSED,
@@ -37,7 +38,10 @@ class ConnectionsMonitor(peer: Peer, electrumClient: ElectrumClient, networkMoni
                 Connections(
                     peer = peerState,
                     electrum = electrumState,
-                    internet = internetState
+                    internet = when (internetState) {
+                        NetworkState.Available -> Connection.ESTABLISHED
+                        NetworkState.NotAvailable -> Connection.CLOSED
+                    }
                 )
             }.collect {
                 _connections.value = it

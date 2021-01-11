@@ -173,6 +173,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val peer by lazy { buildPeer() }
 
+    private var appConnectionsDaemon: AppConnectionsDaemon? = null
+
     private val walletManager by lazy { WalletManager() }
     private val appHistoryManager by lazy { AppHistoryManager(loggerFactory, appDB, peer) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
@@ -186,14 +188,17 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
 
     fun start() {
-        AppConnectionsDaemon(
-            appConfigurationManager,
-            walletManager,
-            currencyManager,
-            networkMonitor,
-            electrumClient,
-            loggerFactory
-        ) { peer }
+        if (appConnectionsDaemon == null) {
+            appConnectionsDaemon = AppConnectionsDaemon(
+                appConfigurationManager,
+                walletManager,
+                currencyManager,
+                networkMonitor,
+                electrumClient,
+                loggerFactory,
+                getPeer = { peer } // lazy getter
+            )
+        }
     }
 
     // Converts a mnemonics list to a seed.
@@ -207,6 +212,14 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         if (walletManager.wallet == null) {
             walletManager.loadWallet(seed)
         }
+    }
+
+    fun incrementDisconnectCount(): Unit {
+        appConnectionsDaemon?.incrementDisconnectCount()
+    }
+
+    fun decrementDisconnectCount(): Unit {
+        appConnectionsDaemon?.decrementDisconnectCount()
     }
 
     fun nodeID(): String {
@@ -225,7 +238,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     val controllers: ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
         override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
-        override fun home(): HomeController = AppHomeController(loggerFactory, peer, electrumClient, networkMonitor, appHistoryManager)
+        override fun home(): HomeController = AppHomeController(loggerFactory, peer, appHistoryManager)
         override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peer)
         override fun scan(): ScanController = AppScanController(loggerFactory, peer)
         override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)
