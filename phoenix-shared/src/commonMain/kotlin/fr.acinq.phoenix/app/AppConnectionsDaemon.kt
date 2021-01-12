@@ -67,14 +67,14 @@ class AppConnectionsDaemon(
         launch {
             peerControlChanges.consumeEach { change ->
                 val newState = peerControlFlow.value.change()
-                logger.info { "peerControlFlow: $newState" }
+                logger.debug { "peerControlFlow = $newState" }
                 peerControlFlow.value = newState
             }
         }
         launch {
             electrumControlChanges.consumeEach { change ->
                 val newState = electrumControlFlow.value.change()
-                logger.info { "electrumControlFlow: $newState" }
+                logger.debug { "electrumControlFlow = $newState" }
                 electrumControlFlow.value = newState
             }
         }
