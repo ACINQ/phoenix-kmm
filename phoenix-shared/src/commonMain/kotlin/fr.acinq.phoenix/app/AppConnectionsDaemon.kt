@@ -42,9 +42,18 @@ class AppConnectionsDaemon(
     private data class TrafficControl(
         val networkIsAvailable: Boolean = false,
 
+        // Under normal circumstances, the connections are automatically managed based on whether
+        // or not an Internet connection is available. However, the app may need to influence
+        // this in one direction or another.
+        // For example, the app may want us to disconnect.
+        // This variable allows different parts of the app to "vote" towards various overrides.
+        //
         // if > 0, triggers disconnect & prevents future connection attempts.
-        // Caller is responsible for balancing calls to increment/decrement this value.
-        // Value is purposefully allowed to be less than zero.
+        // if <= 0, allows connection based on available Internet connection (as usual).
+        // Any part of the app that "votes" is expected to properly balance their calls.
+        // For example, on iOS, when the app goes into background mode,
+        // it votes by incrementing this value. Therefore it must balance that call by
+        // decrementing the value when the app goes into the foreground again.
         val disconnectCount: Int = 0
     ) {
         fun incrementDisconnectCount(): TrafficControl {

@@ -217,6 +217,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			}
 		}
 		
+		// The OS gives us 30 seconds to fetch data, and then invoke the completionHandler.
+		// Failure to properly "clean up" in this way will result in the OS reprimanding us.
+		// So we set a timer to ensure we stop before the max allowed.
 		totalTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: false, block: Finish)
 		
 		var isCurrentValue = true
