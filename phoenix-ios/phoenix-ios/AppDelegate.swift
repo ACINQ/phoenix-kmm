@@ -362,7 +362,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			// So in this case, we want to register a "null" with the server.
 			
 			var token = self.fcmToken
-			if UIApplication.shared.backgroundRefreshStatus == .available {
+			if UIApplication.shared.backgroundRefreshStatus != .available {
 				token = nil
 			}
 			
