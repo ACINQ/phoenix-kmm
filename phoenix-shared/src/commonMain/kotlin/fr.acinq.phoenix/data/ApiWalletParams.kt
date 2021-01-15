@@ -2,13 +2,14 @@ package fr.acinq.phoenix.data
 
 import fr.acinq.bitcoin.PublicKey
 import fr.acinq.eclair.CltvExpiryDelta
+import fr.acinq.eclair.WalletParams
 import fr.acinq.eclair.utils.sat
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class WalletParams(val testnet: ChainParams, val mainnet: ChainParams) {
-    fun export(chain: Chain) : fr.acinq.eclair.WalletParams = when(chain) {
+data class ApiWalletParams(val testnet: ChainParams, val mainnet: ChainParams) {
+    fun export(chain: Chain) : WalletParams = when(chain) {
         Chain.MAINNET -> mainnet.export()
         else -> testnet.export()
     }
@@ -20,8 +21,8 @@ data class ChainParams(
     @SerialName("latest_critical_version") val latestCriticalVersion : Int,
     val trampoline: TrampolineParams,
 ) {
-    fun export(): fr.acinq.eclair.WalletParams =  trampoline.v2.run {
-        fr.acinq.eclair.WalletParams(nodes.first().export(), attempts.map { it.export() })
+    fun export(): WalletParams =  trampoline.v2.run {
+        WalletParams(nodes.first().export(), attempts.map { it.export() })
     }
 }
 

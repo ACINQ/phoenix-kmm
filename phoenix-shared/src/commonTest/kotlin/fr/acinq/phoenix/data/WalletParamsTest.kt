@@ -11,7 +11,7 @@ class WalletParamsTest {
     @Test
     fun `wallet params deserialization`() {
         val json = Json { ignoreUnknownKeys = true }
-        val walletParams = json.decodeFromString(WalletParams.serializer(), jsonApi)
+        val walletParams = json.decodeFromString(ApiWalletParams.serializer(), jsonApi)
         assertNotNull(walletParams)
 
         walletParams.testnet.checkStructure()

@@ -175,6 +175,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient) }
+    val walletParamsManager by lazy { WalletParamsManager(loggerFactory, httpClient, walletParamsDb, chain) }
     val connectionsMonitor by lazy { ConnectionsMonitor(peer, electrumClient, networkMonitor) }
     val util by lazy { Utilities(loggerFactory, chain) }
 
