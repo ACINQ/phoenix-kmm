@@ -17,6 +17,9 @@ import fracinqphoenixdb.Wallet_params
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.Clock
+import kotlinx.datetime.DateTimePeriod
+import kotlinx.datetime.Instant
 
 class SqliteWalletParamsDb(private val driver: SqlDriver) {
 
@@ -50,12 +53,14 @@ class SqliteWalletParamsDb(private val driver: SqlDriver) {
                         node_host = walletParams.trampolineNode.host,
                         node_port = walletParams.trampolineNode.port,
                         trampoline_fees = walletParams.trampolineFees,
+                        updated_at = Clock.System.now().epochSeconds
                     )
                 } else {
                     queries.update(
                         node_host = walletParams.trampolineNode.host,
                         node_port = walletParams.trampolineNode.port,
                         trampoline_fees = walletParams.trampolineFees,
+                        updated_at = Clock.System.now().epochSeconds,
                         // WHERE
                         node_id = walletParams.trampolineNode.id.toString(),
                     )
@@ -64,7 +69,7 @@ class SqliteWalletParamsDb(private val driver: SqlDriver) {
         }
     }
 
-    suspend fun getWalletParams(): WalletParams {
+    suspend fun getLastWalletParams(): Pair<Instant, WalletParams> {
         return withContext(Dispatchers.Default) {
             queries.list(::mapWalletParams).executeAsList().first()
         }
@@ -74,8 +79,10 @@ class SqliteWalletParamsDb(private val driver: SqlDriver) {
          node_id: String,
          node_host: String,
          node_port: Int,
-         trampoline_fees: List<TrampolineFees>
-    ): WalletParams {
-        return WalletParams(NodeUri(PublicKey.fromHex(node_id), node_host, node_port), trampoline_fees)    }
+         trampoline_fees: List<TrampolineFees>,
+         updated_at: Long
+    ): Pair<Instant, WalletParams> {
+        return Instant.fromEpochSeconds(updated_at) to WalletParams(NodeUri(PublicKey.fromHex(node_id), node_host, node_port), trampoline_fees)
+    }
 
 }
