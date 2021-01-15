@@ -24,16 +24,13 @@ import fr.acinq.phoenix.app.ctrl.config.*
 import fr.acinq.phoenix.ctrl.*
 import fr.acinq.phoenix.ctrl.config.*
 import fr.acinq.phoenix.data.Chain
+import fr.acinq.phoenix.db.*
 import fr.acinq.phoenix.db.SqliteChannelsDb
-import fr.acinq.phoenix.db.SqlitePaymentsDb
-import fr.acinq.phoenix.db.createChannelsDbDriver
-import fr.acinq.phoenix.db.createPaymentsDbDriver
 import fr.acinq.phoenix.utils.*
 import io.ktor.client.*
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import org.kodein.db.DB
 import org.kodein.db.impl.factory
@@ -160,6 +157,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
     private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) }
     private val paymentsDb by lazy { SqlitePaymentsDb(createPaymentsDbDriver(ctx)) }
+    private val walletParamsDb by lazy { SqliteWalletParamsDb(createWalletParamsDbDriver(ctx)) }
 
     // TestNet
     private val acinqNodeUri = NodeUri(PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"), "13.248.222.197", 9735)

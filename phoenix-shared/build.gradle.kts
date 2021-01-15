@@ -140,6 +140,10 @@ sqldelight {
         packageName = "fr.acinq.phoenix.db"
         sourceFolders = listOf("paymentsdb")
     }
+    database("WalletParamsDatabase") {
+        packageName = "fr.acinq.phoenix.db"
+        sourceFolders = listOf("walletparamsdb")
+    }
 }
 
 val packForXcode by tasks.creating(Sync::class) {
