@@ -25,6 +25,7 @@ import kotlin.time.seconds
 class AppConnectionsDaemon(
     private val configurationManager: AppConfigurationManager,
     private val walletManager: WalletManager,
+    private val walletParamsManager: WalletParamsManager,
     private val currencyManager: CurrencyManager,
     private val monitor: NetworkMonitor,
     private val electrumClient: ElectrumClient,
@@ -112,11 +113,13 @@ class AppConnectionsDaemon(
                 Connection.CLOSED -> {
                     peerConnectionOrder.send(ConnectionOrder.CLOSE)
                     electrumConnectionOrder.send(ConnectionOrder.CLOSE)
+                    walletParamsManager.stop()
                     currencyManager.stop()
                 }
                 else -> {
                     peerConnectionOrder.send(ConnectionOrder.CONNECT)
                     electrumConnectionOrder.send(ConnectionOrder.CONNECT)
+                    walletParamsManager.start()
                     currencyManager.start()
                 }
             }

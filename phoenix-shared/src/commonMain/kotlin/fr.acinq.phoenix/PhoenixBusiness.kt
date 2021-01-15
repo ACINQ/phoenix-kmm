@@ -187,6 +187,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         AppConnectionsDaemon(
             appConfigurationManager,
             walletManager,
+            walletParamsManager,
             currencyManager,
             networkMonitor,
             electrumClient,
