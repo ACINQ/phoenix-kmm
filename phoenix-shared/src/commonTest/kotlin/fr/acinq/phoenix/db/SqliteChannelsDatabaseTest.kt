@@ -28,7 +28,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
 class SqliteChannelsDatabaseTest {
-    private val db = SqliteChannelsDb(testDriver())
+    private val db = SqliteChannelsDb(testDriver(), peer.nodeParams)
 
     @ExperimentalCoroutinesApi
     @Test
