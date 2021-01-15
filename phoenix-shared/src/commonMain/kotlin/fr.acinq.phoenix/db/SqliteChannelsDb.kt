@@ -26,7 +26,7 @@ import fr.acinq.eclair.serialization.Serialization
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-internal class SqliteChannelsDb(private val driver: SqlDriver, private val odeParams: NodeParams) : ChannelsDb {
+internal class SqliteChannelsDb(private val driver: SqlDriver, private val nodeParams: NodeParams) : ChannelsDb {
 
     private val database = ChannelsDatabase(driver)
     private val queries = database.channelsDatabaseQueries
