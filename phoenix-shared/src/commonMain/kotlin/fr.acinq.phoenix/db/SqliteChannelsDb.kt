@@ -56,7 +56,7 @@ internal class SqliteChannelsDb(private val driver: SqlDriver, private val nodeP
         val bytes = withContext(Dispatchers.Default) {
             queries.listLocalChannels().executeAsList()
         }
-        return bytes.map { Serialization.deserialize(it, odeParams) }
+        return bytes.map { Serialization.deserialize(it, nodeParams) }
     }
 
     override suspend fun addHtlcInfo(channelId: ByteVector32, commitmentNumber: Long, paymentHash: ByteVector32, cltvExpiry: CltvExpiry) {
