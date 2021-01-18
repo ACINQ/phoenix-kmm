@@ -35,6 +35,9 @@ struct HomeView : View {
 		
 		ZStack {
 			
+			Image("testnet_bg")
+				.resizable(resizingMode: .tile)
+			
 			VStack {
 				
 				// === Top-row buttons ===
@@ -84,14 +87,13 @@ struct HomeView : View {
 				BottomBar(model: model)
 			
 			} // </VStack>
-			.padding(.top, keyWindow?.safeAreaInsets.top)
+			.padding(.top, keyWindow?.safeAreaInsets.top ?? 0) // bottom handled in BottomBar
 			.padding(.top)
 		
 		} // </ZStack>
 		.frame(maxHeight: .infinity)
 		.background(Color.primaryBackground)
-		.edgesIgnoringSafeArea(.top)
-		.edgesIgnoringSafeArea(.bottom)
+		.edgesIgnoringSafeArea(.all)
 	}
 	
 	func toggleCurrencyType() -> Void {
@@ -181,7 +183,7 @@ struct ConnectionStatusButton : View {
 					Image("ic_connection_lost")
 						.resizable()
 						.frame(width: 16, height: 16)
-					Text(status.text())
+					Text(status.localizedText())
 						.font(.caption2)
 				}
 			}
@@ -355,7 +357,7 @@ struct ConnectionCell : View {
 
 			Text("\(label):")
 			Spacer()
-			Text(connection.text())
+			Text(connection.localizedText())
 		}
 		.padding([.top, .bottom], 8)
 	}

@@ -68,7 +68,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
     private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
-    private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) }
+    private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx), peer.nodeParams) }
     private val paymentsDb by lazy { SqlitePaymentsDb(createPaymentsDbDriver(ctx)) }
     private val walletParamsDb by lazy { SqliteWalletParamsDb(createWalletParamsDbDriver(ctx)) }
 
@@ -79,6 +79,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val electrumClient by lazy { ElectrumClient(tcpSocketBuilder, MainScope()) }
     private val electrumWatcher by lazy { ElectrumWatcher(electrumClient, MainScope()) }
+
+    private var appConnectionsDaemon: AppConnectionsDaemon? = null
 
     private val walletManager by lazy { WalletManager() }
     private val walletParamsManager by lazy { WalletParamsManager(loggerFactory, httpClient, walletParamsDb, chain) }
@@ -95,7 +97,23 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
 
     fun start() {
-        AppConnectionsDaemon(appConfigurationManager, walletManager, walletParamsManager, peerManager, currencyManager, networkMonitor, electrumClient, loggerFactory)
+        if (appConnectionsDaemon == null) {
+            appConnectionsDaemon = AppConnectionsDaemon(
+                appConfigurationManager,
+                walletManager,
+                currencyManager,
+                networkMonitor,
+                electrumClient,
+                loggerFactory,
+                getPeer = { peer } // lazy getter
+            )
+    }
+
+    // Converts a mnemonics list to a seed.
+    // This is generally called with a mnemonics list that has been previously saved.
+    fun prepWallet(mnemonics: List<String>, passphrase: String = ""): ByteArray {
+        MnemonicCode.validate(mnemonics)
+        return MnemonicCode.toSeed(mnemonics, passphrase)
     }
 
     fun loadWallet(seed: ByteArray): Unit {
@@ -104,15 +122,31 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         }
     }
 
-    fun prepWallet(mnemonics: List<String>, passphrase: String = ""): ByteArray {
-        MnemonicCode.validate(mnemonics)
-        return MnemonicCode.toSeed(mnemonics, passphrase)
+    fun incrementDisconnectCount(): Unit {
+        appConnectionsDaemon?.incrementDisconnectCount()
     }
+
+    fun decrementDisconnectCount(): Unit {
+        appConnectionsDaemon?.decrementDisconnectCount()
+    }
+
+    fun nodeID(): String {
+        return peer.nodeParams.nodeId.toString()
+    }
+
+    // The (node_id, fcm_token) tuple only needs to be registered once.
+    // And after that, only if the tuple changes (e.g. different fcm_token).
+    fun registerFcmToken(token: String?) {
+        peer.registerFcmToken(token)
+    }
+
+    fun incomingTransactionFlow() =
+        appHistoryManager.openIncomingTransactionSubscription().consumeAsFlow()
 
     val controllers: ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
         override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
-        override fun home(): HomeController = AppHomeController(loggerFactory, peerManager, electrumClient, networkMonitor, appHistoryManager)
+        override fun home(): HomeController = AppHomeController(loggerFactory, peerManager, appHistoryManager)
         override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peerManager)
         override fun scan(): ScanController = AppScanController(loggerFactory, peerManager)
         override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)

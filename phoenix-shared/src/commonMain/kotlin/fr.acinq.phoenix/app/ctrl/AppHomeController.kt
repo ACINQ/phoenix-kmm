@@ -1,19 +1,15 @@
 package fr.acinq.phoenix.app.ctrl
 
-import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.channel.Aborted
 import fr.acinq.eclair.channel.Closed
 import fr.acinq.eclair.channel.Closing
 import fr.acinq.eclair.channel.ErrorInformationLeak
-import fr.acinq.eclair.io.Peer
 import fr.acinq.phoenix.app.AppHistoryManager
 import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.ctrl.Home
 import fr.acinq.phoenix.data.Transaction
-import fr.acinq.phoenix.utils.NetworkMonitor
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.consumeAsFlow
@@ -22,7 +18,11 @@ import org.kodein.log.LoggerFactory
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class AppHomeController(loggerFactory: LoggerFactory, private val peerManager: PeerManager, private val electrumClient: ElectrumClient, private val networkMonitor: NetworkMonitor, private val historyManager: AppHistoryManager) : AppController<Home.Model, Home.Intent>(loggerFactory, Home.emptyModel) {
+class AppHomeController(
+    loggerFactory: LoggerFactory,
+    private val peerManager: PeerManager,
+    private val historyManager: AppHistoryManager
+) : AppController<Home.Model, Home.Intent>(loggerFactory, Home.emptyModel) {
 
     init {
         launch {
@@ -44,7 +44,7 @@ class AppHomeController(loggerFactory: LoggerFactory, private val peerManager: P
         }
 
         launch {
-            historyManager.openTransactionsSubscriptions()
+            historyManager.openTransactionsSubscription()
                 .consumeAsFlow()
                 .collectIndexed { nth, list ->
                     model {
