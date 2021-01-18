@@ -1,26 +1,53 @@
 package fr.acinq.phoenix.data
 
+import fr.acinq.bitcoin.PublicKey
+import fr.acinq.eclair.CltvExpiryDelta
+import fr.acinq.eclair.NodeUri
+import fr.acinq.eclair.TrampolineFees
+import fr.acinq.eclair.WalletParams
+import fr.acinq.eclair.utils.sat
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class WalletParamsTest {
+class ApiWalletParamsTest {
 
     @Test
     fun `wallet params deserialization`() {
         val json = Json { ignoreUnknownKeys = true }
-        val walletParams = json.decodeFromString(ApiWalletParams.serializer(), jsonApi)
-        assertNotNull(walletParams)
+        val apiWalletParams = json.decodeFromString(ApiWalletParams.serializer(), jsonApi)
+        assertNotNull(apiWalletParams)
 
-        walletParams.testnet.checkStructure()
-        walletParams.mainnet.checkStructure()
+        apiWalletParams.testnet.checkStructure()
+        apiWalletParams.mainnet.checkStructure()
 
-        assertEquals(1, walletParams.testnet.trampoline.v2.nodes.size)
-        assertEquals(TrampolineParams.NodeUri("ACINQ", "03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134@13.248.222.197:9735"), walletParams.testnet.trampoline.v2.nodes.first())
+        assertEquals(1, apiWalletParams.testnet.trampoline.v2.nodes.size)
+        assertEquals(TrampolineParams.NodeUri("ACINQ", "03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134@13.248.222.197:9735"), apiWalletParams.testnet.trampoline.v2.nodes.first())
 
-        assertTrue(walletParams.mainnet.trampoline.v2.nodes.isEmpty())
+        assertTrue(apiWalletParams.mainnet.trampoline.v2.nodes.isEmpty())
+    }
+
+    @Test
+    fun `export to fr.acinq.eclair.WalletParams`() {
+        val json = Json { ignoreUnknownKeys = true }
+        val apiWalletParams = json.decodeFromString(ApiWalletParams.serializer(), jsonApi)
+        assertNotNull(apiWalletParams)
+
+        assertEquals(WalletParams(
+            NodeUri(
+                PublicKey.fromHex("03933884aaf1d6b108397e5efe5c86bcf2d8ca8d2f700eda99db9214fc2712b134"),
+                "13.248.222.197",
+                9735
+            ),
+            listOf(
+                TrampolineFees(0.sat, 0, CltvExpiryDelta(576)),
+                TrampolineFees(1.sat, 100, CltvExpiryDelta(576))
+            )
+        ),
+            apiWalletParams.export(Chain.TESTNET))
+
     }
 
     private fun ChainParams.checkStructure() {
