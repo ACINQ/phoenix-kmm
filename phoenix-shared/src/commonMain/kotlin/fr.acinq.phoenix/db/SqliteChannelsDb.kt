@@ -23,11 +23,10 @@ import fr.acinq.eclair.NodeParams
 import fr.acinq.eclair.channel.ChannelStateWithCommitments
 import fr.acinq.eclair.db.ChannelsDb
 import fr.acinq.eclair.serialization.Serialization
-import fr.acinq.phoenix.app.WalletManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-internal class SqliteChannelsDb(private val driver: SqlDriver, private val lazyNodeParams: suspend () -> NodeParams) : ChannelsDb {
+internal class SqliteChannelsDb(private val driver: SqlDriver, private val nodeParams: NodeParams) : ChannelsDb {
 
     private val database = ChannelsDatabase(driver)
     private val queries = database.channelsDatabaseQueries
@@ -57,7 +56,7 @@ internal class SqliteChannelsDb(private val driver: SqlDriver, private val lazyN
         val bytes = withContext(Dispatchers.Default) {
             queries.listLocalChannels().executeAsList()
         }
-        return bytes.map { Serialization.deserialize(it, lazyNodeParams()) }
+        return bytes.map { Serialization.deserialize(it, nodeParams) }
     }
 
     override suspend fun addHtlcInfo(channelId: ByteVector32, commitmentNumber: Long, paymentHash: ByteVector32, cltvExpiry: CltvExpiry) {

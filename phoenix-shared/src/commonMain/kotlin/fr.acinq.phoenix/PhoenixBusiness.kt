@@ -55,8 +55,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
     private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
-    private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) { peerConfigurationManager.getNodeParams() } }
-    private val paymentsDb by lazy { SqlitePaymentsDb(createPaymentsDbDriver(ctx)) }
     private val walletParamsDb by lazy { SqliteWalletParamsDb(createWalletParamsDbDriver(ctx)) }
 
     // TestNet
@@ -70,8 +68,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private var appConnectionsDaemon: AppConnectionsDaemon? = null
 
     private val walletManager by lazy { WalletManager() }
-    private val peerConfigurationManager by lazy { PeerConfigurationManager(loggerFactory, httpClient, walletParamsDb, walletManager, chain) }
-    private val peerManager by lazy { PeerManager(loggerFactory, channelsDb, paymentsDb, peerConfigurationManager, tcpSocketBuilder, electrumWatcher) }
+    private val walletParamsManager by lazy { WalletParamsManager(loggerFactory, httpClient, walletParamsDb, walletManager, chain) }
+    private val peerManager by lazy { PeerManager(loggerFactory, walletManager, walletParamsManager, tcpSocketBuilder, electrumWatcher, chain, ctx) }
     private val appHistoryManager by lazy { AppHistoryManager(loggerFactory, appDB, peerManager) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
@@ -88,7 +86,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             appConnectionsDaemon = AppConnectionsDaemon(
                 appConfigurationManager,
                 walletManager,
-                peerConfigurationManager,
+                walletParamsManager,
                 peerManager,
                 currencyManager,
                 networkMonitor,

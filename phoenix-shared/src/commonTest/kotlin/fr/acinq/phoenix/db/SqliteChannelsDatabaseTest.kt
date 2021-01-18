@@ -29,7 +29,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFails
 
 class SqliteChannelsDatabaseTest {
-    private val db = SqliteChannelsDb(testDriver()) { TestConstants.nodeParams }
+    private val db = SqliteChannelsDb(testDriver(), TestConstants.nodeParams)
 
     @ExperimentalCoroutinesApi
     @Test
