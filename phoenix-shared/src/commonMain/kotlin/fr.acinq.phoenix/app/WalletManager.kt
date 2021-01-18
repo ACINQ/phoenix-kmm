@@ -14,10 +14,8 @@ import fr.acinq.phoenix.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletManager(
@@ -27,19 +25,25 @@ class WalletManager(
     public val walletState: StateFlow<Wallet?> = _wallet
     public val wallet by _wallet
 
+     init {
+         launch { nodeParams.value = generateNodeParams(_wallet.filterNotNull().first()) }
+     }
+
     fun loadWallet(seed: ByteArray): Unit {
         val newWallet = Wallet(seed = seed)
         _wallet.value = newWallet
     }
 
-    suspend fun generateNodeParams(): NodeParams {
+    private val nodeParams = MutableStateFlow<NodeParams?>(null)
+    suspend fun getNodeParams() = nodeParams.filterNotNull().first()
+    private fun generateNodeParams(wallet: Wallet): NodeParams {
         val genesisBlock = when (chain) {
             Chain.MAINNET -> Block.LivenetGenesisBlock
             Chain.TESTNET -> Block.TestnetGenesisBlock
             Chain.REGTEST -> Block.RegtestGenesisBlock
         }
 
-        val keyManager = LocalKeyManager(_wallet.filterNotNull().first().seed.toByteVector32(), genesisBlock.hash)
+        val keyManager = LocalKeyManager(wallet.seed.toByteVector32(), genesisBlock.hash)
 
         return NodeParams(
             keyManager = keyManager,

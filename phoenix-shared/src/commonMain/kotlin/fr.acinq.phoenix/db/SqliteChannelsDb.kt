@@ -19,6 +19,7 @@ package fr.acinq.phoenix.db
 import com.squareup.sqldelight.db.SqlDriver
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.CltvExpiry
+import fr.acinq.eclair.NodeParams
 import fr.acinq.eclair.channel.ChannelStateWithCommitments
 import fr.acinq.eclair.db.ChannelsDb
 import fr.acinq.eclair.serialization.Serialization
@@ -26,7 +27,7 @@ import fr.acinq.phoenix.app.WalletManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-internal class SqliteChannelsDb(private val driver: SqlDriver, private val walletManager: WalletManager) : ChannelsDb {
+internal class SqliteChannelsDb(private val driver: SqlDriver, private val lazyNodeParams: suspend () -> NodeParams) : ChannelsDb {
 
     private val database = ChannelsDatabase(driver)
     private val queries = database.channelsDatabaseQueries
@@ -56,7 +57,7 @@ internal class SqliteChannelsDb(private val driver: SqlDriver, private val walle
         val bytes = withContext(Dispatchers.Default) {
             queries.listLocalChannels().executeAsList()
         }
-        return bytes.map { Serialization.deserialize(it, walletManager.generateNodeParams()) }
+        return bytes.map { Serialization.deserialize(it, lazyNodeParams()) }
     }
 
     override suspend fun addHtlcInfo(channelId: ByteVector32, commitmentNumber: Long, paymentHash: ByteVector32, cltvExpiry: CltvExpiry) {

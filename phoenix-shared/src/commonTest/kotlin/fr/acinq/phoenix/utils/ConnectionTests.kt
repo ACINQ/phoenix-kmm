@@ -17,6 +17,7 @@
 package fr.acinq.phoenix.utils
 
 import fr.acinq.eclair.utils.Connection
+import plus
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

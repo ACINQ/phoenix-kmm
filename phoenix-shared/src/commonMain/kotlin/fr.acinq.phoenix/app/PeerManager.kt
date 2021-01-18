@@ -25,7 +25,6 @@ class PeerManager(
     private val walletParamsManager: WalletParamsManager,
     private val tcpSocketBuilder: TcpSocket.Builder,
     private val electrumWatcher: ElectrumWatcher,
-    private val chain: Chain
 ) : CoroutineScope by MainScope() {
 
     private val logger = newLogger(loggerFactory)
@@ -34,9 +33,10 @@ class PeerManager(
 
     init {
         launch {
-            val nodeParams = walletManager.generateNodeParams()
-            val walletParams = walletParamsManager.walletParams.filterNotNull().first()
-            _peer.value = buildPeer(nodeParams, walletParams)
+            _peer.value = buildPeer(
+                nodeParams = walletManager.getNodeParams(),
+                walletParams = walletParamsManager.walletParams.filterNotNull().first()
+            )
         }
     }
 
