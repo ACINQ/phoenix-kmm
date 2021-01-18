@@ -6,7 +6,6 @@ import fr.acinq.eclair.Feature
 import fr.acinq.eclair.Features
 import fr.acinq.eclair.channel.ChannelState
 import fr.acinq.eclair.db.OutgoingPayment
-import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.SendPayment
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.eclair.utils.UUID
@@ -22,7 +21,7 @@ class AppScanController(loggerFactory: LoggerFactory, private val peerManager: P
 
     init {
         launch {
-            peerManager.peer().channelsFlow.collect { channels ->
+            peerManager.getPeer().channelsFlow.collect { channels ->
                 val balanceMsat = balanceMsat(channels)
                 model {
                     if (this is Scan.Model.Validate) {
@@ -66,7 +65,7 @@ class AppScanController(loggerFactory: LoggerFactory, private val peerManager: P
                         val paymentAmount = intent.amount.toMilliSatoshi(intent.unit)
                         val paymentId = UUID.randomUUID()
 
-                        peerManager.peer().send(SendPayment(paymentId, paymentAmount, it.nodeId, OutgoingPayment.Details.Normal(it)))
+                        peerManager.getPeer().send(SendPayment(paymentId, paymentAmount, it.nodeId, OutgoingPayment.Details.Normal(it)))
 
                         model(Scan.Model.Sending)
                     }
@@ -85,7 +84,7 @@ class AppScanController(loggerFactory: LoggerFactory, private val peerManager: P
     }
 
     private suspend fun validatePaymentRequest(request: String, paymentRequest: PaymentRequest) {
-        val balanceMsat = balanceMsat(peerManager.peer().channels)
+        val balanceMsat = balanceMsat(peerManager.getPeer().channels)
         model(
             Scan.Model.Validate(
                 request = request,

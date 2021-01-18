@@ -1,7 +1,7 @@
 package fr.acinq.phoenix.db
 
 import com.squareup.sqldelight.ColumnAdapter
-§import com.squareup.sqldelight.db.SqlDriver
+import com.squareup.sqldelight.db.SqlDriver
 import fr.acinq.bitcoin.PublicKey
 import fr.acinq.eclair.CltvExpiryDelta
 import fr.acinq.eclair.NodeUri
@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
-class SqliteWalletParamsDb(private val driver: SqlDriver) {
+class SqliteWalletParamsDb(driver: SqlDriver) {
 
     private val trampolineFeesAdapter: ColumnAdapter<List<TrampolineFees>, String> = object : ColumnAdapter<List<TrampolineFees>, String> {
         override fun decode(databaseValue: String): List<TrampolineFees> = databaseValue.split(";").map { fees ->

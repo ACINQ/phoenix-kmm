@@ -2,7 +2,6 @@ package fr.acinq.phoenix.app.ctrl
 
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.MilliSatoshi
-import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.ReceivePayment
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.eclair.utils.secure
@@ -29,7 +28,7 @@ class AppReceiveController(loggerFactory: LoggerFactory, private val peerManager
                     try {
                         val deferred = CompletableDeferred<PaymentRequest>()
                         val preimage = ByteVector32(Random.secure().nextBytes(32)) // must be different everytime
-                        peerManager.peer().send(
+                        peerManager.getPeer().send(
                             ReceivePayment(
                                 preimage,
                                 intent.paymentAmountMsat,

@@ -25,7 +25,7 @@ class AppCloseChannelsConfigurationController(
 
     init {
         launch {
-            peerManager.peer().channelsFlow.collect { channels ->
+            peerManager.getPeer().channelsFlow.collect { channels ->
                 if (!isClosing) {
                     val filteredChannels = filteredChannels(channels)
                     val sats = totalSats(filteredChannels)
@@ -68,13 +68,13 @@ class AppCloseChannelsConfigurationController(
                 }
                 launch {
                     isClosing = true
-                    val filteredChannels = filteredChannels(peerManager.peer().channels)
+                    val filteredChannels = filteredChannels(peerManager.getPeer().channels)
                     val sats = totalSats(filteredChannels)
                     filteredChannels.keys.forEach { channelId ->
                         val command = CMD_CLOSE(scriptPubKey = ByteVector(scriptPubKey))
                         val channelEvent = ChannelEvent.ExecuteCommand(command)
                         val peerEvent = WrappedChannelEvent(channelId, channelEvent)
-                        peerManager.peer().send(peerEvent)
+                        peerManager.getPeer().send(peerEvent)
                     }
                     model(CloseChannelsConfiguration.Model.ChannelsClosed(filteredChannels.size, sats))
                 }

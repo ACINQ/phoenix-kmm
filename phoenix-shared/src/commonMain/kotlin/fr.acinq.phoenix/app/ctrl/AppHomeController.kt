@@ -26,7 +26,7 @@ class AppHomeController(
 
     init {
         launch {
-            peerManager.peer().channelsFlow.collect { channels ->
+            peerManager.getPeer().channelsFlow.collect { channels ->
                 model {
                     copy(
                         balanceSat = channels.values.sumOf {

@@ -1,10 +1,8 @@
 package fr.acinq.phoenix.app.ctrl.config
 
-import fr.acinq.eclair.channel.ChannelState
 import fr.acinq.eclair.channel.ChannelStateWithCommitments
 import fr.acinq.eclair.channel.Normal
 import fr.acinq.eclair.serialization.ByteVector32KSerializer
-import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.serialization.Serialization.eclairSerializersModule
 import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.app.ctrl.AppController
@@ -12,7 +10,6 @@ import fr.acinq.phoenix.ctrl.config.ChannelsConfiguration
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.MapSerializer
@@ -34,7 +31,7 @@ class AppChannelsConfigurationController(
 
     init {
         launch {
-            val peer = peerManager.peer()
+            val peer = peerManager.getPeer()
 
             peer.channelsFlow.collect {
                 model(ChannelsConfiguration.Model(

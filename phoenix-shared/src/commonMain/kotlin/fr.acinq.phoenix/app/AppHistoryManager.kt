@@ -6,18 +6,14 @@ import fr.acinq.eclair.io.PaymentNotSent
 import fr.acinq.eclair.io.PaymentProgress
 import fr.acinq.eclair.io.PaymentReceived
 import fr.acinq.eclair.io.PaymentSent
-import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.utils.UUID
 import fr.acinq.eclair.utils.currentTimestampMillis
-import fr.acinq.eclair.utils.eclairLogger
 import fr.acinq.phoenix.data.Transaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kodein.db.DB
 import org.kodein.db.find
@@ -57,7 +53,7 @@ class AppHistoryManager(
 
     init {
         launch {
-            peerManager.peer().openListenerEventSubscription().consumeEach {
+            peerManager.getPeer().openListenerEventSubscription().consumeEach {
                 when (it) {
                     is PaymentReceived -> {
                         appDb.put(
