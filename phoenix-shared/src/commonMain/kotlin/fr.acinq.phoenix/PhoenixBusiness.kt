@@ -16,11 +16,9 @@ import fr.acinq.phoenix.utils.*
 import io.ktor.client.*
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import org.kodein.db.DB
 import org.kodein.db.impl.factory
@@ -57,7 +55,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
     private val dbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val appDB by lazy { dbFactory.open("application", KotlinxSerializer()) }
-    private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) { walletManager.getNodeParams() } }
+    private val channelsDb by lazy { SqliteChannelsDb(createChannelsDbDriver(ctx)) { peerConfigurationManager.getNodeParams() } }
     private val paymentsDb by lazy { SqlitePaymentsDb(createPaymentsDbDriver(ctx)) }
     private val walletParamsDb by lazy { SqliteWalletParamsDb(createWalletParamsDbDriver(ctx)) }
 
@@ -71,9 +69,9 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private var appConnectionsDaemon: AppConnectionsDaemon? = null
 
-    private val walletManager by lazy { WalletManager(chain) }
-    private val walletParamsManager by lazy { WalletParamsManager(loggerFactory, httpClient, walletParamsDb, chain) }
-    private val peerManager by lazy { PeerManager(loggerFactory, channelsDb, paymentsDb, walletManager, walletParamsManager, tcpSocketBuilder, electrumWatcher) }
+    private val walletManager by lazy { WalletManager() }
+    private val peerConfigurationManager by lazy { PeerConfigurationManager(loggerFactory, httpClient, walletParamsDb, walletManager, chain) }
+    private val peerManager by lazy { PeerManager(loggerFactory, channelsDb, paymentsDb, peerConfigurationManager, tcpSocketBuilder, electrumWatcher) }
     private val appHistoryManager by lazy { AppHistoryManager(loggerFactory, appDB, peerManager) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
@@ -90,7 +88,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             appConnectionsDaemon = AppConnectionsDaemon(
                 appConfigurationManager,
                 walletManager,
-                walletParamsManager,
+                peerConfigurationManager,
                 peerManager,
                 currencyManager,
                 networkMonitor,

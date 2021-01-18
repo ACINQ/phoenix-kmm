@@ -7,7 +7,6 @@ import fr.acinq.eclair.db.Databases
 import fr.acinq.eclair.db.PaymentsDb
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.TcpSocket
-import fr.acinq.phoenix.data.Chain
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
@@ -21,8 +20,7 @@ class PeerManager(
     loggerFactory: LoggerFactory,
     private val channelsDb: ChannelsDb,
     private val paymentsDb: PaymentsDb,
-    private val walletManager: WalletManager,
-    private val walletParamsManager: WalletParamsManager,
+    private val peerConfigurationManager: PeerConfigurationManager,
     private val tcpSocketBuilder: TcpSocket.Builder,
     private val electrumWatcher: ElectrumWatcher,
 ) : CoroutineScope by MainScope() {
@@ -34,8 +32,8 @@ class PeerManager(
     init {
         launch {
             _peer.value = buildPeer(
-                nodeParams = walletManager.getNodeParams(),
-                walletParams = walletParamsManager.walletParams.filterNotNull().first()
+                nodeParams = peerConfigurationManager.getNodeParams(),
+                walletParams = peerConfigurationManager.getWalletParams()
             )
         }
     }
@@ -43,7 +41,6 @@ class PeerManager(
     suspend fun getPeer() = peerState.filterNotNull().first()
 
     private fun buildPeer(nodeParams: NodeParams, walletParams: WalletParams): Peer {
-        logger.info { "nodeid=${nodeParams.nodeId}" }
         logger.info { "nodeParams=$nodeParams" }
         logger.info { "walletParams=$walletParams" }
 
