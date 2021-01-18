@@ -176,7 +176,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private var appConnectionsDaemon: AppConnectionsDaemon? = null
 
     private val walletManager by lazy { WalletManager() }
-    private val appHistoryManager by lazy { AppHistoryManager(loggerFactory, appDB, peer) }
+    private val appHistoryManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peer) }
     private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, appDB, httpClient) }
@@ -233,7 +233,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
 
     fun incomingTransactionFlow() =
-        appHistoryManager.openIncomingTransactionSubscription().consumeAsFlow()
+        appHistoryManager.subscribeToLastIncomingPayment().consumeAsFlow()
 
     val controllers: ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)

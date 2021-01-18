@@ -1,18 +1,15 @@
 package fr.acinq.phoenix.app.ctrl
 
-import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.channel.Aborted
 import fr.acinq.eclair.channel.Closed
 import fr.acinq.eclair.channel.Closing
 import fr.acinq.eclair.channel.ErrorInformationLeak
+import fr.acinq.eclair.db.WalletPayment
 import fr.acinq.eclair.io.Peer
-import fr.acinq.phoenix.app.AppHistoryManager
+import fr.acinq.phoenix.app.PaymentsManager
 import fr.acinq.phoenix.ctrl.Home
-import fr.acinq.phoenix.data.Transaction
-import fr.acinq.phoenix.utils.NetworkMonitor
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.flow.consumeAsFlow
@@ -24,38 +21,37 @@ import org.kodein.log.LoggerFactory
 class AppHomeController(
     loggerFactory: LoggerFactory,
     private val peer: Peer,
-    private val historyManager: AppHistoryManager
+    private val paymentsManager: PaymentsManager
 ) : AppController<Home.Model, Home.Intent>(loggerFactory, Home.emptyModel) {
 
     init {
         launch {
             peer.channelsFlow.collect { channels ->
                 model {
-                    copy(
-                        balanceSat = channels.values.sumOf {
-                            when (it) {
-                                is Closing -> 0
-                                is Closed -> 0
-                                is Aborted -> 0
-                                is ErrorInformationLeak -> 0
-                                else -> it.localCommitmentSpec?.toLocal?.truncateToSatoshi()?.toLong() ?: 0
-                            }
+                    copy(balanceSat = channels.values.sumOf {
+                        when (it) {
+                            is Closing -> 0
+                            is Closed -> 0
+                            is Aborted -> 0
+                            is ErrorInformationLeak -> 0
+                            else -> it.localCommitmentSpec?.toLocal?.truncateToSatoshi()?.toLong() ?: 0
                         }
-                    )
+                    })
                 }
             }
         }
 
         launch {
-            historyManager.openTransactionsSubscription()
+            paymentsManager.subscribeToPayments()
                 .consumeAsFlow()
-                .collectIndexed { nth, list ->
+                .collectIndexed { index, items ->
                     model {
-                        val lastTransaction = list.firstOrNull()
-                        if (nth != 0 && lastTransaction != null && lastTransaction.status != Transaction.Status.Pending) {
-                            copy(history = list, lastTransaction = lastTransaction)
+                        val lastPayment = items.firstOrNull()
+                        // set last payment only if this is not the first time the payment list changes, and if the first payment changed is final
+                        if (index != 0 && lastPayment != null && WalletPayment.completedAt(lastPayment) > 0) {
+                            copy(payments = items, lastPayment = lastPayment)
                         } else {
-                            copy(history = list)
+                            copy(payments = items)
                         }
                     }
                 }
