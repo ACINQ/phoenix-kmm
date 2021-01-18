@@ -232,7 +232,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         peer.registerFcmToken(token)
     }
 
-    fun incomingTransactionFlow() =
+    fun incomingPaymentFlow() =
         appHistoryManager.subscribeToLastIncomingPayment().consumeAsFlow()
 
     val controllers: ControllerFactory = object : ControllerFactory {
