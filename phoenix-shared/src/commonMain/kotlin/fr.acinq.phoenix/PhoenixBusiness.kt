@@ -88,12 +88,14 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             appConnectionsDaemon = AppConnectionsDaemon(
                 appConfigurationManager,
                 walletManager,
+                walletParamsManager,
+                peerManager,
                 currencyManager,
                 networkMonitor,
                 electrumClient,
                 loggerFactory,
-                getPeer = { peer } // lazy getter
             )
+        }
     }
 
     // Converts a mnemonics list to a seed.
