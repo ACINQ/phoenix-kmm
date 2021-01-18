@@ -29,8 +29,10 @@
 		7555FF85242A565B00829871 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7555FF84242A565B00829871 /* Assets.xcassets */; };
 		7555FF88242A565B00829871 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7555FF87242A565B00829871 /* Preview Assets.xcassets */; };
 		7555FF8B242A565B00829871 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7555FF89242A565B00829871 /* LaunchScreen.storyboard */; };
-		7555FF96242A565B00829871 /* phoenix-iosTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF95242A565B00829871 /* phoenix-iosTests.swift */; };
+		7555FF96242A565B00829871 /* AppSecurityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FF95242A565B00829871 /* AppSecurityTests.swift */; };
 		7555FFA1242A565B00829871 /* phoenix-iosUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7555FFA0242A565B00829871 /* phoenix-iosUITests.swift */; };
+		7BA4C64025836943002C07F5 /* TestContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BA4C63F25836943002C07F5 /* TestContentView.swift */; };
+		7BA4C6482583ACF8002C07F5 /* Biometrics.m in Sources */ = {isa = PBXBuildFile; fileRef = 7BA4C6472583ACF8002C07F5 /* Biometrics.m */; };
 		C8D7A70EFE0F071ACA0AE246 /* QRCodeScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A607F036B3184C3D6EED /* QRCodeScanner.swift */; };
 		C8D7A74B29EAFF2EBD73BC6B /* ConfigurationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7AFF1A7C09789C6CF2D06 /* ConfigurationView.swift */; };
 		C8D7A84CCF914B08BDB03BE6 /* RestoreWalletView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D7A44147508AA19378B739 /* RestoreWalletView.swift */; };
@@ -136,11 +138,15 @@
 		7555FF8A242A565B00829871 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		7555FF8C242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7555FF91242A565B00829871 /* phoenix-iosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "phoenix-iosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
-		7555FF95242A565B00829871 /* phoenix-iosTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "phoenix-iosTests.swift"; sourceTree = "<group>"; };
+		7555FF95242A565B00829871 /* AppSecurityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSecurityTests.swift; sourceTree = "<group>"; };
 		7555FF97242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7555FF9C242A565B00829871 /* phoenix-iosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "phoenix-iosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7555FFA0242A565B00829871 /* phoenix-iosUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "phoenix-iosUITests.swift"; sourceTree = "<group>"; };
 		7555FFA2242A565B00829871 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7BA4C63F25836943002C07F5 /* TestContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestContentView.swift; sourceTree = "<group>"; };
+		7BA4C6472583ACF8002C07F5 /* Biometrics.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = Biometrics.m; sourceTree = "<group>"; };
+		7BA4C64C2583AD34002C07F5 /* Biometrics.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Biometrics.h; sourceTree = "<group>"; };
+		7BA4C64D2583AD4E002C07F5 /* BridgingHeader.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = BridgingHeader.h; sourceTree = "<group>"; };
 		C8D7A1F8A123C59199C182C2 /* ElectrumConfigurationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ElectrumConfigurationView.swift; sourceTree = "<group>"; };
 		C8D7A209301A31C14A982ECD /* InitializationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InitializationView.swift; sourceTree = "<group>"; };
 		C8D7A2327BC90150A3E1493D /* AboutView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
@@ -308,6 +314,7 @@
 				7555FF7E242A565900829871 /* AppDelegate.swift */,
 				7555FF80242A565900829871 /* SceneDelegate.swift */,
 				7555FF82242A565900829871 /* ContentView.swift */,
+				7BA4C63F25836943002C07F5 /* TestContentView.swift */,
 				7555FF84242A565B00829871 /* Assets.xcassets */,
 				DC67654D25655D93004D4263 /* Colors.xcassets */,
 				7555FF89242A565B00829871 /* LaunchScreen.storyboard */,
@@ -339,8 +346,11 @@
 		7555FF94242A565B00829871 /* phoenix-iosTests */ = {
 			isa = PBXGroup;
 			children = (
-				7555FF95242A565B00829871 /* phoenix-iosTests.swift */,
+				7555FF95242A565B00829871 /* AppSecurityTests.swift */,
 				7555FF97242A565B00829871 /* Info.plist */,
+				7BA4C6472583ACF8002C07F5 /* Biometrics.m */,
+				7BA4C64C2583AD34002C07F5 /* Biometrics.h */,
+				7BA4C64D2583AD4E002C07F5 /* BridgingHeader.h */,
 			);
 			path = "phoenix-iosTests";
 			sourceTree = "<group>";
@@ -721,6 +731,7 @@
 				DC72C33925A663CA008A927A /* QRCode.swift in Sources */,
 				DCACF6F02566D0A60009B01E /* Data+Hexadecimal.swift in Sources */,
 				53BEF5B2A55C55CFC474DC64 /* controllers.swift in Sources */,
+				7BA4C64025836943002C07F5 /* TestContentView.swift in Sources */,
 				DCACF7092566D0F00009B01E /* AppAccessView.swift in Sources */,
 				F4AED297257A50CD009485C1 /* LogsConfigurationViewerView.swift in Sources */,
 				F4AED298257A50CD009485C1 /* LogsConfigurationView.swift in Sources */,
@@ -732,7 +743,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7555FF96242A565B00829871 /* phoenix-iosTests.swift in Sources */,
+				7BA4C6482583ACF8002C07F5 /* Biometrics.m in Sources */,
+				7555FF96242A565B00829871 /* AppSecurityTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -972,7 +984,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = "phoenix-iosTests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -980,9 +991,10 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "orgIdentifier.phoenix-iosTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "phoenix-iosTests/BridgingHeader.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/phoenix-ios.app/phoenix-ios";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Phoenix.app/Phoenix";
 			};
 			name = Debug;
 		};
@@ -993,7 +1005,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				INFOPLIST_FILE = "phoenix-iosTests/Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 13.2;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1001,9 +1012,10 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "orgIdentifier.phoenix-iosTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "phoenix-iosTests/BridgingHeader.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/phoenix-ios.app/phoenix-ios";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Phoenix.app/Phoenix";
 			};
 			name = Release;
 		};

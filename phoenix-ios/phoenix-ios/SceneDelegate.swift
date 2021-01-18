@@ -9,8 +9,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
 
-        let contentView = ContentView()
+        ContentView.UIKitAppearance()
 
+        #if DEBUG
+        let contentView = bypassInitForTesting() ? AnyView(TestContentView()) : AnyView(ContentView())
+        #else
+        let contentView = ContentView()
+        #endif
+        
         if let windowScene = scene as? UIWindowScene {
             let window = UIWindow(windowScene: windowScene)
             window.rootViewController = UIHostingController(rootView: contentView)
@@ -77,3 +83,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 }
 
+
+#if DEBUG
+    extension SceneDelegate {
+        func bypassInitForTesting() -> Bool {
+            // this might fail for UI Tests, may be check against an env var if it becomes blocking
+            NSClassFromString("XCTest") != nil
+        }
+    }
+#endif
