@@ -1,24 +1,17 @@
 package fr.acinq.phoenix.db
 
 import com.squareup.sqldelight.ColumnAdapter
-import com.squareup.sqldelight.EnumColumnAdapter
-import com.squareup.sqldelight.db.SqlDriver
-import fr.acinq.bitcoin.ByteVector
-import fr.acinq.bitcoin.ByteVector32
+§import com.squareup.sqldelight.db.SqlDriver
 import fr.acinq.bitcoin.PublicKey
-import fr.acinq.eclair.*
-import fr.acinq.eclair.db.HopDesc
-import fr.acinq.eclair.db.IncomingPayment
+import fr.acinq.eclair.CltvExpiryDelta
+import fr.acinq.eclair.NodeUri
+import fr.acinq.eclair.TrampolineFees
+import fr.acinq.eclair.WalletParams
 import fr.acinq.eclair.utils.sat
-import fracinqphoenixdb.Incoming_payments
-import fracinqphoenixdb.Outgoing_payment_parts
-import fracinqphoenixdb.Outgoing_payments
 import fracinqphoenixdb.Wallet_params
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimePeriod
 import kotlinx.datetime.Instant
 
 class SqliteWalletParamsDb(private val driver: SqlDriver) {
@@ -69,9 +62,9 @@ class SqliteWalletParamsDb(private val driver: SqlDriver) {
         }
     }
 
-    suspend fun getLastWalletParams(): Pair<Instant, WalletParams> {
+    suspend fun getLastWalletParams(): Pair<Instant, WalletParams?> {
         return withContext(Dispatchers.Default) {
-            queries.list(::mapWalletParams).executeAsList().first()
+            queries.list(::mapWalletParams).executeAsList().firstOrNull() ?: Instant.DISTANT_PAST to null
         }
     }
 
