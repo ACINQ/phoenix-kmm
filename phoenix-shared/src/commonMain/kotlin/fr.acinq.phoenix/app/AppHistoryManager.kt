@@ -16,6 +16,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kodein.db.DB
 import org.kodein.db.find
@@ -29,7 +31,7 @@ import org.kodein.log.newLogger
 class AppHistoryManager(
     loggerFactory: LoggerFactory,
     private val appDb: DB,
-    private val peer: Peer
+    private val peerManager: PeerManager
 ) : CoroutineScope by MainScope() {
 
     private fun getList() = appDb.find<Transaction>().byIndex("timestamp").useModels(reverse = true) { it.toList() }
@@ -40,7 +42,7 @@ class AppHistoryManager(
 
     init {
         launch {
-            peer.openListenerEventSubscription().consumeEach {
+            peerManager.peer().openListenerEventSubscription().consumeEach {
                 when (it) {
                     is PaymentReceived -> {
                         appDb.put(

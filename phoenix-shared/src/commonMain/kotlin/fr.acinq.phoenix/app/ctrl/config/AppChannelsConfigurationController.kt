@@ -6,6 +6,7 @@ import fr.acinq.eclair.channel.Normal
 import fr.acinq.eclair.io.ByteVector32KSerializer
 import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.eclairSerializersModule
+import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.ChannelsConfiguration
 import fr.acinq.phoenix.data.Chain
@@ -22,7 +23,7 @@ import org.kodein.log.LoggerFactory
 @OptIn(ExperimentalCoroutinesApi::class)
 class AppChannelsConfigurationController(
     loggerFactory: LoggerFactory, 
-    private val peer: Peer, 
+    private val peerManager: PeerManager,
     private val chain: Chain
 ) : AppController<ChannelsConfiguration.Model, ChannelsConfiguration.Intent>(loggerFactory, ChannelsConfiguration.emptyModel) {
 
@@ -33,6 +34,8 @@ class AppChannelsConfigurationController(
 
     init {
         launch {
+            val peer = peerManager.peer()
+
             peer.channelsFlow.collect {
                 model(ChannelsConfiguration.Model(
                     peer.nodeParams.keyManager.nodeId.toString(),

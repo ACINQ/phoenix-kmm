@@ -7,6 +7,7 @@ import fr.acinq.eclair.channel.Closing
 import fr.acinq.eclair.channel.ErrorInformationLeak
 import fr.acinq.eclair.io.Peer
 import fr.acinq.phoenix.app.AppHistoryManager
+import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.ctrl.Home
 import fr.acinq.phoenix.data.Transaction
 import fr.acinq.phoenix.utils.NetworkMonitor
@@ -21,11 +22,11 @@ import org.kodein.log.LoggerFactory
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class AppHomeController(loggerFactory: LoggerFactory, private val peer: Peer, private val electrumClient: ElectrumClient, private val networkMonitor: NetworkMonitor, private val historyManager: AppHistoryManager) : AppController<Home.Model, Home.Intent>(loggerFactory, Home.emptyModel) {
+class AppHomeController(loggerFactory: LoggerFactory, private val peerManager: PeerManager, private val electrumClient: ElectrumClient, private val networkMonitor: NetworkMonitor, private val historyManager: AppHistoryManager) : AppController<Home.Model, Home.Intent>(loggerFactory, Home.emptyModel) {
 
     init {
         launch {
-            peer.channelsFlow.collect { channels ->
+            peerManager.peer().channelsFlow.collect { channels ->
                 model {
                     copy(
                         balanceSat = channels.values.sumOf {
