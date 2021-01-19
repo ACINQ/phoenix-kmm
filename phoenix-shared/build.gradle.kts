@@ -140,9 +140,9 @@ sqldelight {
         packageName = "fr.acinq.phoenix.db"
         sourceFolders = listOf("paymentsdb")
     }
-    database("WalletParamsDatabase") {
+    database("AppDatabase") {
         packageName = "fr.acinq.phoenix.db"
-        sourceFolders = listOf("walletparamsdb")
+        sourceFolders = listOf("appdb")
     }
 }
 

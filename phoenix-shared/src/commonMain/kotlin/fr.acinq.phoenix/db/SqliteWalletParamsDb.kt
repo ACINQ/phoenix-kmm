@@ -30,7 +30,7 @@ class SqliteWalletParamsDb(driver: SqlDriver) {
         }
     }
 
-    private val database = WalletParamsDatabase(
+    private val database = AppDatabase(
         driver = driver,
         wallet_paramsAdapter = Wallet_params.Adapter(trampoline_feesAdapter = trampolineFeesAdapter)
     )

@@ -23,4 +23,4 @@ expect fun createChannelsDbDriver(ctx: PlatformContext): SqlDriver
 
 expect fun createPaymentsDbDriver(ctx: PlatformContext): SqlDriver
 
-expect fun createWalletParamsDbDriver(ctx: PlatformContext): SqlDriver
+expect fun createAppDbDriver(ctx: PlatformContext): SqlDriver

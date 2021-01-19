@@ -1,22 +1,13 @@
 package fr.acinq.phoenix.app
 
-import fr.acinq.bitcoin.Block
 import fr.acinq.eclair.*
-import fr.acinq.eclair.blockchain.fee.FeerateTolerance
-import fr.acinq.eclair.blockchain.fee.OnChainFeeConf
-import fr.acinq.eclair.crypto.LocalKeyManager
-import fr.acinq.eclair.utils.msat
-import fr.acinq.eclair.utils.sat
-import fr.acinq.eclair.utils.toByteVector32
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.data.ApiWalletParams
-import fr.acinq.phoenix.data.Wallet
 import fr.acinq.phoenix.db.SqliteWalletParamsDb
 import io.ktor.client.*
 import io.ktor.client.request.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import org.kodein.log.LoggerFactory
