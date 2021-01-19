@@ -4,7 +4,6 @@ import fr.acinq.eclair.channel.Aborted
 import fr.acinq.eclair.channel.Closed
 import fr.acinq.eclair.channel.Closing
 import fr.acinq.eclair.channel.ErrorInformationLeak
-import fr.acinq.eclair.db.WalletPayment
 import fr.acinq.eclair.io.Peer
 import fr.acinq.phoenix.app.PaymentsManager
 import fr.acinq.phoenix.ctrl.Home
@@ -12,7 +11,6 @@ import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectIndexed
-import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 
@@ -43,15 +41,9 @@ class AppHomeController(
 
         launch {
             paymentsManager.subscribeToPayments()
-                .collectIndexed { index, items ->
+                .collectIndexed { index, pair ->
                     model {
-                        val lastPayment = items.firstOrNull()
-                        // set last payment only if this is not the first time the payment list changes, and if the first payment changed is final
-                        if (index > 1 && lastPayment != null && WalletPayment.completedAt(lastPayment) > 0) {
-                            copy(payments = items, lastPayment = lastPayment)
-                        } else {
-                            copy(payments = items)
-                        }
+                        copy(payments = pair.first, lastPayment = pair.second)
                     }
                 }
         }

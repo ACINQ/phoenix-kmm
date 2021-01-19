@@ -29,7 +29,7 @@ class PaymentsManager(
     private suspend fun listPayments(): List<WalletPayment> = paymentsDb.listPayments(150, 0)
 
     /** Broadcasts an observable relevant list of payments. */
-    private val payments = MutableStateFlow(emptyList<WalletPayment>())
+    private val payments = MutableStateFlow<Pair<List<WalletPayment>, WalletPayment?>>(Pair(emptyList(), null))
 
     /**
      * Broadcasts the most recent incoming payment since the app was launched.
@@ -48,7 +48,7 @@ class PaymentsManager(
 
     init {
         launch {
-            payments.value = listPayments()
+            payments.value = listPayments() to null
             peer.openListenerEventSubscription().consumeEach { event ->
                 when (event) {
                     is PaymentReceived, is PaymentSent, is PaymentNotSent, is PaymentProgress -> {
@@ -56,7 +56,8 @@ class PaymentsManager(
                         if (event is PaymentReceived) {
                             lastIncomingPayment.send(event.incomingPayment)
                         }
-                        payments.value = listPayments()
+                        val list = listPayments()
+                        payments.value = list to list.firstOrNull()?.takeIf { WalletPayment.completedAt(it) > 0 }
                     }
                     else -> Unit
                 }
