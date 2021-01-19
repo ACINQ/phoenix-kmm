@@ -81,8 +81,12 @@ class AppConfigurationManager(
                 fallbackWalletParams
             }
 
-        logger.info { "initialize WalletParams=$walletParams" }
-        if (_walletParams.value == null) _walletParams.value = walletParams
+        // _walletParams can be updated by [updateWalletParamsLoop] before we reach this block.
+        // In that case, we don't update from here
+        if (_walletParams.value == null) {
+            logger.debug { "initialize WalletParams=$walletParams" }
+            _walletParams.value = walletParams
+        }
     }
 
     private var updateParametersJob: Job? = null
@@ -97,8 +101,11 @@ class AppConfigurationManager(
     private fun updateWalletParamsLoop() = launch {
         while (isActive) {
             val walletParams = fetchAndStoreWalletParams()
-            logger.info { "updated WalletParams=${walletParams}" }
-            if (_walletParams.value == null) _walletParams.value = walletParams
+            // _walletParams can be updated just once.
+            if (_walletParams.value == null) {
+                logger.debug { "updated WalletParams=${walletParams}" }
+                _walletParams.value = walletParams
+            }
 
             delay(
                 if (_walletParams.value == null) 500.milliseconds else 5.minutes
@@ -112,7 +119,6 @@ class AppConfigurationManager(
             val newWalletParams = apiParams.export(chain)
             logger.info { "retrieved WalletParams=${newWalletParams}" }
             appDb.setWalletParams(newWalletParams)
-            delay(15.seconds)
             newWalletParams
         } catch (t: Throwable) {
             logger.error(t) { "${t.message}" }
