@@ -41,6 +41,10 @@ export MACOSX_DEPLOYMENT_TARGET="10.4"
 # Get the correct toolchain for target platforms
 CC=$(xcrun --find --sdk "${SDK}" clang)
 export CC
+AR=$(xcrun --find --sdk "${SDK}" ar)
+export AR
+RANLIB=$(xcrun --find --sdk "${SDK}" ranlib)
+export RANLIB
 export CFLAGS="${HOST_FLAGS} ${OPT_FLAGS}"
 export LDFLAGS="${HOST_FLAGS}"
 

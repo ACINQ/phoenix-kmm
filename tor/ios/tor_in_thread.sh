@@ -27,6 +27,8 @@ PREFIX="${SCRIPT_DIR}/build/${ARCH}"
 cd ../tor_in_thread
 
 CC=$(xcrun --find --sdk "${SDK}" clang)
+AR=$(xcrun --find --sdk "${SDK}" ar)
+RANLIB=$(xcrun --find --sdk "${SDK}" ranlib)
 
 mkdir -p build &> /dev/null
 echo $CC ${HOST_FLAGS} ${OPT_FLAGS} -I"${PREFIX}/include" -c -o build/tor_in_thread.o tor_in_thread.c
@@ -34,8 +36,8 @@ $CC ${HOST_FLAGS} ${OPT_FLAGS} -I"${PREFIX}/include" -c -o build/tor_in_thread.o
 
 mkdir -p "${PREFIX}/lib" &> /dev/null
 rm -f "${PREFIX}/lib/libtor_in_thread.a"
-ar r "${PREFIX}/lib/libtor_in_thread.a" "build/tor_in_thread.o"
-ranlib -c "${PREFIX}/lib/libtor_in_thread.a"
+$AR r "${PREFIX}/lib/libtor_in_thread.a" "build/tor_in_thread.o"
+$RANLIB -c "${PREFIX}/lib/libtor_in_thread.a"
 
 mkdir -p "${PREFIX}/include" &> /dev/null
 cp -v tor_in_thread.h "${PREFIX}/include"

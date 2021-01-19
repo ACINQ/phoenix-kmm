@@ -1,25 +1,41 @@
 #!/bin/bash
 set -e
 
+[[ -z "$NDK" ]] && echo "Please set the NDK variable" && exit 1
 [[ -z "$ARCH" ]] && echo "Please set the ARCH variable" && exit 1
 
-# Compiler options
-OPT_FLAGS="-O3 -g3 -fembed-bitcode"
-MAKE_JOBS=8
-MIN_IOS_VERSION=12.0
-
-if [ "$ARCH" == "arm64" ]; then
-  SDK="iphoneos"
-  HOST_FLAGS="-arch arm64 -arch arm64e -miphoneos-version-min=${MIN_IOS_VERSION} -isysroot $(xcrun --sdk ${SDK} --show-sdk-path)"
-  CHOST="arm-apple-darwin"
-elif [ "$ARCH" == "x86_64" ]; then
-  SDK="iphonesimulator"
-  HOST_FLAGS="-arch x86_64 -mios-simulator-version-min=${MIN_IOS_VERSION} -isysroot $(xcrun --sdk ${SDK} --show-sdk-path)"
-  CHOST="x86_64-apple-darwin"
+if [ "$ARCH" == "x86_64" ]; then
+  SYS=x86_64
+elif [ "$ARCH" == "x86" ]; then
+  SYS=i686
+elif [ "$ARCH" == "arm64-v8a" ]; then
+  SYS=aarch64
+elif [ "$ARCH" == "armeabi-v7a" ]; then
+  SYS=armv7a
 else
   echo "Unsupported ARCH: $ARCH"
   exit 1
 fi
+
+case "$(uname -s)" in
+  Linux*) TOOLCHAIN=linux-x86_64 ;;
+  Darwin*) TOOLCHAIN=darwin-x86_64 ;;
+  MINGW*) TOOLCHAIN=windows-x86_64 ;;
+  *) echo "Unsupported OS: $(uname -s)" ; exit 1 ;;
+esac
+
+CHOST=$SYS-linux-android
+TARGET=$CHOST
+if [ "$SYS" == "armv7a" ]; then
+  CHOST=armv7a-linux-androideabi
+  TARGET=arm-linux-androideabi
+fi
+
+HOST_FLAGS="-fpic"
+
+# Compiler options
+OPT_FLAGS="-O3 -g3"
+MAKE_JOBS=8
 
 # Locations
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
@@ -32,19 +48,19 @@ cd ../libs/tor
 PATH=$PATH:/usr/local/bin:/usr/local/opt/gettext/bin
 
 if [[ ! -f ./configure ]]; then
-  export LIBTOOLIZE=glibtoolize
+  if [ "$(uname)" == "Darwin" ]; then
+    export LIBTOOLIZE=glibtoolize
+  fi
   ./autogen.sh
 fi
 
-# Ensure -fembed-bitcode builds, as workaround for libtool macOS bug
-export MACOSX_DEPLOYMENT_TARGET="10.4"
 # Get the correct toolchain for target platforms
-CC=$(xcrun --find --sdk "${SDK}" clang)
-export CC
-AR=$(xcrun --find --sdk "${SDK}" ar)
-export AR
-RANLIB=$(xcrun --find --sdk "${SDK}" ranlib)
-export RANLIB
+export CC="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/${CHOST}21-clang"
+export LD="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/$TARGET-ld"
+export AR="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/$TARGET-ar"
+export AS="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/$TARGET-as"
+export RANLIB="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/$TARGET-ranlib"
+export STRIP="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/$TARGET-strip"
 export CFLAGS="${HOST_FLAGS} ${OPT_FLAGS} -I${PREFIX}/include"
 export LDFLAGS="${HOST_FLAGS}"
 
@@ -56,7 +72,7 @@ export LDFLAGS="${HOST_FLAGS}"
   --enable-static-libevent --disable-asciidoc --disable-system-torrc --disable-linker-hardening --disable-dependency-tracking --disable-manpage --disable-html-manual \
   --enable-lzma --enable-zstd=no \
   --with-libevent-dir="${PREFIX}" --with-openssl-dir="${PREFIX}"\
-  cross_compiling="yes" ac_cv_func_clock_gettime="no"
+  cross_compiling="yes"
 
 make clean
 mkdir -p "${PREFIX}" &> /dev/null
