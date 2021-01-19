@@ -65,6 +65,8 @@ class AppConfigurationManager(
         val (instant, fallbackWalletParams) = appDb.getFirstWalletParamsOrNull()
 
         val freshness = Clock.System.now() - instant
+        logger.info { "WalletParams loaded, not updated since=$freshness" }
+
         val timeout =
             if (freshness < 48.hours) 2.seconds
             else max(freshness.inDays.toInt(), 5) * 2.seconds // max=10s
@@ -84,7 +86,7 @@ class AppConfigurationManager(
         // _walletParams can be updated by [updateWalletParamsLoop] before we reach this block.
         // In that case, we don't update from here
         if (_walletParams.value == null) {
-            logger.debug { "initialize WalletParams=$walletParams" }
+            logger.info { "initialize WalletParams=$walletParams" }
             _walletParams.value = walletParams
         }
     }

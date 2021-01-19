@@ -20,8 +20,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalCoroutinesApi::class)
 class WalletManager : CoroutineScope by MainScope() {
     private val _wallet = MutableStateFlow<Wallet?>(null)
-    public val walletState: StateFlow<Wallet?> = _wallet
-    public val wallet by _wallet
+    public val wallet: StateFlow<Wallet?> = _wallet
 
     fun loadWallet(seed: ByteArray): Unit {
         val newWallet = Wallet(seed = seed)

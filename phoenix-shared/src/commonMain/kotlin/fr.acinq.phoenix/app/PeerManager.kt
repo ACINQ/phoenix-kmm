@@ -47,7 +47,7 @@ class PeerManager(
     init {
         launch {
             _peer.value = buildPeer(
-                wallet = walletManager.walletState.filterNotNull().first(),
+                wallet = walletManager.wallet.filterNotNull().first(),
                 walletParams = configurationManager.walletParams.filterNotNull().first(),
             )
         }

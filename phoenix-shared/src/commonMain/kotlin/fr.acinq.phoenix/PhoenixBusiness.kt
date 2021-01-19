@@ -104,7 +104,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
 
     fun loadWallet(seed: ByteArray): Unit {
-        if (walletManager.wallet == null) {
+        if (walletManager.wallet.value == null) {
             walletManager.loadWallet(seed)
         }
     }
