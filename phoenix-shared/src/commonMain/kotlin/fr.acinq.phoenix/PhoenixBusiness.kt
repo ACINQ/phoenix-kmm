@@ -131,7 +131,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         appHistoryManager.openIncomingTransactionSubscription().consumeAsFlow()
 
     val controllers: ControllerFactory = object : ControllerFactory {
-        override fun content(): ContentController = AppContentController(loggerFactory, walletManager, appConfigurationManager)
+        override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
         override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
         override fun home(): HomeController = AppHomeController(loggerFactory, peerManager, appHistoryManager)
         override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peerManager)
