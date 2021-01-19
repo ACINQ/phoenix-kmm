@@ -127,7 +127,7 @@ struct PaymentCell : View {
 			}
 			
 			VStack(alignment: .leading) {
-                Text(payment.desc())
+                Text(payment.desc() ?? "no desc")
 					.lineLimit(1)
 					.truncationMode(.tail)
 					.foregroundColor(.primaryForeground)
@@ -138,11 +138,11 @@ struct PaymentCell : View {
 			.frame(maxWidth: .infinity, alignment: .leading)
 			.padding([.leading, .trailing], 6)
 			
-			if payment.status != .failure {
+			if payment.status() != .failure {
 				HStack(spacing: 0) {
 					
-					let amount = Utils.format(currencyPrefs, msat: payment.amountMsat)
-					let isNegative = payment.amountMsat < 0
+					let amount = Utils.format(currencyPrefs, msat: payment.amountMsat())
+					let isNegative = payment.amountMsat() < 0
 					
 					Text(isNegative ? "" : "+")
 						.foregroundColor(isNegative ? .appRed : .appGreen)
@@ -376,10 +376,6 @@ class HomeView_Previews: PreviewProvider {
 	static let mockModel = Home.Model(
 		balanceSat: 123500,
 		payments: [
-			mockSpendFailedPayment,
-			mockReceivePayment,
-			mockSpendPayment,
-			mockPendingPayment
 		],
 		lastPayment: nil
 	)

@@ -105,13 +105,13 @@ struct PaymentView : View {
 				)
 				
 				HStack(alignment: .top) {
-					let desc = (payment.desc().count > 0)
+					let desc = (payment.desc() != nil)
 						? payment.desc()
 						: NSLocalizedString("No description", comment: "placeholder text")
 					
 					Text("Desc")
 						.foregroundColor(.secondary)
-					Text(desc)
+					Text(desc!)
 						.contextMenu {
 							Button(action: {
 								UIPasteboard.general.string = desc
@@ -132,29 +132,29 @@ struct PaymentView : View {
 	}
 }
 
-class PaymentView_Previews : PreviewProvider {
+//class PaymentView_Previews : PreviewProvider {
 	
-    static var previews: some View {
-		PaymentView(payment: mockPendingPayment(), close: {})
-			.preferredColorScheme(.dark)
-			.environmentObject(CurrencyPrefs.mockEUR())
-		
-        PaymentView(payment: mockSpendPayment(), close: {})
-			.preferredColorScheme(.dark)
-			.environmentObject(CurrencyPrefs.mockEUR())
-		
-        PaymentView(payment: mockSpendFailedPayment(), close: {})
-			.preferredColorScheme(.dark)
-			.environmentObject(CurrencyPrefs.mockEUR())
-		
-        PaymentView(payment: mockReceivePayment(), close: {})
-			.preferredColorScheme(.dark)
-			.environmentObject(CurrencyPrefs.mockEUR())
-	}
-
-	#if DEBUG
-	@objc class func injected() {
-		UIApplication.shared.windows.first?.rootViewController = UIHostingController(rootView: previews)
-	}
-	#endif
-}
+//    static var previews: some View {
+//        PaymentView(payment: PhoenixShared.Mock.outgoingPending(), close: {})
+//			.preferredColorScheme(.dark)
+//			.environmentObject(CurrencyPrefs.mockEUR())
+//
+//        PaymentView(payment: PhoenixShared.Mock.outgoingSuccessful(), close: {})
+//			.preferredColorScheme(.dark)
+//			.environmentObject(CurrencyPrefs.mockEUR())
+//
+//        PaymentView(payment: PhoenixShared.Mock.outgoingFailed(), close: {})
+//			.preferredColorScheme(.dark)
+//			.environmentObject(CurrencyPrefs.mockEUR())
+//
+//        PaymentView(payment: PhoenixShared.Mock.incomingPaymentReceived(), close: {})
+//			.preferredColorScheme(.dark)
+//			.environmentObject(CurrencyPrefs.mockEUR())
+//	}
+//
+//	#if DEBUG
+//	@objc class func injected() {
+//		UIApplication.shared.windows.first?.rootViewController = UIHostingController(rootView: previews)
+//	}
+//	#endif
+//}

@@ -6,7 +6,7 @@
 import Foundation
 import PhoenixShared
 
-let mockPendingPayment = PhoenixShared.Mock.outgoingPending(<#T##self: Mock##Mock#>)
-let mockSpendPayment = PhoenixShared.Mock.outgoingSuccessful(<#T##self: Mock##Mock#>)
-let mockReceivePayment = PhoenixShared.Mock.incomingPaymentReceived(<#T##self: Mock##Mock#>)
-let mockSpendFailedPayment = PhoenixShared.Mock.outgoingFailed(<#T##self: Mock##Mock#>)
+//let mockPendingPayment = PhoenixShared.Mock.outgoingPending(<#T##self: Mock##Mock#>)
+//let mockSpendPayment = PhoenixShared.Mock.outgoingSuccessful(<#T##self: Mock##Mock#>)
+//let mockReceivePayment = PhoenixShared.Mock.incomingPaymentReceived(<#T##self: Mock##Mock#>)
+//let mockSpendFailedPayment = PhoenixShared.Mock.outgoingFailed(<#T##self: Mock##Mock#>)
