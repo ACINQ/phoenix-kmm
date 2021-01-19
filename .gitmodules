@@ -1,0 +1,12 @@
+[submodule "tor/libevent"]
+	path = tor/libs/event
+	url = https://github.com/libevent/libevent.git
+[submodule "tor/openssl"]
+	path = tor/libs/openssl
+	url = git://github.com/openssl/openssl.git
+[submodule "tor/tor"]
+	path = tor/libs/tor
+	url = https://git.torproject.org/tor.git
+[submodule "tor/xz"]
+	path = tor/libs/xz
+	url = https://git.tukaani.org/xz.git
