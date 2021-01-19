@@ -8,6 +8,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
@@ -25,7 +26,7 @@ class PaymentsManager(
     private suspend fun listPayments(): List<WalletPayment> = paymentsDb.listPayments(150, 0)
 
     /** Broadcasts an observable relevant list of payments. */
-    private val payments = ConflatedBroadcastChannel(emptyList<WalletPayment>())
+    private val payments = MutableStateFlow(emptyList<WalletPayment>())
 
     /**
      * Broadcasts the most recent incoming payment since the app was launched.
@@ -44,6 +45,7 @@ class PaymentsManager(
 
     init {
         launch {
+            payments.value = listPayments()
             peer.openListenerEventSubscription().consumeEach { event ->
                 when (event) {
                     is PaymentReceived, is PaymentSent, is PaymentNotSent, is PaymentProgress -> {
@@ -51,7 +53,7 @@ class PaymentsManager(
                         if (event is PaymentReceived) {
                             lastIncomingPayment.send(event.incomingPayment)
                         }
-                        payments.send(listPayments())
+                        payments.value = listPayments()
                     }
                     else -> Unit
                 }
@@ -59,6 +61,6 @@ class PaymentsManager(
         }
     }
 
-    fun subscribeToPayments() = payments.openSubscription()
+    fun subscribeToPayments() = payments
     fun subscribeToLastIncomingPayment() = lastIncomingPayment.openSubscription()
 }
