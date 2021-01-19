@@ -33,7 +33,7 @@ object Mock {
         return listOf(OutgoingPayment.Part(
             id = UUID.randomUUID(),
             amount = amount,
-            route = listOf(HopDesc(a,b)),
+            route = listOf(HopDesc(a, b)),
             status = status
         ))
     }
@@ -86,9 +86,36 @@ object Mock {
     }
 }
 
-fun WalletPayment.desc(): String = "placeholder"
-fun WalletPayment.amountMsat(): Long = 12345
-fun WalletPayment.id(): String = "placeholder-id"
-fun WalletPayment.status(): String = "status"
-fun WalletPayment.timestamp(): Long = 0
+fun WalletPayment.desc(): String? = when (this) {
+    is OutgoingPayment -> when (val d = this.details) {
+        is OutgoingPayment.Details.Normal -> d.paymentRequest.description
+        is OutgoingPayment.Details.KeySend -> "donation"
+        is OutgoingPayment.Details.SwapOut -> d.address
+    }
+    is IncomingPayment -> when (val o = this.origin) {
+        is IncomingPayment.Origin.Invoice -> o.paymentRequest.description
+        is IncomingPayment.Origin.KeySend -> "donation"
+        is IncomingPayment.Origin.SwapIn -> o.address
+    }
+}
 
+enum class WalletPaymentStatus { Success, Pending, Failure }
+
+fun WalletPayment.amountMsat(): Long = WalletPayment.amount(this).msat
+fun WalletPayment.id(): String = when (this) {
+    is OutgoingPayment -> this.id.toString()
+    is IncomingPayment -> this.paymentHash.toHex()
+}
+fun WalletPayment.status(): WalletPaymentStatus = when (this) {
+    is OutgoingPayment -> when (status) {
+        is OutgoingPayment.Status.Pending -> WalletPaymentStatus.Pending
+        is OutgoingPayment.Status.Succeeded -> WalletPaymentStatus.Success
+        is OutgoingPayment.Status.Failed -> WalletPaymentStatus.Failure
+    }
+    is IncomingPayment -> when {
+        this.received == null -> WalletPaymentStatus.Pending
+        else -> WalletPaymentStatus.Success
+    }
+}
+
+fun WalletPayment.timestamp(): Long = WalletPayment.completedAt(this)
