@@ -1,8 +1,11 @@
 package fr.acinq.phoenix.app
 
+import fr.acinq.eclair.db.IncomingPayment
+import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.db.PaymentsDb
 import fr.acinq.eclair.db.WalletPayment
 import fr.acinq.eclair.io.*
+import fr.acinq.eclair.utils.msat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
@@ -64,3 +67,41 @@ class PaymentsManager(
     fun subscribeToPayments() = payments
     fun subscribeToLastIncomingPayment() = lastIncomingPayment.openSubscription()
 }
+
+fun WalletPayment.desc(): String? = when (this) {
+    is OutgoingPayment -> when (val d = this.details) {
+        is OutgoingPayment.Details.Normal -> d.paymentRequest.description
+        is OutgoingPayment.Details.KeySend -> "donation"
+        is OutgoingPayment.Details.SwapOut -> d.address
+    }
+    is IncomingPayment -> when (val o = this.origin) {
+        is IncomingPayment.Origin.Invoice -> o.paymentRequest.description
+        is IncomingPayment.Origin.KeySend -> "donation"
+        is IncomingPayment.Origin.SwapIn -> o.address
+    }
+}
+
+enum class WalletPaymentStatus { Success, Pending, Failure }
+
+fun WalletPayment.amountMsat(): Long = when (this) {
+    is OutgoingPayment -> -recipientAmount.msat
+    is IncomingPayment -> received?.amount?.msat ?: 0
+}
+
+fun WalletPayment.id(): String = when (this) {
+    is OutgoingPayment -> this.id.toString()
+    is IncomingPayment -> this.paymentHash.toHex()
+}
+fun WalletPayment.status(): WalletPaymentStatus = when (this) {
+    is OutgoingPayment -> when (status) {
+        is OutgoingPayment.Status.Pending -> WalletPaymentStatus.Pending
+        is OutgoingPayment.Status.Succeeded -> WalletPaymentStatus.Success
+        is OutgoingPayment.Status.Failed -> WalletPaymentStatus.Failure
+    }
+    is IncomingPayment -> when (received) {
+        null -> WalletPaymentStatus.Pending
+        else -> WalletPaymentStatus.Success
+    }
+}
+
+fun WalletPayment.timestamp(): Long = WalletPayment.completedAt(this)
