@@ -7,6 +7,8 @@ import fr.acinq.phoenix.data.address
 import fr.acinq.phoenix.data.asServerAddress
 import fr.acinq.phoenix.utils.NetworkMonitor
 import fr.acinq.phoenix.utils.NetworkState
+import fr.acinq.phoenix.utils.RETRY_DELAY
+import fr.acinq.phoenix.utils.increaseDelay
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -214,7 +216,7 @@ class AppConnectionsDaemon(
     }
 
     private fun connectionLoop(name: String, statusStateFlow: StateFlow<Connection>, connect: () -> Unit) = launch {
-        var retryDelay = 0.5.seconds
+        var retryDelay = RETRY_DELAY
         statusStateFlow.collect {
             logger.debug { "New $name status $it" }
 
@@ -223,13 +225,8 @@ class AppConnectionsDaemon(
                 delay(retryDelay) ; retryDelay = increaseDelay(retryDelay)
                 connect()
             } else if (it == Connection.ESTABLISHED) {
-                retryDelay = 0.5.seconds
+                retryDelay = RETRY_DELAY
             }
         }
     }
-
-    private fun increaseDelay(retryDelay: Duration) = when (val delay = retryDelay.inSeconds) {
-        8.0 -> delay
-        else -> delay * 2.0
-    }.seconds
 }

@@ -5,6 +5,8 @@ import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.blockchain.electrum.HeaderSubscriptionResponse
 import fr.acinq.phoenix.data.*
 import fr.acinq.phoenix.db.SqliteAppDb
+import fr.acinq.phoenix.utils.RETRY_DELAY
+import fr.acinq.phoenix.utils.increaseDelay
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.utils.io.errors.*
@@ -101,6 +103,8 @@ class AppConfigurationManager(
 
     @OptIn(ExperimentalTime::class)
     private fun updateWalletParamsLoop() = launch {
+        var retryDelay = RETRY_DELAY
+
         while (isActive) {
             val walletParams = fetchAndStoreWalletParams()
             // _walletParams can be updated just once.
@@ -109,15 +113,16 @@ class AppConfigurationManager(
                 _walletParams.value = walletParams
             }
 
-            delay(
-                if (_walletParams.value == null) 500.milliseconds else 5.minutes
-            )
+            retryDelay = if (_walletParams.value != null) 5.minutes
+            else increaseDelay(retryDelay)
+
+            delay(retryDelay)
         }
     }
 
     private suspend fun fetchAndStoreWalletParams() : WalletParams? {
         return try {
-            val apiParams = httpClient.get<ApiWalletParams>("https://acinq.co/phoenix/walletcontext.json")
+            val apiParams = httpClient.get<ApiWalletParams>("https://acinqq.co/phoenix/walletcontext.json")
             val newWalletParams = apiParams.export(chain)
             logger.info { "retrieved WalletParams=${newWalletParams}" }
             appDb.setWalletParams(newWalletParams)
