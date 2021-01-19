@@ -67,7 +67,7 @@ class AppConfigurationManager(
         val (instant, fallbackWalletParams) = appDb.getFirstWalletParamsOrNull()
 
         val freshness = Clock.System.now() - instant
-        logger.info { "WalletParams loaded, not updated since=$freshness" }
+        logger.info { "local WalletParams loaded, not updated since=$freshness" }
 
         val timeout =
             if (freshness < 48.hours) 2.seconds
@@ -87,10 +87,7 @@ class AppConfigurationManager(
 
         // _walletParams can be updated by [updateWalletParamsLoop] before we reach this block.
         // In that case, we don't update from here
-        if (_walletParams.value == null) {
-            logger.info { "initialize WalletParams=$walletParams" }
-            _walletParams.value = walletParams
-        }
+        if (_walletParams.value == null) _walletParams.value = walletParams
     }
 
     private var updateParametersJob: Job? = null
@@ -108,10 +105,7 @@ class AppConfigurationManager(
         while (isActive) {
             val walletParams = fetchAndStoreWalletParams()
             // _walletParams can be updated just once.
-            if (_walletParams.value == null) {
-                logger.debug { "updated WalletParams=${walletParams}" }
-                _walletParams.value = walletParams
-            }
+            if (_walletParams.value == null) _walletParams.value = walletParams
 
             retryDelay = if (_walletParams.value != null) 5.minutes
             else increaseDelay(retryDelay)
@@ -122,7 +116,7 @@ class AppConfigurationManager(
 
     private suspend fun fetchAndStoreWalletParams() : WalletParams? {
         return try {
-            val apiParams = httpClient.get<ApiWalletParams>("https://acinqq.co/phoenix/walletcontext.json")
+            val apiParams = httpClient.get<ApiWalletParams>("https://acinq.co/phoenix/walletcontext.json")
             val newWalletParams = apiParams.export(chain)
             logger.info { "retrieved WalletParams=${newWalletParams}" }
             appDb.setWalletParams(newWalletParams)
