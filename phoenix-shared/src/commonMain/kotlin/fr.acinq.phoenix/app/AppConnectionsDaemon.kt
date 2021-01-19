@@ -23,7 +23,6 @@ import kotlin.time.seconds
 class AppConnectionsDaemon(
     private val configurationManager: AppConfigurationManager,
     private val walletManager: WalletManager,
-    private val walletParamsManager: WalletParamsManager,
     private val peerManager: PeerManager,
     private val currencyManager: CurrencyManager,
     private val monitor: NetworkMonitor,
@@ -152,11 +151,11 @@ class AppConnectionsDaemon(
             httpApiControlFlow.collect {
                 when {
                     it.networkIsAvailable && it.disconnectCount == 0 -> {
-                        walletParamsManager.start()
+                        configurationManager.startWalletParamsLoop()
                         currencyManager.start()
                     }
                     else -> {
-                        walletParamsManager.stop()
+                        configurationManager.stopWalletParamsLoop()
                         currencyManager.stop()
                     }
                 }

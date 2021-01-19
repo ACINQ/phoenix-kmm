@@ -14,7 +14,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 
-class SqliteWalletParamsDb(driver: SqlDriver) {
+class SqliteAppDb(driver: SqlDriver) {
 
     private val trampolineFeesAdapter: ColumnAdapter<List<TrampolineFees>, String> = object : ColumnAdapter<List<TrampolineFees>, String> {
         override fun decode(databaseValue: String): List<TrampolineFees> = databaseValue.split(";").map { fees ->

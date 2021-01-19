@@ -33,7 +33,7 @@ import org.kodein.log.newLogger
 class PeerManager(
     loggerFactory: LoggerFactory,
     private val walletManager: WalletManager,
-    private val walletParamsManager: WalletParamsManager,
+    private val configurationManager: AppConfigurationManager,
     private val tcpSocketBuilder: TcpSocket.Builder,
     private val electrumWatcher: ElectrumWatcher,
     private val chain: Chain,
@@ -48,7 +48,7 @@ class PeerManager(
         launch {
             _peer.value = buildPeer(
                 wallet = walletManager.walletState.filterNotNull().first(),
-                walletParams = walletParamsManager.getWalletParams(),
+                walletParams = configurationManager.walletParams.filterNotNull().first(),
             )
         }
     }

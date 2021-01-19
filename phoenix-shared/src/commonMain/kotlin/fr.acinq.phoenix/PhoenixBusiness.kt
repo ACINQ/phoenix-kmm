@@ -57,8 +57,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     // TODO to be remove
     private val noSqlDbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val noSqlAppDB by lazy { noSqlDbFactory.open("application", KotlinxSerializer()) }
-    private val appDbDriver by lazy { createAppDbDriver(ctx) }
-    private val walletParamsDb by lazy { SqliteWalletParamsDb(appDbDriver) }
+    private val appDb by lazy { SqliteAppDb(createAppDbDriver(ctx)) }
 
     // TestNet
     private val chain = Chain.TESTNET
@@ -71,10 +70,9 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private var appConnectionsDaemon: AppConnectionsDaemon? = null
 
     private val walletManager by lazy { WalletManager() }
-    private val walletParamsManager by lazy { WalletParamsManager(loggerFactory, httpClient, walletParamsDb, walletManager, chain) }
-    private val peerManager by lazy { PeerManager(loggerFactory, walletManager, walletParamsManager, tcpSocketBuilder, electrumWatcher, chain, ctx) }
+    private val peerManager by lazy { PeerManager(loggerFactory, walletManager, appConfigurationManager, tcpSocketBuilder, electrumWatcher, chain, ctx) }
     private val appHistoryManager by lazy { AppHistoryManager(loggerFactory, noSqlAppDB, peerManager) }
-    private val appConfigurationManager by lazy { AppConfigurationManager(noSqlAppDB, electrumClient, chain, loggerFactory) }
+    private val appConfigurationManager by lazy { AppConfigurationManager(noSqlAppDB, appDb, httpClient, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, noSqlAppDB, httpClient) }
     val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor) }
@@ -89,7 +87,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
             appConnectionsDaemon = AppConnectionsDaemon(
                 appConfigurationManager,
                 walletManager,
-                walletParamsManager,
                 peerManager,
                 currencyManager,
                 networkMonitor,
