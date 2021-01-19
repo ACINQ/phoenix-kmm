@@ -12,11 +12,12 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.*
+import kotlinx.datetime.Clock
 import org.kodein.db.*
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import kotlin.time.ExperimentalTime
-import kotlin.time.minutes
+import kotlin.math.max
+import kotlin.time.*
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class, ExperimentalStdlibApi::class)
 class AppConfigurationManager(
@@ -29,10 +30,6 @@ class AppConfigurationManager(
 ) : CoroutineScope by MainScope() {
 
     private val logger = newLogger(loggerFactory)
-
-    private val electrumServerUpdates = ConflatedBroadcastChannel<ElectrumServer>()
-    fun openElectrumServerUpdateSubscription(): ReceiveChannel<ElectrumServer> =
-        electrumServerUpdates.openSubscription()
 
     init {
         // Wallet Params
@@ -60,14 +57,32 @@ class AppConfigurationManager(
         }
     }
 
-    // WalletParams
+    //endregion WalletParams fetch / store / initialization
     private val _walletParams = MutableStateFlow<WalletParams?>(null)
     val walletParams: StateFlow<WalletParams?> = _walletParams
 
     public fun initWalletParams() = launch {
-        // TODO manage startup with conf and timeouts
-        val (instant, walletParams) = appDb.getWalletParamsList().filterNotNull().first()[0]
-        _walletParams.value = walletParams
+        val (instant, fallbackWalletParams) = appDb.getFirstWalletParamsOrNull()
+
+        val freshness = Clock.System.now() - instant
+        val timeout =
+            if (freshness < 48.hours) 2.seconds
+            else max(freshness.inDays.toInt(), 5) * 2.seconds // max=10s
+
+        // TODO are we using TOR? -> increase timeout
+
+        val walletParams =
+            try {
+                withTimeout(timeout) {
+                    fetchAndStoreWalletParams() ?: fallbackWalletParams
+                }
+            } catch (t: TimeoutCancellationException) {
+                logger.warning { "Unable to fetch WalletParams, using fallback values=$fallbackWalletParams" }
+                fallbackWalletParams
+            }
+
+        logger.info { "initialize WalletParams=$walletParams" }
+        if (_walletParams.value == null) _walletParams.value = walletParams
     }
 
     private var updateParametersJob: Job? = null
@@ -81,23 +96,36 @@ class AppConfigurationManager(
     @OptIn(ExperimentalTime::class)
     private fun updateWalletParamsLoop() = launch {
         while (isActive) {
-            fetchAndStoreWalletParams()
-            delay(5.minutes)
+            val walletParams = fetchAndStoreWalletParams()
+            logger.info { "updated WalletParams=${walletParams}" }
+            if (_walletParams.value == null) _walletParams.value = walletParams
+
+            delay(
+                if (_walletParams.value == null) 500.milliseconds else 5.minutes
+            )
         }
     }
 
-    private suspend fun fetchAndStoreWalletParams() {
-        try {
+    private suspend fun fetchAndStoreWalletParams() : WalletParams? {
+        return try {
             val apiParams = httpClient.get<ApiWalletParams>("https://acinq.co/phoenix/walletcontext.json")
             val newWalletParams = apiParams.export(chain)
-            logger.debug { "retrieved WalletParams=${newWalletParams}" }
+            logger.info { "retrieved WalletParams=${newWalletParams}" }
             appDb.setWalletParams(newWalletParams)
+            delay(15.seconds)
+            newWalletParams
         } catch (t: Throwable) {
-            logger.error(t)
+            logger.error(t) { "${t.message}" }
+            null
         }
     }
+    //endregion
 
-    // Electrum
+    //region Electrum configuration
+    private val electrumServerUpdates = ConflatedBroadcastChannel<ElectrumServer>()
+    fun openElectrumServerUpdateSubscription(): ReceiveChannel<ElectrumServer> =
+        electrumServerUpdates.openSubscription()
+
     private val electrumServerKey = noSqlDb.key<ElectrumServer>(0)
     private fun createElectrumConfiguration(): ElectrumServer {
         if (noSqlDb[electrumServerKey] == null) {
@@ -127,4 +155,5 @@ class AppConfigurationManager(
             }.asElectrumServer()
         )
     }
+    //endregion
 }

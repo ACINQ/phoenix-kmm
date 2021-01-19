@@ -68,11 +68,10 @@ class SqliteAppDb(driver: SqlDriver) {
     fun getWalletParamsList(): Flow<List<Pair<Instant, WalletParams>>> =
         queries.list(::mapWalletParams).asFlow().mapToList()
 
-    suspend fun getFirstWalletParamsOrNull(): Pair<Instant, WalletParams?> {
-        return withContext(Dispatchers.Default) {
-            queries.list(::mapWalletParams).executeAsList().firstOrNull() ?: Instant.DISTANT_PAST to null
-        }
-    }
+    suspend fun getFirstWalletParamsOrNull(): Pair<Instant, WalletParams?> =
+        withContext(Dispatchers.Default) {
+            queries.list(::mapWalletParams).executeAsList()
+        }.firstOrNull() ?: Instant.DISTANT_PAST to null
 
     private fun mapWalletParams(
          node_id: String,
