@@ -2,6 +2,8 @@ package fr.acinq.phoenix.db
 
 import com.squareup.sqldelight.ColumnAdapter
 import com.squareup.sqldelight.db.SqlDriver
+import com.squareup.sqldelight.runtime.coroutines.asFlow
+import com.squareup.sqldelight.runtime.coroutines.mapToList
 import fr.acinq.bitcoin.PublicKey
 import fr.acinq.eclair.CltvExpiryDelta
 import fr.acinq.eclair.NodeUri
@@ -10,6 +12,7 @@ import fr.acinq.eclair.WalletParams
 import fr.acinq.eclair.utils.sat
 import fracinqphoenixdb.Wallet_params
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
@@ -62,7 +65,10 @@ class SqliteAppDb(driver: SqlDriver) {
         }
     }
 
-    suspend fun getLastWalletParams(): Pair<Instant, WalletParams?> {
+    fun getWalletParamsList(): Flow<List<Pair<Instant, WalletParams>>> =
+        queries.list(::mapWalletParams).asFlow().mapToList()
+
+    suspend fun getFirstWalletParamsOrNull(): Pair<Instant, WalletParams?> {
         return withContext(Dispatchers.Default) {
             queries.list(::mapWalletParams).executeAsList().firstOrNull() ?: Instant.DISTANT_PAST to null
         }

@@ -34,11 +34,10 @@ class AppConfigurationManager(
     fun openElectrumServerUpdateSubscription(): ReceiveChannel<ElectrumServer> =
         electrumServerUpdates.openSubscription()
 
-    /*
-        TODO Manage updates for connection configurations:
-            e.g. for Electrum Server : reconnect to new server
-     */
     init {
+        // Wallet Params
+        initWalletParams()
+        // Electrum Triggers
         noSqlDb.on<ElectrumServer>().register {
             didPut {
                 launch { electrumServerUpdates.send(it) }
@@ -63,31 +62,39 @@ class AppConfigurationManager(
 
     // WalletParams
     private val _walletParams = MutableStateFlow<WalletParams?>(null)
-    suspend fun getWalletParams() = _walletParams.filterNotNull().first()
+    val walletParams: StateFlow<WalletParams?> = _walletParams
+
+    public fun initWalletParams() = launch {
+        // TODO manage startup with conf and timeouts
+        val (instant, walletParams) = appDb.getWalletParamsList().filterNotNull().first()[0]
+        _walletParams.value = walletParams
+    }
 
     private var updateParametersJob: Job? = null
     public fun startWalletParamsLoop() {
-        updateParametersJob = updateLoop()
+        updateParametersJob = updateWalletParamsLoop()
     }
     public fun stopWalletParamsLoop() {
         launch { updateParametersJob?.cancelAndJoin() }
     }
 
     @OptIn(ExperimentalTime::class)
-    private fun updateLoop() = launch {
+    private fun updateWalletParamsLoop() = launch {
         while (isActive) {
-            updateWalletParameters()
-            yield()
+            fetchAndStoreWalletParams()
             delay(5.minutes)
         }
     }
 
-    private suspend fun updateWalletParameters() {
-        val apiParams = httpClient.get<ApiWalletParams>("https://acinq.co/phoenix/walletcontext.json")
-        val newWalletParams = apiParams.export(chain)
-        logger.debug { "retrieved WalletParams=${newWalletParams}" }
-        appDb.setWalletParams(newWalletParams)
-        _walletParams.value = newWalletParams
+    private suspend fun fetchAndStoreWalletParams() {
+        try {
+            val apiParams = httpClient.get<ApiWalletParams>("https://acinq.co/phoenix/walletcontext.json")
+            val newWalletParams = apiParams.export(chain)
+            logger.debug { "retrieved WalletParams=${newWalletParams}" }
+            appDb.setWalletParams(newWalletParams)
+        } catch (t: Throwable) {
+            logger.error(t)
+        }
     }
 
     // Electrum
