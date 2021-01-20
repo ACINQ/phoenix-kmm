@@ -16,21 +16,20 @@ class SqliteAppDb(driver: SqlDriver) {
     private val queries = database.walletParamsQueries
     private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun setWalletParams(version: ApiWalletParams.Version, json: String): WalletParams? {
+    suspend fun setWalletParams(version: ApiWalletParams.Version, rawData: String): WalletParams? {
         withContext(Dispatchers.Default) {
             queries.transaction {
                 queries.get(version.name).executeAsOneOrNull()?.run {
-                    queries.insert(
-                        version = version.name,
-                        data = json,
+                    queries.update(
+                        version = this.version,
+                        data = rawData,
                         updated_at = Clock.System.now().epochSeconds
                     )
                 } ?: run {
-                    queries.update(
-                        data = json,
-                        updated_at = Clock.System.now().epochSeconds,
-                        // WHERE
-                        version = version.name
+                    queries.insert(
+                        version = version.name,
+                        data = rawData,
+                        updated_at = Clock.System.now().epochSeconds
                     )
                 }
             }

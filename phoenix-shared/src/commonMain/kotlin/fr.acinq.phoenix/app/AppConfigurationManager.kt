@@ -88,7 +88,10 @@ class AppConfigurationManager(
 
         // _walletParams can be updated by [updateWalletParamsLoop] before we reach this block.
         // In that case, we don't update from here
-        if (_walletParams.value == null) _walletParams.value = walletParams
+        if (_walletParams.value == null) {
+            logger.debug { "init WalletParams=$walletParams" }
+            _walletParams.value = walletParams
+        }
     }
 
     private var updateParametersJob: Job? = null
@@ -106,10 +109,13 @@ class AppConfigurationManager(
         while (isActive) {
             val walletParams = fetchAndStoreWalletParams()
             // _walletParams can be updated just once.
-            if (_walletParams.value == null) _walletParams.value = walletParams
-
-            retryDelay = if (_walletParams.value != null) 5.minutes
-            else increaseDelay(retryDelay)
+            if (_walletParams.value == null) {
+                retryDelay = increaseDelay(retryDelay)
+                logger.debug { "update WalletParams=$walletParams" }
+                _walletParams.value = walletParams
+            } else {
+                retryDelay = 5.minutes
+            }
 
             delay(retryDelay)
         }
@@ -117,9 +123,8 @@ class AppConfigurationManager(
 
     private suspend fun fetchAndStoreWalletParams() : WalletParams? {
         return try {
-            val apiParams = httpClient.get<String>("https://acinq.co/phoenix/walletcontext.json")
-            logger.info { "retrieved ApiWalletParams=$apiParams" }
-            appDb.setWalletParams(currentWalletParamsVersion, apiParams)
+            val rawData = httpClient.get<String>("https://acinq.co/phoenix/walletcontext.json")
+            appDb.setWalletParams(currentWalletParamsVersion, rawData)
         } catch (t: Throwable) {
             logger.error(t) { "${t.message}" }
             null
