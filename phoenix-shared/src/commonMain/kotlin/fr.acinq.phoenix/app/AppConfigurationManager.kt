@@ -114,7 +114,7 @@ class AppConfigurationManager(
                 logger.debug { "update WalletParams=$walletParams" }
                 _walletParams.value = walletParams
             } else {
-                retryDelay = 5.minutes
+                retryDelay = 60.minutes
             }
 
             delay(retryDelay)
