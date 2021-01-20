@@ -1,86 +1,58 @@
 package fr.acinq.phoenix.db
 
-import com.squareup.sqldelight.ColumnAdapter
 import com.squareup.sqldelight.db.SqlDriver
-import com.squareup.sqldelight.runtime.coroutines.asFlow
-import com.squareup.sqldelight.runtime.coroutines.mapToList
-import fr.acinq.bitcoin.PublicKey
-import fr.acinq.eclair.CltvExpiryDelta
-import fr.acinq.eclair.NodeUri
-import fr.acinq.eclair.TrampolineFees
 import fr.acinq.eclair.WalletParams
-import fr.acinq.eclair.utils.sat
-import fracinqphoenixdb.Wallet_params
+import fr.acinq.phoenix.data.ApiWalletParams
+import fr.acinq.phoenix.data.Chain
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
+import kotlinx.serialization.json.Json
 
 class SqliteAppDb(driver: SqlDriver) {
 
-    private val trampolineFeesAdapter: ColumnAdapter<List<TrampolineFees>, String> = object : ColumnAdapter<List<TrampolineFees>, String> {
-        override fun decode(databaseValue: String): List<TrampolineFees> = databaseValue.split(";").map { fees ->
-            val els = fees.split(":")
-            val feeBase = els[0].toLong()
-            val feeProportional = els[1].toLong()
-            val cltvEpiry = els[2].toInt()
-            TrampolineFees(feeBase.sat, feeProportional, CltvExpiryDelta(cltvEpiry))
-        }
-
-        override fun encode(value: List<TrampolineFees>): String = value.joinToString(";") {
-            "${it.feeBase.sat}:${it.feeProportional}:${it.cltvExpiryDelta.toInt()}"
-        }
-    }
-
-    private val database = AppDatabase(
-        driver = driver,
-        wallet_paramsAdapter = Wallet_params.Adapter(trampoline_feesAdapter = trampolineFeesAdapter)
-    )
-
+    private val database = AppDatabase(driver = driver)
     private val queries = database.walletParamsQueries
+    private val json = Json { ignoreUnknownKeys = true }
 
-    suspend fun setWalletParams(walletParams: WalletParams) {
+    suspend fun setWalletParams(version: ApiWalletParams.Version, json: String): WalletParams? {
         withContext(Dispatchers.Default) {
             queries.transaction {
-                if (queries.get(walletParams.trampolineNode.id.toString()).executeAsOneOrNull() == null) {
+                queries.get(version.name).executeAsOneOrNull()?.run {
                     queries.insert(
-                        node_id = walletParams.trampolineNode.id.toString(),
-                        node_host = walletParams.trampolineNode.host,
-                        node_port = walletParams.trampolineNode.port,
-                        trampoline_fees = walletParams.trampolineFees,
+                        version = version.name,
+                        data = json,
                         updated_at = Clock.System.now().epochSeconds
                     )
-                } else {
+                } ?: run {
                     queries.update(
-                        node_host = walletParams.trampolineNode.host,
-                        node_port = walletParams.trampolineNode.port,
-                        trampoline_fees = walletParams.trampolineFees,
+                        data = json,
                         updated_at = Clock.System.now().epochSeconds,
                         // WHERE
-                        node_id = walletParams.trampolineNode.id.toString(),
+                        version = version.name
                     )
                 }
             }
         }
+
+        return getWalletParamsOrNull(version).second
     }
 
-    fun getWalletParamsList(): Flow<List<Pair<Instant, WalletParams>>> =
-        queries.list(::mapWalletParams).asFlow().mapToList()
-
-    suspend fun getFirstWalletParamsOrNull(): Pair<Instant, WalletParams?> =
+    suspend fun getWalletParamsOrNull(version: ApiWalletParams.Version): Pair<Instant, WalletParams?> =
         withContext(Dispatchers.Default) {
-            queries.list(::mapWalletParams).executeAsList()
-        }.firstOrNull() ?: Instant.DISTANT_PAST to null
+            queries.get(version.name, ::mapWalletParams).executeAsOneOrNull()
+        } ?: Instant.DISTANT_PAST to null
 
     private fun mapWalletParams(
-         node_id: String,
-         node_host: String,
-         node_port: Int,
-         trampoline_fees: List<TrampolineFees>,
+         version: String,
+         data: String,
          updated_at: Long
     ): Pair<Instant, WalletParams> {
-        return Instant.fromEpochSeconds(updated_at) to WalletParams(NodeUri(PublicKey.fromHex(node_id), node_host, node_port), trampoline_fees)
-    }
+        val walletParams = when(ApiWalletParams.Version.valueOf(version)) {
+            ApiWalletParams.Version.V0 -> json.decodeFromString(ApiWalletParams.V0.serializer(), data).export(Chain.TESTNET)
+        }
 
+        return Instant.fromEpochSeconds(updated_at) to walletParams
+    }
 }

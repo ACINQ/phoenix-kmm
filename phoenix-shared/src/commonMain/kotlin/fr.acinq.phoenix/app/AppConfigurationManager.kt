@@ -60,11 +60,12 @@ class AppConfigurationManager(
     }
 
     //endregion WalletParams fetch / store / initialization
+    private val currentWalletParamsVersion = ApiWalletParams.Version.V0
     private val _walletParams = MutableStateFlow<WalletParams?>(null)
     val walletParams: StateFlow<WalletParams?> = _walletParams
 
     public fun initWalletParams() = launch {
-        val (instant, fallbackWalletParams) = appDb.getFirstWalletParamsOrNull()
+        val (instant, fallbackWalletParams) = appDb.getWalletParamsOrNull(currentWalletParamsVersion)
 
         val freshness = Clock.System.now() - instant
         logger.info { "local WalletParams loaded, not updated since=$freshness" }
@@ -116,11 +117,9 @@ class AppConfigurationManager(
 
     private suspend fun fetchAndStoreWalletParams() : WalletParams? {
         return try {
-            val apiParams = httpClient.get<ApiWalletParams>("https://acinq.co/phoenix/walletcontext.json")
-            val newWalletParams = apiParams.export(chain)
-            logger.info { "retrieved WalletParams=${newWalletParams}" }
-            appDb.setWalletParams(newWalletParams)
-            newWalletParams
+            val apiParams = httpClient.get<String>("https://acinq.co/phoenix/walletcontext.json")
+            logger.info { "retrieved ApiWalletParams=$apiParams" }
+            appDb.setWalletParams(currentWalletParamsVersion, apiParams)
         } catch (t: Throwable) {
             logger.error(t) { "${t.message}" }
             null

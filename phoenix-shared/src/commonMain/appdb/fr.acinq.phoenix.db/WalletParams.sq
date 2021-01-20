@@ -1,25 +1,20 @@
-import fr.acinq.eclair.TrampolineFees;
-import kotlin.collections.List;
-
 -- wallet parameters
 CREATE TABLE IF NOT EXISTS wallet_params (
-    node_id TEXT NOT NULL PRIMARY KEY,
-    node_host TEXT NOT NULL,
-    node_port INTEGER AS Int NOT NULL,
-    trampoline_fees TEXT AS List<TrampolineFees> NOT NULL,
+    version TEXT NOT NULL PRIMARY KEY,
+    data TEXT NOT NULL,
     updated_at INTEGER NOT NULL
 );
 
 -- queries
 
 insert:
-INSERT INTO wallet_params(node_id, node_host, node_port, trampoline_fees, updated_at) VALUES (?, ?, ?, ?, ?);
+INSERT INTO wallet_params(version, data, updated_at) VALUES (?, ?, ?);
 
 update:
-UPDATE wallet_params SET node_host=?, node_port=?, trampoline_fees=?, updated_at=? WHERE node_id=?;
+UPDATE wallet_params SET data=?, updated_at=? WHERE version=?;
 
 get:
-SELECT * FROM wallet_params WHERE node_id=?;
+SELECT * FROM wallet_params WHERE version=?;
 
-list:
-SELECT * FROM wallet_params;
+delete:
+DELETE FROM wallet_params WHERE version=?;
