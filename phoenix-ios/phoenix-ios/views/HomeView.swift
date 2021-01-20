@@ -1,13 +1,23 @@
 import SwiftUI
 import PhoenixShared
 import Network
+import os.log
+
+#if DEBUG && false
+fileprivate var log = Logger(
+	subsystem: Bundle.main.bundleIdentifier!,
+	category: "HomeView"
+)
+#else
+fileprivate var log = Logger(OSLog.disabled)
+#endif
 
 struct HomeView : View {
 
-    @State var lastTransaction: PhoenixShared.Transaction? = nil
+    @State var lastPayment: PhoenixShared.Eclair_kmpWalletPayment? = nil
     @State var showConnections = false
 
-    @State var selectedTransaction: PhoenixShared.Transaction? = nil
+    @State var selectedPayment: PhoenixShared.Eclair_kmpWalletPayment? = nil
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
@@ -15,9 +25,9 @@ struct HomeView : View {
         MVIView({ $0.home() },
 			background: true,
 			onModel: { change in
-				if lastTransaction != change.newModel.lastTransaction {
-					lastTransaction = change.newModel.lastTransaction
-					selectedTransaction = lastTransaction
+				if lastPayment != change.newModel.lastPayment {
+                    lastPayment = change.newModel.lastPayment
+					selectedPayment = lastPayment
 				}
 			}
         ) { model, postIntent in
@@ -34,6 +44,9 @@ struct HomeView : View {
 	) -> some View {
 		
 		ZStack {
+			
+			Image("testnet_bg")
+				.resizable(resizingMode: .tile)
 			
 			VStack {
 				
@@ -60,23 +73,23 @@ struct HomeView : View {
 					
 				} // </HStack>
 
-				// === Transaction List ====
+				// === Payments List ====
 				ScrollView {
 					LazyVStack {
-						ForEach(model.history.indices, id: \.self) { index in
+						ForEach(model.payments.indices, id: \.self) { index in
 							Button {
-								selectedTransaction = model.history[index]
+								selectedPayment = model.payments[index]
 							} label: {
-								TransactionCell(transaction: model.history[index])
+								PaymentCell(payment: model.payments[index])
 							}
 						}
 					}
-					.sheet(isPresented: .constant(selectedTransaction != nil)) {
-						selectedTransaction = nil
+					.sheet(isPresented: .constant(selectedPayment != nil)) {
+						selectedPayment = nil
 					} content: {
-						TransactionView(
-							transaction: selectedTransaction!,
-							close: { selectedTransaction = nil }
+						PaymentView(
+							payment: selectedPayment!,
+							close: { selectedPayment = nil }
 						)
 					}
 				}
@@ -84,14 +97,13 @@ struct HomeView : View {
 				BottomBar(model: model)
 			
 			} // </VStack>
-			.padding(.top, keyWindow?.safeAreaInsets.top)
+			.padding(.top, keyWindow?.safeAreaInsets.top ?? 0) // bottom handled in BottomBar
 			.padding(.top)
 		
 		} // </ZStack>
 		.frame(maxHeight: .infinity)
 		.background(Color.primaryBackground)
-		.edgesIgnoringSafeArea(.top)
-		.edgesIgnoringSafeArea(.bottom)
+		.edgesIgnoringSafeArea(.all)
 	}
 	
 	func toggleCurrencyType() -> Void {
@@ -99,15 +111,15 @@ struct HomeView : View {
 	}
 }
 
-struct TransactionCell : View {
+struct PaymentCell : View {
 
-	let transaction: PhoenixShared.Transaction
+	let payment: PhoenixShared.Eclair_kmpWalletPayment
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
 	var body: some View {
 		HStack {
-			switch (transaction.status) {
+			switch (payment.status()) {
 			case .success:
 				Image("payment_holder_def_success")
 					.padding(4)
@@ -125,22 +137,22 @@ struct TransactionCell : View {
 			}
 			
 			VStack(alignment: .leading) {
-				Text(transaction.desc)
+                Text(payment.desc() ?? NSLocalizedString("No description", comment: "placeholder text"))
 					.lineLimit(1)
 					.truncationMode(.tail)
 					.foregroundColor(.primaryForeground)
-				Text(transaction.timestamp.formatDateMS())
+				Text(payment.timestamp().formatDateMS())
 					.font(.caption)
 					.foregroundColor(.secondary)
 			}
 			.frame(maxWidth: .infinity, alignment: .leading)
 			.padding([.leading, .trailing], 6)
 			
-			if transaction.status != .failure {
+			if payment.status() != .failure {
 				HStack(spacing: 0) {
 					
-					let amount = Utils.format(currencyPrefs, msat: transaction.amountMsat)
-					let isNegative = transaction.amountMsat < 0
+					let amount = Utils.format(currencyPrefs, msat: payment.amountMsat())
+					let isNegative = payment.amountMsat() < 0
 					
 					Text(isNegative ? "" : "+")
 						.foregroundColor(isNegative ? .appRed : .appGreen)
@@ -172,16 +184,13 @@ struct ConnectionStatusButton : View {
 		
 		Group {
 			Button {
-				popoverState.dismissable.send(true)
-				popoverState.displayContent.send(
-					ConnectionPopup().anyView
-				)
+				showConnectionsPopover()
 			} label: {
 				HStack {
 					Image("ic_connection_lost")
 						.resizable()
 						.frame(width: 16, height: 16)
-					Text(status.text())
+					Text(status.localizedText())
 						.font(.caption2)
 				}
 			}
@@ -204,6 +213,15 @@ struct ConnectionStatusButton : View {
 				}
 			}
 		}
+	}
+	
+	func showConnectionsPopover() -> Void {
+		log.trace("(ConnectionStatusButton) showConnectionsPopover()")
+		
+		popoverState.dismissable.send(true)
+		popoverState.displayContent.send(
+			ConnectionsPopover().anyView
+		)
 	}
 }
 
@@ -301,66 +319,6 @@ struct BottomBar: View {
 	}
 }
 
-struct ConnectionPopup : View {
-
-	@StateObject var monitor = ObservableConnectionsMonitor()
-	
-	@Environment(\.popoverState) var popoverState: PopoverState
-
-	var body: some View {
-		
-		VStack(alignment: .leading) {
-			Text("Connection status")
-				.font(.title3)
-				.padding(.bottom)
-			Divider()
-			ConnectionCell(label: "Internet", connection: monitor.connections.internet)
-			Divider()
-			ConnectionCell(label: "Lightning peer", connection: monitor.connections.peer)
-			Divider()
-			ConnectionCell(label: "Electrum server", connection: monitor.connections.electrum)
-			Divider()
-			HStack {
-				Spacer()
-				Button("OK") {
-					withAnimation {
-						popoverState.close.send()
-					}
-				}
-				.font(.title2)
-			}
-			.padding(.top)
-		}
-		.padding()
-	}
-}
-
-struct ConnectionCell : View {
-	let label: String
-	let connection: Eclair_kmpConnection
-
-	var body : some View {
-		HStack {
-			let bullet = Image("ic_bullet").resizable().frame(width: 10, height: 10)
-
-			if connection == .established {
-				bullet.foregroundColor(.appGreen)
-			}
-			else if connection == .establishing {
-				bullet.foregroundColor(.appYellow)
-			}
-			else if connection == .closed {
-				bullet.foregroundColor(.appRed)
-			}
-
-			Text("\(label):")
-			Spacer()
-			Text(connection.text())
-		}
-		.padding([.top, .bottom], 8)
-	}
-}
-
 // MARK: -
 
 class HomeView_Previews: PreviewProvider {
@@ -373,13 +331,9 @@ class HomeView_Previews: PreviewProvider {
 	
 	static let mockModel = Home.Model(
 		balanceSat: 123500,
-		history: [
-			mockSpendFailedTransaction,
-			mockReceiveTransaction,
-			mockSpendTransaction,
-			mockPendingTransaction
+		payments: [
 		],
-		lastTransaction: nil
+		lastPayment: nil
 	)
 
 	static var previews: some View {
