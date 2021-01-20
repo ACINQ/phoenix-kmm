@@ -34,6 +34,7 @@ class PeerManager(
     loggerFactory: LoggerFactory,
     private val walletManager: WalletManager,
     private val configurationManager: AppConfigurationManager,
+    private val paymentsDb: PaymentsDb,
     private val tcpSocketBuilder: TcpSocket.Builder,
     private val electrumWatcher: ElectrumWatcher,
     private val chain: Chain,
@@ -123,7 +124,7 @@ class PeerManager(
 
         val databases = object : Databases {
             override val channels: ChannelsDb get() = SqliteChannelsDb(createChannelsDbDriver(ctx), nodeParams.copy())
-            override val payments: PaymentsDb get() = SqlitePaymentsDb(createPaymentsDbDriver(ctx))
+            override val payments: PaymentsDb get() = paymentsDb
         }
 
         return Peer(tcpSocketBuilder, nodeParams, walletParams, electrumWatcher, databases, MainScope())
