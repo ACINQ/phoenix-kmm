@@ -39,9 +39,9 @@ MAKE_JOBS=8
 
 # Locations
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-PREFIX="${SCRIPT_DIR}/build/${ARCH}"
+PREFIX="$(pwd)/build/android/${ARCH}"
 
-cd ../libs/xz
+cd "${SCRIPT_DIR}/../libs/xz"
 
 # We need gettext
 # This extends the path to look in some common locations (for example, if installed via Homebrew)

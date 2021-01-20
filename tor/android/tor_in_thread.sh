@@ -38,9 +38,9 @@ OPT_FLAGS="-O3 -g3"
 
 # Locations
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-PREFIX="${SCRIPT_DIR}/build/${ARCH}"
+PREFIX="$(pwd)/build/android/${ARCH}"
 
-cd ../tor_in_thread
+cd "${SCRIPT_DIR}/../tor_in_thread"
 
 CC="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/${CHOST}21-clang"
 AR="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin/$TARGET-ar"

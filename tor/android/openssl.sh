@@ -29,9 +29,9 @@ MAKE_JOBS=8
 
 # Locations
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-PREFIX="${SCRIPT_DIR}/build/${ARCH}"
+PREFIX="$(pwd)/build/android/${ARCH}"
 
-cd ../libs/openssl
+cd "${SCRIPT_DIR}/../libs/openssl"
 
 export PATH="$NDK/toolchains/llvm/prebuilt/$TOOLCHAIN/bin:$NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/$TOOLCHAIN/bin:$PATH"
 export ANDROID_NDK_HOME=$NDK

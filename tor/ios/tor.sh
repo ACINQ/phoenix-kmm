@@ -23,9 +23,9 @@ fi
 
 # Locations
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-PREFIX="${SCRIPT_DIR}/build/${ARCH}"
+PREFIX="$(pwd)/build/ios/${ARCH}"
 
-cd ../libs/tor
+cd "${SCRIPT_DIR}/../libs/tor"
 
 # We need gettext
 # This extends the path to look in some common locations (for example, if installed via Homebrew)

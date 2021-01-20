@@ -23,9 +23,9 @@ fi
 
 # Locations
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
-PREFIX="${SCRIPT_DIR}/build/${ARCH}"
+PREFIX="$(pwd)/build/ios/${ARCH}"
 
-cd ../libs/openssl
+cd "${SCRIPT_DIR}/../libs/openssl"
 
 # Ensure -fembed-bitcode builds, as workaround for libtool macOS bug
 export MACOSX_DEPLOYMENT_TARGET="10.4"
