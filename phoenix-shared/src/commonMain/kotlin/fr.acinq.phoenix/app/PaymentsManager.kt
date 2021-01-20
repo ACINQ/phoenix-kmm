@@ -80,7 +80,7 @@ fun WalletPayment.desc(): String? = when (this) {
         is IncomingPayment.Origin.KeySend -> "donation"
         is IncomingPayment.Origin.SwapIn -> o.address
     }
-}
+}.takeIf { !it.isNullOrBlank() }
 
 enum class WalletPaymentStatus { Success, Pending, Failure }
 

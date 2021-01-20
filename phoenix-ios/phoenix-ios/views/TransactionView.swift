@@ -105,13 +105,11 @@ struct PaymentView : View {
 				)
 				
 				HStack(alignment: .top) {
-					let desc = (payment.desc() != nil)
-						? payment.desc()
-						: NSLocalizedString("No description", comment: "placeholder text")
+					let desc = payment.desc() ?? NSLocalizedString("No description", comment: "placeholder text")
 					
 					Text("Desc")
 						.foregroundColor(.secondary)
-					Text(desc!)
+					Text(desc)
 						.contextMenu {
 							Button(action: {
 								UIPasteboard.general.string = desc

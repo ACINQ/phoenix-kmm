@@ -127,7 +127,7 @@ struct PaymentCell : View {
 			}
 			
 			VStack(alignment: .leading) {
-                Text(payment.desc() ?? "no desc")
+                Text(payment.desc() ?? NSLocalizedString("No description", comment: "placeholder text"))
 					.lineLimit(1)
 					.truncationMode(.tail)
 					.foregroundColor(.primaryForeground)
