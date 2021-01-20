@@ -26,9 +26,8 @@ struct ContentView: View {
 		UIApplication.didEnterBackgroundNotification
 	)
 
-
-	@State private var unlockedOnce = false
 	@State private var isUnlocked = false
+	@State private var unlockedOnce = false
 	@State private var enabledSecurity = EnabledSecurity()
 	
 	@Environment(\.popoverState) private var popoverState: PopoverState
@@ -135,19 +134,23 @@ struct ContentView: View {
 		
 		AppSecurity.shared.tryUnlockWithKeychain {(mnemonics: [String]?, enabledSecurity: EnabledSecurity) in
 
+			// There are multiple potential configurations:
+			//
+			// - no security       => mnemonics are available, enabledSecurity is empty
+			// - standard security => mnemonics are available, enabledSecurity is non-empty
+			// - advanced security => mnemonics are not available, enabledSecurity is non-empty
+			//
+			// Another way to think about it:
+			// - standard security => touchID only protects the UI, wallet can immediately be loaded
+			// - advanced security => touchID required to unlock both the UI and the seed
+			
 			if let mnemonics = mnemonics {
-				// wallet is unlocked
+				// unlock & load wallet
 				AppDelegate.get().loadWallet(mnemonics: mnemonics)
-				self.isUnlocked = true
-
-			} else if enabledSecurity.isEmpty {
-				// wallet not yet configured
-				self.isUnlocked = true
-
-			} else {
-				// wallet is locked
-				self.enabledSecurity = enabledSecurity
 			}
+			
+			self.isUnlocked = enabledSecurity.isEmpty
+			self.enabledSecurity = enabledSecurity
 		}
 	}
 	

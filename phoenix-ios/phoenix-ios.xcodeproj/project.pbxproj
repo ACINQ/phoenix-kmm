@@ -58,6 +58,7 @@
 		DC72C33925A663CA008A927A /* QRCode.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC72C33825A663CA008A927A /* QRCode.swift */; };
 		DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */; };
 		DC89857F25914747007B253F /* UIApplicationState+Phoenix.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC89857E25914747007B253F /* UIApplicationState+Phoenix.swift */; };
+		DC99E90925B78FA800FB20F7 /* EnabledSecurity.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC99E90825B78FA800FB20F7 /* EnabledSecurity.swift */; };
 		DCACF6F02566D0A60009B01E /* Data+Hexadecimal.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCACF6EF2566D0A60009B01E /* Data+Hexadecimal.swift */; };
 		DCACF6FA2566D0BA0009B01E /* KeyStoreError.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCACF6F52566D0BA0009B01E /* KeyStoreError.swift */; };
 		DCACF6FB2566D0BA0009B01E /* GenericPasswordStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCACF6F62566D0BA0009B01E /* GenericPasswordStore.swift */; };
@@ -170,6 +171,7 @@
 		DC72C33825A663CA008A927A /* QRCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCode.swift; sourceTree = "<group>"; };
 		DC8107D2255F1FC1002084A3 /* RecoverySeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoverySeedView.swift; sourceTree = "<group>"; };
 		DC89857E25914747007B253F /* UIApplicationState+Phoenix.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIApplicationState+Phoenix.swift"; sourceTree = "<group>"; };
+		DC99E90825B78FA800FB20F7 /* EnabledSecurity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnabledSecurity.swift; sourceTree = "<group>"; };
 		DCACF6EF2566D0A60009B01E /* Data+Hexadecimal.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Data+Hexadecimal.swift"; sourceTree = "<group>"; };
 		DCACF6F52566D0BA0009B01E /* KeyStoreError.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = KeyStoreError.swift; sourceTree = "<group>"; };
 		DCACF6F62566D0BA0009B01E /* GenericPasswordStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GenericPasswordStore.swift; sourceTree = "<group>"; };
@@ -442,6 +444,7 @@
 			children = (
 				DCACF6F72566D0BA0009B01E /* AppSecurity.swift */,
 				DCACF6F82566D0BA0009B01E /* SecurityFile.swift */,
+				DC99E90825B78FA800FB20F7 /* EnabledSecurity.swift */,
 				DCACF6F62566D0BA0009B01E /* GenericPasswordStore.swift */,
 				DCACF6F92566D0BA0009B01E /* GenericPasswordConvertible.swift */,
 				DCACF6F52566D0BA0009B01E /* KeyStoreError.swift */,
@@ -683,6 +686,7 @@
 				DC09085825B5E43900A46136 /* String+VersionComparison.swift in Sources */,
 				DCACF6FE2566D0BA0009B01E /* GenericPasswordConvertible.swift in Sources */,
 				DC8107D3255F1FC1002084A3 /* RecoverySeedView.swift in Sources */,
+				DC99E90925B78FA800FB20F7 /* EnabledSecurity.swift in Sources */,
 				7555FF7F242A565900829871 /* AppDelegate.swift in Sources */,
 				DC649FDC2577002300853C46 /* kotlin.swift in Sources */,
 				7555FF81242A565900829871 /* SceneDelegate.swift in Sources */,
