@@ -72,8 +72,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val walletManager by lazy { WalletManager() }
     private val peerManager by lazy { PeerManager(loggerFactory, walletManager, appConfigurationManager, paymentsDb, tcpSocketBuilder, electrumWatcher, chain, ctx) }
-    private val appHistoryManager by lazy { AppHistoryManager(loggerFactory, noSqlAppDB, peerManager) }
-    private val appConfigurationManager by lazy { AppConfigurationManager(noSqlAppDB, appDb, httpClient, electrumClient, chain, loggerFactory) }
+    private val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peer) }
+    private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, noSqlAppDB, httpClient) }
     val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor) }
@@ -128,13 +128,13 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         peerManager.peerState.value?.registerFcmToken(token)
     }
 
-    fun incomingTransactionFlow() =
-        appHistoryManager.openIncomingTransactionSubscription().consumeAsFlow()
+    fun incomingPaymentFlow() =
+        paymentsManager.subscribeToLastIncomingPayment().consumeAsFlow()
 
     val controllers: ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
         override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
-        override fun home(): HomeController = AppHomeController(loggerFactory, peerManager, appHistoryManager)
+        override fun home(): HomeController = AppHomeController(loggerFactory, peerManager, paymentsManager)
         override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peerManager)
         override fun scan(): ScanController = AppScanController(loggerFactory, peerManager)
         override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory, walletManager)
