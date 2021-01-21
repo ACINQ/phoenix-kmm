@@ -72,8 +72,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val walletManager by lazy { WalletManager() }
     private val peerManager by lazy { PeerManager(loggerFactory, walletManager, appConfigurationManager, paymentsDb, tcpSocketBuilder, electrumWatcher, chain, ctx) }
-    private val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peer) }
-    private val appConfigurationManager by lazy { AppConfigurationManager(appDB, electrumClient, chain, loggerFactory) }
+    private val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peerManager) }
+    private val appConfigurationManager by lazy { AppConfigurationManager(noSqlAppDB, appDb, httpClient, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, noSqlAppDB, httpClient) }
     val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor) }

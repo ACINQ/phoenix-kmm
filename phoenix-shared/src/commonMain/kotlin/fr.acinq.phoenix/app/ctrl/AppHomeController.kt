@@ -5,8 +5,12 @@ import fr.acinq.eclair.channel.Closed
 import fr.acinq.eclair.channel.Closing
 import fr.acinq.eclair.channel.ErrorInformationLeak
 import fr.acinq.phoenix.app.PaymentsManager
+import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.ctrl.Home
+import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectIndexed
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 
@@ -37,7 +41,7 @@ class AppHomeController(
 
         launch {
             paymentsManager.subscribeToPayments()
-                .collectIndexed { index, pair ->
+                .collectIndexed { _, pair ->
                     model {
                         copy(payments = pair.first, lastPayment = pair.second)
                     }
