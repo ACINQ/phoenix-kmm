@@ -47,6 +47,16 @@ kotlin {
                 baseName = "PhoenixShared"
             }
         }
+        compilations["main"].cinterops.create("tor_in_thread") {
+            includeDirs.headerFilterOnly("$rootDir/tor/tor_in_thread")
+        }
+    }
+    iosArm64().compilations["main"].cinterops.getByName("tor_in_thread") {
+        tasks[interopProcessingTaskName].dependsOn(":tor:buildTor_in_threadIosArm64")
+
+    }
+    iosX64().compilations["main"].cinterops.getByName("tor_in_thread") {
+        tasks[interopProcessingTaskName].dependsOn(":tor:buildTor_in_threadIosX86_64")
     }
 
     sourceSets {
@@ -78,6 +88,7 @@ kotlin {
 
         val commonTest by getting {
             dependencies {
+                implementation("fr.acinq.eclair:eclair-kmp-test-fixtures:snapshot")
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))
             }

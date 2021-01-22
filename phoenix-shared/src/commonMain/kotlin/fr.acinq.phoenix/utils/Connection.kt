@@ -1,3 +1,5 @@
+package fr.acinq.phoenix.utils
+
 import fr.acinq.eclair.utils.Connection
 
 operator fun Connection.plus(other: Connection) : Connection =
