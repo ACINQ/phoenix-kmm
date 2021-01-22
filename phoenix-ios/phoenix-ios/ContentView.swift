@@ -157,21 +157,33 @@ struct ContentView: View {
 	private func performVersionUpgradeChecks() -> Void {
 		
 		// Upgrade check(s)
-		//
+		
+		let key = "lastVersionCheck"
+		let previousBuild = UserDefaults.standard.string(forKey: key) ?? "3"
+		
 		// v0.7.3 (build 4)
 		// - serialization change for Channels
 		// - attempting to deserialize old version causes crash
 		// - we decided to delete old channels database (due to low number of test users)
-		
-		let key = "lastVersionCheck"
-		let str = UserDefaults.standard.string(forKey: key) ?? "3"
-		
-		if str.isVersion(lessThan: "4") {
-		
-			migrateChannelsDbFiles()
+		//
+		if previousBuild.isVersion(lessThan: "4") {
 			
-			let version = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "4"
-			UserDefaults.standard.set(version, forKey: key)
+			migrateChannelsDbFiles()
+		}
+		
+		// v0.7.4 (build 5)
+		// - adding support for both soft & hard biometrics
+		// - previously only supported hard biometics
+		//
+		if previousBuild.isVersion(lessThan: "5") {
+
+			AppSecurity.shared.performMigration(previousBuild: previousBuild)
+		}
+
+		let currentBuild = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+		if previousBuild.isVersion(lessThan: currentBuild) {
+
+			UserDefaults.standard.set(currentBuild, forKey: key)
 		}
 	}
 	

@@ -77,11 +77,9 @@ class AppSecurity {
 		return appSupportDir.appendingPathComponent("security.json", isDirectory: false)
 	}()
 	
-	/// Performs disk IO - use in background thread.
+	/// Performs disk IO - prefer use in background thread.
 	///
 	private func readFromDisk() -> SecurityFile {
-		
-		assert(!Thread.isMainThread, "Attempting to perform disk IO on the main thread")
 		
 		var result: SecurityFile? = nil
 		do {
@@ -94,11 +92,9 @@ class AppSecurity {
 		return result ?? SecurityFile()
 	}
 	
-	/// Performs disk IO - use in background thread.
+	/// Performs disk IO - prefer use in background thread.
 	///
 	private func writeToDisk(securityFile: SecurityFile) throws {
-		
-		assert(!Thread.isMainThread, "Attempting to perform disk IO on the main thread")
 		
 		let jsonData = try JSONEncoder().encode(securityFile)
 		
@@ -185,6 +181,44 @@ class AppSecurity {
 		}
 		
 		return .notAvailable
+	}
+	
+	public func performMigration(previousBuild: String) -> Void {
+		log.trace("performMigration(previousBuild: \(previousBuild)")
+		
+		if previousBuild.isVersion(lessThan: "5") {
+			
+			let keychain = GenericPasswordStore()
+			var hardBiomtricsEnabled = false
+			
+			do {
+				hardBiomtricsEnabled = try keychain.keyExists(account: keychain_accountName_biometrics)
+			} catch {
+				log.error("keychain.keyExists(account: hardBiometrics): error: \(String(describing: error))")
+			}
+			
+			if hardBiomtricsEnabled {
+				// Then soft biometrics are implicitly enabled.
+				// So we need to set that flag.
+				
+				let account = keychain_accountName_softBiometrics
+				do {
+					try keychain.deleteKey(account: account)
+				} catch {
+					log.error("keychain.deleteKey(account: softBiometrics): error: \(String(describing: error))")
+				}
+				
+				do {
+					var query = [String: Any]()
+					query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+					
+					try keychain.storeKey("true", account: account, mixins: query)
+					
+				} catch {
+					log.error("keychain.storeKey(account: softBiometrics): error: \(String(describing: error))")
+				}
+			}
+		}
 	}
 	
 	// --------------------------------------------------------------------------------
@@ -415,7 +449,7 @@ class AppSecurity {
 				do {
 					var query = [String: Any]()
 					query[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
-			
+					
 					try keychain.storeKey("true", account: account, mixins: query)
 					
 				} catch {
