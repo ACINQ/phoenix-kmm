@@ -13,6 +13,7 @@ import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.TcpSocket
 import fr.acinq.eclair.utils.msat
 import fr.acinq.eclair.utils.sat
+import fr.acinq.eclair.utils.toByteVector
 import fr.acinq.eclair.utils.toByteVector32
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.data.Wallet
@@ -63,7 +64,7 @@ class PeerManager(
             Chain.REGTEST -> Block.RegtestGenesisBlock
         }
 
-        val keyManager = LocalKeyManager(wallet.seed.toByteVector32(), genesisBlock.hash)
+        val keyManager = LocalKeyManager(wallet.seed.toByteVector(), genesisBlock.hash)
         logger.info { "nodeid=${keyManager.nodeId}" }
 
         val nodeParams = NodeParams(
