@@ -3,7 +3,6 @@ package fr.acinq.phoenix.app.ctrl
 import fr.acinq.phoenix.ctrl.MVI
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
