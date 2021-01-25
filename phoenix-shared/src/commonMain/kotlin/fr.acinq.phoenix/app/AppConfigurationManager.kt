@@ -37,7 +37,7 @@ class AppConfigurationManager(
         // Electrum Triggers
         noSqlDb.on<ElectrumServer>().register {
             didPut {
-                launch { _electrumServer.value = it }
+                launch { electrumServer.value = it }
             }
         }
         launch {
@@ -131,8 +131,8 @@ class AppConfigurationManager(
     //endregion
 
     //region Electrum configuration
-    private val _electrumServer by lazy { MutableStateFlow(getElectrumServer()) }
-    fun subscribeToElectrumServer(): StateFlow<ElectrumServer> = _electrumServer
+    private val electrumServer by lazy { MutableStateFlow(getElectrumServer()) }
+    fun subscribeToElectrumServer(): StateFlow<ElectrumServer> = electrumServer
 
     private val electrumServerKey = noSqlDb.key<ElectrumServer>(0)
     private fun createElectrumConfiguration(): ElectrumServer {
