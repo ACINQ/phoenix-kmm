@@ -4,6 +4,9 @@ import fr.acinq.eclair.io.TcpSocket
 import fr.acinq.eclair.io.linesFlow
 import fr.acinq.phoenix.utils.PlatformContext
 import fr.acinq.phoenix.utils.getApplicationCacheDirectoryPath
+import fr.acinq.phoenix.utils.getTemporaryDirectoryPath
+import fr.acinq.phoenix.utils.hmacSha256
+import fr.acinq.secp256k1.Hex
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
@@ -12,6 +15,10 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.selects.select
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
+import org.kodein.memory.file.*
+import org.kodein.memory.io.readBytes
+import org.kodein.memory.use
+import kotlin.random.Random
 
 
 expect fun startTorInThread(args: Array<String>)
@@ -29,14 +36,29 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
 
     private var torIsRunning = false
 
-    private suspend fun tryConnect(port: Int, tries: Int): TcpSocket =
+    private suspend fun tryConnect(address: String, port: Int, tries: Int): TcpSocket =
         try {
-            TcpSocket.Builder().connect("localhost", port, tls = null)
+            logger.debug { "Connecting to Tor Control on $address:$port" }
+            TcpSocket.Builder().connect(address, port, tls = null)
         } catch (ex: TcpSocket.IOException.ConnectionRefused) {
             if (tries == 0) throw ex
+            logger.debug { "Tor control is not ready yet" }
             delay(200)
-            tryConnect(port, tries - 1)
+            tryConnect(address, port, tries - 1)
         }
+
+    private suspend fun tryRead(file: Path): ByteArray {
+        val timeWait = 0
+        while (file.getType() !is EntityType.File) {
+            logger.debug { "${file.name} does not exist yet" }
+            if (timeWait >= 5000) {
+                error("${file.name} was not created in 5 seconds")
+            }
+            delay(100)
+        }
+
+        return file.openReadableFile().use { it.readBytes() }
+    }
 
     fun start() {
         if (torIsRunning) {
@@ -46,21 +68,29 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
 
         logger.info { "Starting Tor thread" }
 
+        val portFile = Path(getTemporaryDirectoryPath(ctx)).resolve("tor-control.port")
+        val dataDir = Path(getApplicationCacheDirectoryPath(ctx)).resolve("tor_data")
+
         startTorInThread(arrayOf(
             "tor",
             "__DisableSignalHandlers", "1",
             //"SafeSocks", "1",
             "SocksPort", SOCKS_PORT.toString(),
             "NoExec", "1",
-            "ControlPort", "42841", // should be auto
-            "CookieAuthentication", "0",
-            //"ControlPortWriteToFile", "???",
-            "DataDirectory", "${getApplicationCacheDirectoryPath(ctx)}/tor_data",
+            "ControlPort", "auto",
+            "ControlPortWriteToFile", portFile.path,
+            "CookieAuthentication", "1",
+            "DataDirectory", dataDir.path,
             "Log", "err file /dev/null" // Logs will be monitored by controller
         ))
 
         GlobalScope.launch(Dispatchers.Main) {
-            val socket = tryConnect(42841, 15)
+            val portString = tryRead(portFile).decodeToString().trim()
+            logger.debug { "Port control file content: $portString" }
+            if (!portString.startsWith("PORT=")) error("Invalid port file content: $portString")
+            val (address, port) = portString.removePrefix("PORT=").split(":")
+
+            val socket = tryConnect(address, port.toInt(), 15)
             logger.info { "Connected to Tor Control Socket." }
 
             torIsRunning = true
@@ -72,7 +102,6 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
                 socketRequestChannel.consumeEach { command ->
                     socket.send(command.toProtocolString().encodeToByteArray(), flush = true)
                 }
-                println("COROUTINE socketRequestChannel ENDED!")
             }
 
             launch {
@@ -88,7 +117,6 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
                     socketResponseChannel.close()
                     controlParser.reset()
                 }
-                println("COROUTINE socket.linesFlow ENDED!")
             }
 
             launch {
@@ -116,19 +144,38 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
                         }
                     }
                 } while (loop)
-                println("COROUTINE select ENDED!")
             }
 
-            require(TorControlRequest("AUTHENTICATE", listOf("\"\"")))
+            val cookie = tryRead(dataDir.resolve("control_auth_cookie"))
+            logger.debug { "Cookie file contains ${cookie.size} bytes" }
+
+            val clientNonce = Random.nextBytes(1)
+            val clientNonceHex = Hex.encode(clientNonce).toUpperCase()
+            logger.debug { "Auth challenge client nonce: $clientNonceHex" }
+            val acResponse = require(TorControlRequest("AUTHCHALLENGE", listOf("SAFECOOKIE", clientNonceHex)))
+            val (acCommand, acValues) = acResponse.replies[0].parseCommandKeyValues()
+            if (acCommand != "AUTHCHALLENGE") error("Bad auth challenge reply: $acCommand")
+            val serverHash = acValues["SERVERHASH"]?.let { Hex.decode(it) }
+                ?: error("Auth challenge reply has no SERVERHASH: $acResponse")
+            val serverNonce = acValues["SERVERNONCE"]?.let { Hex.decode(it) }
+                ?: error("Auth challenge reply has no SERVERNONCE: $acResponse")
+
+            val authMessage = cookie + clientNonce + serverNonce
+            if (!serverHash.contentEquals(hmacSha256(SAFECOOKIE_SERVER_KEY, authMessage))) error("Bad auth server hash!")
+            logger.debug { "Auth server hash is valid" }
+
+            val clientHash = hmacSha256(SAFECOOKIE_CLIENT_KEY, authMessage)
+            require(TorControlRequest("AUTHENTICATE", listOf(Hex.encode(clientHash).toUpperCase())))
             require(TorControlRequest("TAKEOWNERSHIP"))
             require(TorControlRequest("SETEVENTS", subscribedEvents))
         }
     }
 
-    private suspend fun require(request: TorControlRequest) {
+    private suspend fun require(request: TorControlRequest): TorControlResponse {
         val response = sendCommand(request)
-        if (response.isError) error("Tor Control ${request.command.toLowerCase()} error: ${response.status} - ${response.replies[0].reply}")
-        logger.info { "Tor Control ${request.command.toLowerCase()} success!" }
+        if (response.isError) error("${request.command.toLowerCase().capitalize()} error: ${response.status} - ${response.replies[0].reply}")
+        logger.debug { "${request.command.toLowerCase().capitalize()} success!" }
+        return response
     }
 
     private fun handleAsyncResponse(response: TorControlResponse) {
@@ -160,5 +207,7 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
 
     companion object {
         const val SOCKS_PORT = 34781 // CRC-16 of "Phoenix"!
+        val SAFECOOKIE_SERVER_KEY = "Tor safe cookie authentication server-to-controller hash".encodeToByteArray()
+        val SAFECOOKIE_CLIENT_KEY = "Tor safe cookie authentication controller-to-server hash".encodeToByteArray()
     }
 }

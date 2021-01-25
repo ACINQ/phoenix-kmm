@@ -9,6 +9,7 @@ import org.kodein.log.LoggerFactory
 import org.kodein.log.frontend.simplePrintFrontend
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
+import kotlin.time.days
 import kotlin.time.hours
 import kotlin.time.seconds
 
@@ -20,14 +21,15 @@ class TorLocalTest {
 
         tor.start()
 
-        delay(5.seconds)
-
-        tor.stop()
-
-        delay(5.seconds)
-
-        tor.start()
-
-        delay(5.seconds)
+//        delay(5.seconds)
+//
+//        tor.stop()
+//
+//        delay(5.seconds)
+//
+//        tor.start()
+//
+//        delay(5.seconds)
+        delay(1.days)
     }
 }
