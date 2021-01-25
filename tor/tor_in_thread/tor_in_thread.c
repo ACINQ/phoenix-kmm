@@ -15,7 +15,9 @@ typedef struct tor_in_thread_args tor_in_thread_args;
 
 int tor_in_thread_is_running = 0;
 
-void *tor_in_thread_start(void *ptr) {
+void *tor_in_thread_exec(void *ptr) {
+    printf("Tor thread has started.\n");
+
     tor_in_thread_args *args = (tor_in_thread_args *) ptr;
 
     tor_main_configuration_t *cfg = tor_main_configuration_new();
@@ -35,12 +37,11 @@ void *tor_in_thread_start(void *ptr) {
     return NULL;
 }
 
-void tor_in_thread(int argc, char **argv) {
+void tor_in_thread_start(int argc, char **argv) {
     if (tor_in_thread_is_running == 1) {
-        printf("Tor is already running!\n");
+        printf("Cannot start Tor: it is already running!\n");
         return ;
     }
-    tor_in_thread_is_running = 1;
 
     tor_in_thread_args *args = (tor_in_thread_args *) malloc(sizeof(tor_in_thread_args));
     args->argc = argc;
@@ -51,8 +52,11 @@ void tor_in_thread(int argc, char **argv) {
     args->argv = (char **) malloc(argc * sizeof(char*));
     for (int i = 0 ; i < argc ; ++i) args->argv[i] = strdup(argv[i]);
 
-    printf("Starting Tor thread.\n");
-
     pthread_t thread_id;
-    pthread_create(&thread_id, NULL, tor_in_thread_start, (void *) args);
+    pthread_create(&thread_id, NULL, tor_in_thread_exec, (void *) args);
+    tor_in_thread_is_running = 1;
+}
+
+int tor_in_thread_get_is_running() {
+    return tor_in_thread_is_running;
 }

@@ -22,6 +22,7 @@ import kotlin.random.Random
 
 
 expect fun startTorInThread(args: Array<String>)
+expect fun isTorInThreadRunning(): Boolean
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
@@ -34,7 +35,7 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
 
     private val subscribedEvents = listOf("NOTICE", "WARN", "ERR")
 
-    private var torIsRunning = false
+    val isRunning: Boolean get() = isTorInThreadRunning()
 
     private suspend fun tryConnect(address: String, port: Int, tries: Int): TcpSocket =
         try {
@@ -50,7 +51,7 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
     private suspend fun tryRead(file: Path): ByteArray {
         val timeWait = 0
         while (file.getType() !is EntityType.File) {
-            logger.debug { "${file.name} does not exist yet" }
+            logger.debug { "Port control file does not exist yet" }
             if (timeWait >= 5000) {
                 error("${file.name} was not created in 5 seconds")
             }
@@ -60,8 +61,8 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
         return file.openReadableFile().use { it.readBytes() }
     }
 
-    fun start() {
-        if (torIsRunning) {
+    suspend fun start(scope: CoroutineScope) {
+        if (isRunning) {
             logger.error { "Cannot start Tor as it is already running!" }
             return
         }
@@ -84,75 +85,72 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
             "Log", "err file /dev/null" // Logs will be monitored by controller
         ))
 
-        GlobalScope.launch(Dispatchers.Main) {
-            val portString = tryRead(portFile).decodeToString().trim()
-            logger.debug { "Port control file content: $portString" }
-            if (!portString.startsWith("PORT=")) error("Invalid port file content: $portString")
-            val (address, port) = portString.removePrefix("PORT=").split(":")
+        val portString = tryRead(portFile).decodeToString().trim()
+        logger.debug { "Port control file content: $portString" }
+        if (!portString.startsWith("PORT=")) error("Invalid port file content: $portString")
+        val (address, port) = portString.removePrefix("PORT=").split(":")
 
-            val socket = tryConnect(address, port.toInt(), 15)
-            logger.info { "Connected to Tor Control Socket." }
+        val socket = tryConnect(address, port.toInt(), 15)
+        logger.info { "Connected to Tor Control Socket." }
 
-            torIsRunning = true
+        val socketRequestChannel = Channel<TorControlRequest>()
+        val socketResponseChannel = Channel<TorControlResponse>()
 
-            val socketRequestChannel = Channel<TorControlRequest>()
-            val socketResponseChannel = Channel<TorControlResponse>()
-
-            launch {
-                socketRequestChannel.consumeEach { command ->
-                    socket.send(command.toProtocolString().encodeToByteArray(), flush = true)
-                }
+        scope.launch {
+            socketRequestChannel.consumeEach { command ->
+                socket.send(command.toProtocolString().encodeToByteArray(), flush = true)
             }
+        }
 
-            launch {
-                try {
-                    socket.linesFlow().collect { line ->
-                        controlParser.parseLine(line)?.let { socketResponseChannel.send(it) }
-                    }
-                } catch (ex: TcpSocket.IOException.ConnectionClosed) {
-                    logger.info { "Tor Control Socket disconnected!" }
-                } finally {
-                    torIsRunning = false
-                    socketRequestChannel.close()
-                    socketResponseChannel.close()
-                    controlParser.reset()
+        scope.launch {
+            try {
+                socket.linesFlow().collect { line ->
+                    controlParser.parseLine(line)?.let { socketResponseChannel.send(it) }
                 }
+            } catch (ex: TcpSocket.IOException.ConnectionClosed) {
+                logger.info { "Tor Control Socket disconnected!" }
+            } finally {
+                socketRequestChannel.close()
+                socketResponseChannel.close()
+                controlParser.reset()
             }
+        }
 
-            launch {
-                do {
-                    val loop = select<Boolean> {
-                        (socketResponseChannel.onReceiveOrNull()) { reply ->
-                            if (reply == null) false
-                            else {
-                                if (reply.isAsync) handleAsyncResponse(reply)
-                                else logger.warning { "Received a sync reply but did not expect one: $reply" }
-                                true
-                            }
-                        }
-                        requestChannel.onReceive { (cmd, def) ->
-                            socketRequestChannel.send(cmd)
-                            while (true) {
-                                val reply = socketResponseChannel.receive()
-                                if (reply.isAsync) handleAsyncResponse(reply)
-                                else {
-                                    def.complete(reply)
-                                    break
-                                }
-                            }
+        scope.launch {
+            do {
+                val loop = select<Boolean> {
+                    (socketResponseChannel.onReceiveOrNull()) { reply ->
+                        if (reply == null) false
+                        else {
+                            if (reply.isAsync) handleAsyncResponse(reply)
+                            else logger.warning { "Received a sync reply but did not expect one: $reply" }
                             true
                         }
                     }
-                } while (loop)
-            }
+                    requestChannel.onReceive { (cmd, def) ->
+                        socketRequestChannel.send(cmd)
+                        while (true) {
+                            val reply = socketResponseChannel.receive()
+                            if (reply.isAsync) handleAsyncResponse(reply)
+                            else {
+                                def.complete(reply)
+                                break
+                            }
+                        }
+                        true
+                    }
+                }
+            } while (loop)
+        }
 
+        try {
             val cookie = tryRead(dataDir.resolve("control_auth_cookie"))
             logger.debug { "Cookie file contains ${cookie.size} bytes" }
 
             val clientNonce = Random.nextBytes(1)
             val clientNonceHex = Hex.encode(clientNonce).toUpperCase()
             logger.debug { "Auth challenge client nonce: $clientNonceHex" }
-            val acResponse = require(TorControlRequest("AUTHCHALLENGE", listOf("SAFECOOKIE", clientNonceHex)))
+            val acResponse = requireCommand(TorControlRequest("AUTHCHALLENGE", listOf("SAFECOOKIE", clientNonceHex)))
             val (acCommand, acValues) = acResponse.replies[0].parseCommandKeyValues()
             if (acCommand != "AUTHCHALLENGE") error("Bad auth challenge reply: $acCommand")
             val serverHash = acValues["SERVERHASH"]?.let { Hex.decode(it) }
@@ -165,17 +163,13 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
             logger.debug { "Auth server hash is valid" }
 
             val clientHash = hmacSha256(SAFECOOKIE_CLIENT_KEY, authMessage)
-            require(TorControlRequest("AUTHENTICATE", listOf(Hex.encode(clientHash).toUpperCase())))
-            require(TorControlRequest("TAKEOWNERSHIP"))
-            require(TorControlRequest("SETEVENTS", subscribedEvents))
+            requireCommand(TorControlRequest("AUTHENTICATE", listOf(Hex.encode(clientHash).toUpperCase())))
+            requireCommand(TorControlRequest("TAKEOWNERSHIP"))
+            requireCommand(TorControlRequest("SETEVENTS", subscribedEvents))
+        } catch (ex: Throwable) {
+            stop()
+            throw ex
         }
-    }
-
-    private suspend fun require(request: TorControlRequest): TorControlResponse {
-        val response = sendCommand(request)
-        if (response.isError) error("${request.command.toLowerCase().capitalize()} error: ${response.status} - ${response.replies[0].reply}")
-        logger.debug { "${request.command.toLowerCase().capitalize()} success!" }
-        return response
     }
 
     private fun handleAsyncResponse(response: TorControlResponse) {
@@ -194,14 +188,23 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
         return reply.await()
     }
 
-    fun stop() {
-        if (!torIsRunning) {
+    private suspend fun requireCommand(request: TorControlRequest): TorControlResponse {
+        val response = sendCommand(request)
+        if (response.isError) error("${request.command.toLowerCase().capitalize()} error: ${response.status} - ${response.replies[0].reply}")
+        logger.debug { "${request.command.toLowerCase().capitalize()} success!" }
+        return response
+    }
+
+    suspend fun stop() {
+        if (!isRunning) {
             logger.warning { "Cannot stop Tor as it is not running!" }
             return
         }
 
-        GlobalScope.launch(Dispatchers.Main) {
-            sendCommand(TorControlRequest("SIGNAL", listOf("SHUTDOWN")))
+        requireCommand(TorControlRequest("SIGNAL", listOf("SHUTDOWN")))
+        while (true) {
+            if (!isRunning) break
+            delay(20)
         }
     }
 

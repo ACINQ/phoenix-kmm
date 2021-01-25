@@ -1,17 +1,13 @@
 package fr.acinq.phoenix.tor
 
 import fr.acinq.eclair.tests.utils.runSuspendBlocking
-import fr.acinq.eclair.tests.utils.runSuspendTest
 import fr.acinq.phoenix.utils.PlatformContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.kodein.log.LoggerFactory
 import org.kodein.log.frontend.simplePrintFrontend
 import kotlin.test.Test
 import kotlin.time.ExperimentalTime
 import kotlin.time.days
-import kotlin.time.hours
-import kotlin.time.seconds
 
 
 class TorLocalTest {
@@ -19,17 +15,20 @@ class TorLocalTest {
     @Test fun run() = runSuspendBlocking {
         val tor = Tor(PlatformContext(), LoggerFactory(simplePrintFrontend))
 
-        tor.start()
+        tor.start(this)
 
-//        delay(5.seconds)
-//
-//        tor.stop()
-//
-//        delay(5.seconds)
-//
-//        tor.start()
-//
-//        delay(5.seconds)
         delay(1.days)
+
+//        val socket = TcpSocket.Builder().connect("neverssl.com", 80)
+//        socket.send("GET / HTTP/1.0\nhost: neverssl.com\n\n".encodeToByteArray())
+//
+//        val buffer = ByteArray(64 * 1024)
+//        try {
+//            while (true) {
+//                val read = socket.receiveAvailable(buffer)
+//                print(buffer.decodeToString(0, read))
+//            }
+//        } catch (_: TcpSocket.IOException) {}
+//        println()
     }
 }
