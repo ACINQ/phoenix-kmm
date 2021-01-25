@@ -12,6 +12,7 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
@@ -44,7 +45,7 @@ class PaymentsManager(
      *
      * As a side effect, this allows the app to show a notification when a payment has been received.
      */
-    private val lastIncomingPayment = ConflatedBroadcastChannel<WalletPayment?>(null)
+    private val lastIncomingPayment = MutableStateFlow<WalletPayment?>(null)
 
     init {
         launch {
@@ -54,7 +55,7 @@ class PaymentsManager(
                     is PaymentReceived, is PaymentSent, is PaymentNotSent, is PaymentProgress -> {
                         logger.debug { "refreshing payment history with event=$event" }
                         if (event is PaymentReceived) {
-                            lastIncomingPayment.send(event.incomingPayment)
+                            lastIncomingPayment.value = event.incomingPayment
                         }
                         val list = listPayments()
                         payments.value = list to list.firstOrNull()?.takeIf { WalletPayment.completedAt(it) > 0 }
@@ -65,8 +66,8 @@ class PaymentsManager(
         }
     }
 
-    fun subscribeToPayments() = payments
-    fun subscribeToLastIncomingPayment() = lastIncomingPayment.openSubscription()
+    fun subscribeToPayments(): StateFlow<Pair<List<WalletPayment>, WalletPayment?>> = payments
+    fun subscribeToLastIncomingPayment(): StateFlow<WalletPayment?> = lastIncomingPayment
 }
 
 fun WalletPayment.desc(): String? = when (this) {
