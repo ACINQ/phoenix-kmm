@@ -131,7 +131,7 @@ class AppConfigurationManager(
     //endregion
 
     //region Electrum configuration
-    private val _electrumServer = MutableStateFlow(getElectrumServer())
+    private val _electrumServer by lazy { MutableStateFlow(getElectrumServer()) }
     fun subscribeToElectrumServer(): StateFlow<ElectrumServer> = _electrumServer
 
     private val electrumServerKey = noSqlDb.key<ElectrumServer>(0)
