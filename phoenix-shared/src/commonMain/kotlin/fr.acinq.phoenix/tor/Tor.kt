@@ -2,6 +2,7 @@ package fr.acinq.phoenix.tor
 
 import fr.acinq.eclair.io.TcpSocket
 import fr.acinq.eclair.io.linesFlow
+import fr.acinq.eclair.utils.secure
 import fr.acinq.phoenix.utils.PlatformContext
 import fr.acinq.phoenix.utils.getApplicationCacheDirectoryPath
 import fr.acinq.phoenix.utils.getTemporaryDirectoryPath
@@ -18,6 +19,7 @@ import org.kodein.log.newLogger
 import org.kodein.memory.file.*
 import org.kodein.memory.io.readBytes
 import org.kodein.memory.use
+import org.kodein.memory.util.nextString
 import kotlin.random.Random
 
 
@@ -36,6 +38,8 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
     private val subscribedEvents = listOf("NOTICE", "WARN", "ERR")
 
     val isRunning: Boolean get() = isTorInThreadRunning()
+
+    val proxy = Socks5Proxy(loggerFactory, "127.0.0.1", SOCKS_PORT)
 
     private suspend fun tryConnect(address: String, port: Int, tries: Int): TcpSocket =
         try {
@@ -75,7 +79,7 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
         startTorInThread(arrayOf(
             "tor",
             "__DisableSignalHandlers", "1",
-            //"SafeSocks", "1",
+            "SafeSocks", "1",
             "SocksPort", SOCKS_PORT.toString(),
             "NoExec", "1",
             "ControlPort", "auto",

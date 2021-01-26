@@ -23,10 +23,7 @@ class TorLocalTest {
 
         delay(2.seconds)
 
-        val socket = TcpSocket.Builder().connectThroughSocks5(
-            "127.0.0.1", 34781,
-            "neverssl.com", 80
-        )
+        val socket = TcpSocket.Builder().connect(tor.proxy, "neverssl.com", 80)
         socket.send("GET / HTTP/1.0\nhost: neverssl.com\n\n".encodeToByteArray())
 
         val buffer = ByteArray(64 * 1024)
@@ -35,8 +32,7 @@ class TorLocalTest {
                 val read = socket.receiveAvailable(buffer)
                 print(buffer.decodeToString(0, read))
             }
-        } catch (_: TcpSocket.IOException) {
-        }
+        } catch (_: TcpSocket.IOException) {}
 
         tor.stop()
     }
