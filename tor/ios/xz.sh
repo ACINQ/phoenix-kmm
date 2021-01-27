@@ -32,7 +32,6 @@ cd "${SCRIPT_DIR}/../libs/xz"
 PATH=$PATH:/usr/local/bin:/usr/local/opt/gettext/bin
 
 if [[ ! -f ./configure ]]; then
-  export LIBTOOLIZE=glibtoolize
   ./autogen.sh
 fi
 
