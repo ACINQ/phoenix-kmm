@@ -8,14 +8,15 @@ import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
 
-class Socks5Proxy(loggerFactory: LoggerFactory, val proxyHost: String, val proxyPort: Int) {
+class Socks5Proxy(
+    val socketBuilder: TcpSocket.Builder,
+    loggerFactory: LoggerFactory,
+    val proxyHost: String, val proxyPort: Int
+    ) : TcpSocket.Builder {
 
     val logger = newLogger(loggerFactory)
 
-    suspend fun connect(
-        socketBuilder: TcpSocket.Builder,
-        destinationHost: String, destinationPort: Int
-    ): TcpSocket {
+    override suspend fun connect(host: String, port: Int, tls: TcpSocket.TLS?): TcpSocket {
         val socket = socketBuilder.connect(proxyHost, proxyPort)
 
         socket.send(
@@ -35,8 +36,8 @@ class Socks5Proxy(loggerFactory: LoggerFactory, val proxyHost: String, val proxy
             else -> error("Unsupported authentication method: 0x${handshake[1].toString(16)}")
         }
 
-        val destinationHostBytes = destinationHost.encodeToByteArray()
-        val destinationPortBytes = Pack.writeInt16BE(destinationPort.toShort())
+        val destinationHostBytes = host.encodeToByteArray()
+        val destinationPortBytes = Pack.writeInt16BE(port.toShort())
 
         socket.send(
             byteArrayOf(
@@ -93,6 +94,3 @@ class Socks5Proxy(loggerFactory: LoggerFactory, val proxyHost: String, val proxy
     }
 
 }
-
-suspend fun TcpSocket.Builder.connect(proxy: Socks5Proxy, host: String, port: Int): TcpSocket =
-    proxy.connect(this, host, port)

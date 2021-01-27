@@ -27,7 +27,7 @@ expect fun startTorInThread(args: Array<String>)
 expect fun isTorInThreadRunning(): Boolean
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
+class Tor(private val ctx: PlatformContext, val loggerFactory: LoggerFactory) {
 
     private val logger = newLogger(loggerFactory)
 
@@ -39,7 +39,7 @@ class Tor(private val ctx: PlatformContext, loggerFactory: LoggerFactory) {
 
     val isRunning: Boolean get() = isTorInThreadRunning()
 
-    val proxy = Socks5Proxy(loggerFactory, "127.0.0.1", SOCKS_PORT)
+    fun proxy(socketBuilder: TcpSocket.Builder) = Socks5Proxy(socketBuilder, loggerFactory, "127.0.0.1", SOCKS_PORT)
 
     private suspend fun tryConnect(address: String, port: Int, tries: Int): TcpSocket =
         try {
