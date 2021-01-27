@@ -55,4 +55,4 @@ staticLibraries = \
     libevent_core.a \
     libevent_extra.a \
     libevent_pthreads.a \
-    liblzma.la
+    liblzma.a
