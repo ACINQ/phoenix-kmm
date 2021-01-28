@@ -27,8 +27,8 @@ struct TorConfigurationView: View {
     struct TorFormHeader: View {
         var body: some View {
             Text(
-                    "You can improve your privacy by only using Tor when connecting to an Electrum server or " +
-                            " to your Lightning peer. This will slightly slow down the application startup."
+                    "You can improve your privacy by only using Tor when connecting to an Electrum server or" +
+                            " to your Lightning peer. This will slightly slow down your transactions."
             )
                     .font(.body)
                     .foregroundColor(Color.primary)
