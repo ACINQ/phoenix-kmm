@@ -47,16 +47,6 @@ kotlin {
                 baseName = "PhoenixShared"
             }
         }
-        compilations["main"].cinterops.create("tor_in_thread") {
-            includeDirs.headerFilterOnly("$rootDir/tor/tor_in_thread")
-        }
-    }
-    iosArm64().compilations["main"].cinterops.getByName("tor_in_thread") {
-        tasks[interopProcessingTaskName].dependsOn(":tor:buildTor_in_threadIosArm64")
-
-    }
-    iosX64().compilations["main"].cinterops.getByName("tor_in_thread") {
-        tasks[interopProcessingTaskName].dependsOn(":tor:buildTor_in_threadIosX86_64")
     }
 
     sourceSets {
@@ -64,13 +54,14 @@ kotlin {
         val coroutinesVersion = "1.3.9-native-mt-2"
         val serializationVersion = "1.0.0"
         val secp256k1Version = "0.4.1"
-        val ktorVersion = "1.4.1"
+        val ktorVersion = "1.5.0"
         val kodeinDBVersion = "0.2.0-beta"
         val sqldelightVersion = "1.4.4"
 
         val commonMain by getting {
             dependencies {
                 api("fr.acinq.eclair:eclair-kmp:snapshot")
+                api("fr.acinq.tor:tor-mobile-kmp:1.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")

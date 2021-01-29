@@ -30,5 +30,3 @@ System.setProperty("isIntelliJ", isIntelliJ.toString())
 if (withAndroid && !isIntelliJ) {
     include(":phoenix-android")
 }
-
-include(":tor")
