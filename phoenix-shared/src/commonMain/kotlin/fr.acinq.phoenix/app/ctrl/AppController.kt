@@ -3,8 +3,9 @@ package fr.acinq.phoenix.app.ctrl
 import fr.acinq.phoenix.ctrl.MVI
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
@@ -16,29 +17,28 @@ abstract class AppController<M : MVI.Model, I : MVI.Intent>(loggerFactory: Logge
 
     override val coroutineContext = MainScope().coroutineContext + job
 
-    protected val logger = newLogger(loggerFactory)
+    protected val logger = loggerFactory.newLogger(this::class)
 
-    private val models = ConflatedBroadcastChannel(firstModel)
+    private val models = MutableStateFlow(firstModel)
 
     private val modelChanges = Channel<M.() -> M>()
 
     init {
-        fun Any.oneLineString() = toString().lines().map { it.trim() } .joinToString(" ")
 
-        logger.info { "First Model: ${firstModel.oneLineString()}" }
+        logger.info { "initial model=${firstModel}" }
 
         launch {
             modelChanges.consumeEach { change ->
                 val newModel = models.value.change()
-                logger.info { "Model: ${newModel.oneLineString()}" }
-                models.send(newModel)
+                logger.info { "model=${newModel}" }
+                models.value = newModel
             }
         }
     }
 
     final override fun subscribe(onModel: (M) -> Unit): () -> Unit {
         val subscription = launch {
-            models.openSubscription().consumeEach { onModel(it) }
+            models.collect { onModel(it) }
         }
 
         return ({ subscription.cancel() })
@@ -55,7 +55,7 @@ abstract class AppController<M : MVI.Model, I : MVI.Intent>(loggerFactory: Logge
     protected abstract fun process(intent: I)
 
     final override fun intent(intent: I) {
-        logger.info { "${this::class.simpleName} Intent: $intent" }
+        logger.info { "intent=$intent" }
         process(intent)
     }
 

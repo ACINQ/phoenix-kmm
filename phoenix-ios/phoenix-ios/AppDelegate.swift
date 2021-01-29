@@ -85,6 +85,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		nc.publisher(for: UIApplication.willEnterForegroundNotification).sink { _ in
 			self._applicationWillEnterForeground(application)
 		}.store(in: &cancellables)
+
+		// Tor configuration observer
+		Prefs.shared.isTorEnabledPublisher.sink {[weak self](isTorEnabled: Bool) in
+			self?.business.updateTorUsage(isEnabled: isTorEnabled)
+		}.store(in: &cancellables)
 		
         return true
     }
@@ -285,8 +290,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			let formattedAmt = Utils.format(currencyPrefs, msat: payment.amountMsat())
 
 			var body: String
-			if payment.desc() != nil {
-				body = "\(formattedAmt.string): \(payment.desc())"
+			if let desc = payment.desc(), desc.count > 0 {
+				body = "\(formattedAmt.string): \(desc)"
 			} else {
 				body = formattedAmt.string
 			}

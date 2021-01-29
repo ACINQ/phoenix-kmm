@@ -4,14 +4,16 @@ import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.db.PaymentsDb
 import fr.acinq.eclair.db.WalletPayment
-import fr.acinq.eclair.io.*
-import fr.acinq.eclair.utils.msat
+import fr.acinq.eclair.io.PaymentNotSent
+import fr.acinq.eclair.io.PaymentProgress
+import fr.acinq.eclair.io.PaymentReceived
+import fr.acinq.eclair.io.PaymentSent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
@@ -21,7 +23,7 @@ import org.kodein.log.newLogger
 class PaymentsManager(
     loggerFactory: LoggerFactory,
     private val paymentsDb: PaymentsDb,
-    private val peer: Peer
+    private val peerManager: PeerManager
 ) : CoroutineScope by MainScope() {
     private val logger = newLogger(loggerFactory)
 
@@ -44,17 +46,17 @@ class PaymentsManager(
      *
      * As a side effect, this allows the app to show a notification when a payment has been received.
      */
-    private val lastIncomingPayment = ConflatedBroadcastChannel<WalletPayment?>(null)
+    private val lastIncomingPayment = MutableStateFlow<WalletPayment?>(null)
 
     init {
         launch {
             payments.value = listPayments() to null
-            peer.openListenerEventSubscription().consumeEach { event ->
+            peerManager.getPeer().openListenerEventSubscription().consumeEach { event ->
                 when (event) {
                     is PaymentReceived, is PaymentSent, is PaymentNotSent, is PaymentProgress -> {
                         logger.debug { "refreshing payment history with event=$event" }
                         if (event is PaymentReceived) {
-                            lastIncomingPayment.send(event.incomingPayment)
+                            lastIncomingPayment.value = event.incomingPayment
                         }
                         val list = listPayments()
                         payments.value = list to list.firstOrNull()?.takeIf { WalletPayment.completedAt(it) > 0 }
@@ -65,8 +67,8 @@ class PaymentsManager(
         }
     }
 
-    fun subscribeToPayments() = payments
-    fun subscribeToLastIncomingPayment() = lastIncomingPayment.openSubscription()
+    fun subscribeToPayments(): StateFlow<Pair<List<WalletPayment>, WalletPayment?>> = payments
+    fun subscribeToLastIncomingPayment(): StateFlow<WalletPayment?> = lastIncomingPayment
 }
 
 fun WalletPayment.desc(): String? = when (this) {
@@ -106,3 +108,11 @@ fun WalletPayment.status(): WalletPaymentStatus = when (this) {
 }
 
 fun WalletPayment.timestamp(): Long = WalletPayment.completedAt(this)
+
+fun WalletPayment.errorMessage(): String? = when (this) {
+    is OutgoingPayment -> when (val s = status) {
+        is OutgoingPayment.Status.Failed -> s.reason.toString()
+        else -> null
+    }
+    is IncomingPayment -> null
+}

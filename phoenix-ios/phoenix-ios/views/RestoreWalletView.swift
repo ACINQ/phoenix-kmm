@@ -11,38 +11,27 @@ fileprivate var log = Logger(
 fileprivate var log = Logger(OSLog.disabled)
 #endif
 
-struct RestoreWalletView: View {
 
+struct RestoreWalletView: AltMviView {
+
+	@StateObject var mvi = AltMVI({ $0.restoreWallet() })
+	
 	@State var acceptedWarning = false
 	@State var mnemonics = [String]()
 	@State var autocomplete = [String]()
 	
-	var body: some View {
-		MVIView({ $0.restoreWallet() },
-			onModel: { change in
-			
-				if let model = change.newModel as? RestoreWallet.ModelFilteredWordlist {
-					autocomplete = model.words
-				}
-				else if let model = change.newModel as? RestoreWallet.ModelValidMnemonics {
-					finishAndRestoreWallet(model: model)
-				}
-				
-			}) { model, postIntent in
-			
-				main(model: model, postIntent: postIntent)
-					.padding(.top, keyWindow?.safeAreaInsets.bottom)
-					.padding(.bottom, keyWindow?.safeAreaInsets.top)
-					.padding([.leading, .trailing], 10)
-					.edgesIgnoringSafeArea([.bottom, .leading, .trailing])
-		}
-		.navigationBarTitle("Restore my wallet", displayMode: .inline)
-    }
+	@ViewBuilder
+	var view: some View {
+		
+		main()
+			.navigationBarTitle("Restore my wallet", displayMode: .inline)
+			.onChange(of: mvi.model, perform: { model in
+				onModelChange(model: model)
+			})
+	}
 
-	@ViewBuilder func main(
-		model: RestoreWallet.Model,
-		postIntent: @escaping (RestoreWallet.Intent) -> Void
-	) -> some View {
+	@ViewBuilder
+	func main() -> some View {
 		
 		if !acceptedWarning {
 			WarningView(acceptedWarning: $acceptedWarning)
@@ -50,8 +39,7 @@ struct RestoreWalletView: View {
 				.transition(.move(edge: .bottom))
 		} else {
 			RestoreView(
-				model: model,
-				postIntent: postIntent,
+				mvi: mvi,
 				mnemonics: $mnemonics,
 				autocomplete: $autocomplete
 			)
@@ -59,7 +47,16 @@ struct RestoreWalletView: View {
 		}
 	}
 	
+	func onModelChange(model: RestoreWallet.Model) -> Void {
+		log.trace("onModelChange()")
+		
+		if let model = model as? RestoreWallet.ModelValidMnemonics {
+			finishAndRestoreWallet(model: model)
+		}
+	}
+	
 	func finishAndRestoreWallet(model: RestoreWallet.ModelValidMnemonics) -> Void {
+		log.trace("finishAndRestoreWallet()")
 		
 		AppSecurity.shared.addKeychainEntry(mnemonics: mnemonics) { (error: Error?) in
 			if error == nil {
@@ -83,12 +80,16 @@ struct WarningView: View {
 			)
 			.font(.title3)
 			.padding(.top, 20)
-
-			Toggle(isOn: $iUnderstand) {
-				Text("I understand.").font(.title3)
+			
+			HStack {
+				Spacer()
+				Text("I understand.")
+					.font(.title3)
+					.padding(.trailing, 10)
+				Toggle("", isOn: $iUnderstand).labelsHidden()
+				Spacer()
 			}
 			.padding([.top, .bottom], 16)
-			.padding([.leading, .trailing], 88)
 
 			Button {
 				withAnimation {
@@ -118,14 +119,14 @@ struct WarningView: View {
 			Spacer()
 			
 		} // </VStack>
-		.background(Color(UIColor.systemBackground))
+		.padding([.leading, .trailing])
+		.background(Color(UIColor.systemBackground)) // needed for animation (on dismissal)
 	}
 }
 
 struct RestoreView: View {
 	
-	let model: RestoreWallet.Model
-	let postIntent: (RestoreWallet.Intent) -> Void
+	@ObservedObject var mvi: AltMVI<RestoreWallet.Model, RestoreWallet.Intent>
 
 	@Binding var mnemonics: [String]
 	@Binding var autocomplete: [String]
@@ -133,142 +134,299 @@ struct RestoreView: View {
 	@State var wordInput: String = ""
 	@State var isProcessingPaste = false
 	
-	var body: some View {
+	let topID = "top"
+	let inputID = "input"
+	let keyboardWillShow = NotificationCenter.default.publisher(for:
+		UIApplication.keyboardWillShowNotification
+	)
+	let keyboardDidHide = NotificationCenter.default.publisher(for:
+		UIApplication.keyboardDidHideNotification
+	)
 	
-		VStack {
-			
+	let maxAutocompleteCount = 12
+	
+	var body: some View {
+		
+		ScrollViewReader { scrollViewProxy in
+			ScrollView {
+				ZStack {
+					
+					// This interfers with tapping on buttons.
+					// It only seems to affect the device (not the simulator)
+					//
+					// A better solution is to use keyboardDismissMode, as below.
+					//
+//					Color(UIColor.clear)
+//						.frame(maxWidth: .infinity, maxHeight: .infinity)
+//						.contentShape(Rectangle())
+//						.onTapGesture {
+//							// dismiss keyboard if visible
+//							let keyWindow = UIApplication.shared.connectedScenes
+//								.filter({ $0.activationState == .foregroundActive })
+//								.map({ $0 as? UIWindowScene })
+//								.compactMap({ $0 })
+//								.first?.windows
+//								.filter({ $0.isKeyWindow }).first
+//							keyWindow?.endEditing(true)
+//						}
+					
+					main(scrollViewProxy)
+				}
+			}
+		}
+		.onAppear {
+			UIScrollView.appearance().keyboardDismissMode = .interactive
+		}
+	}
+	
+	@ViewBuilder
+	func main(_ scrollViewProxy: ScrollViewProxy) -> some View {
+	
+		VStack(alignment: HorizontalAlignment.leading) {
+
 			Text("Your wallet's seed is a list of 12 english words.")
 				.font(.title3)
-				.padding(.top, 20)
-
+				.padding(.top)
+				.id(topID)
+			
 			TextField("Enter keywords from your seed", text: $wordInput)
 				.onChange(of: wordInput) { _ in
 					onInput()
 				}
-				.padding()
+				.id(inputID)
+				.padding([.top, .bottom])
 				.disableAutocorrection(true)
 				.disabled(mnemonics.count == 12)
 
 			// Autocomplete suggestions for mnemonics
 			ScrollView(.horizontal) {
 				LazyHStack {
-					if autocomplete.count < 12 {
+					if autocomplete.count < maxAutocompleteCount {
 						ForEach(autocomplete, id: \.self) { word in
 
-							Text(word)
-								.underline()
-								.frame(maxWidth: .infinity) // Hack to be able to tap ...
-								.onTapGesture {
-									selectMnemonic(word)
-								}
+							Button {
+								selectMnemonic(word)
+							} label: {
+								Text(word)
+									.underline()
+									.foregroundColor(Color.primary)
+							}
 						}
 					}
 				}
 			}
 			.frame(height: 32)
-			.padding([.leading, .trailing])
 
-			Divider()
-				.padding()
+			Divider().padding(.bottom)
+			
+			mnemonicsList()
 
-			// List of mnemonics:
-			// #1   #7
-			// #2   #8
-			// ...  ...
-			ForEach(0..<6, id: \.self) { idx in
-
-				let idxLeftColumn = idx
-				let idxRightColumn = idx + 6
-
-				VStack(spacing: 2) {
-					HStack(alignment: .center, spacing: 0) {
-
-						Text("#\(idxLeftColumn + 1) ")
-							.font(.headline)
-							.foregroundColor(.secondary)
-							.padding(.trailing, 2)
-
-						HStack {
-							Text(mnemonic(idxLeftColumn))
-								.font(.headline)
-								.frame(maxWidth: .infinity, alignment: .leading)
-
-							Button {
-								mnemonics.removeSubrange(idxLeftColumn..<mnemonics.count)
-							} label: {
-								Image("ic_cross")
-									.resizable()
-									.frame(width: 24, height: 24)
-									.foregroundColor(Color.appRed)
-							}
-							.isHidden(mnemonics.count <= idxLeftColumn)
-						}
-						.padding(.trailing, 8)
-
-						Text("#\(idxRightColumn + 1) ")
-							.font(.headline)
-							.foregroundColor(.secondary)
-							.padding(.trailing, 2)
-
-						HStack {
-							Text(mnemonic(idxRightColumn ))
-								.font(.headline)
-								.frame(maxWidth: .infinity, alignment: .leading)
-
-							Button {
-								mnemonics.removeSubrange(idxRightColumn..<mnemonics.count)
-							} label: {
-								Image("ic_cross")
-									.resizable()
-									.frame(width: 24, height: 24)
-									.foregroundColor(Color.appRed)
-							}
-							.isHidden(mnemonics.count <= idxRightColumn)
-						}
-
-					} // </HStack>
-					.padding([.leading, .trailing], 16)
-
-				} // </VStack>
-			} // </ForEach>
-
-			if model is RestoreWallet.ModelInvalidMnemonics {
+			if mvi.model is RestoreWallet.ModelInvalidMnemonics {
 				Text(
 					"This seed is invalid and cannot be imported.\n\n" +
 					"Please try again"
 				)
-				.padding()
+				.padding([.top, .bottom])
 				.foregroundColor(Color.red)
 			}
 
-			Spacer()
+			HStack { // Center button using: HStack {[space, button, space]}
+				Spacer()
+				
+				Button {
+					onImportButtonTapped()
+				} label: {
+					HStack {
+						Image(systemName: "checkmark.circle")
+							.imageScale(.small)
 
-			Button {
-				onImportButtonTapped()
-			} label: {
-				HStack {
-					Image(systemName: "checkmark.circle")
-						.imageScale(.small)
-
-					Text("Import")
+						Text("Import")
+					}
+					.font(.title2)
 				}
-				.font(.title2)
+				.disabled(mnemonics.count != 12)
+				.buttonStyle(PlainButtonStyle())
+				.padding([.top, .bottom], 8)
+				.padding([.leading, .trailing], 16)
+				.background(Color(UIColor.systemFill))
+				.cornerRadius(16)
+				.overlay(
+					RoundedRectangle(cornerRadius: 16)
+						.stroke(Color.appHorizon, lineWidth: 2)
+				)
+				.padding([.top, .bottom]) // buffer space at bottom of scrollView
+				
+				Spacer()
 			}
-			.disabled(mnemonics.count != 12)
-			.buttonStyle(PlainButtonStyle())
-			.padding([.top, .bottom], 8)
-			.padding([.leading, .trailing], 16)
-			.background(Color(UIColor.systemFill))
-			.cornerRadius(16)
-			.overlay(
-				RoundedRectangle(cornerRadius: 16)
-					.stroke(Color.appHorizon, lineWidth: 2)
-			)
-			.padding(.bottom, 20)
 		}
-		.frame(maxHeight: .infinity)
+		.padding([.leading, .trailing], 20)
+		.onChange(of: mvi.model, perform: { model in
+			onModelChange(model: model)
+		})
 		.onChange(of: autocomplete) { _ in
 			onAutocompleteListChanged()
+		}
+		.onReceive(keyboardWillShow) { notification in
+			withAnimation {
+				scrollViewProxy.scrollTo(inputID, anchor: .top)
+			}
+		}
+		.onReceive(keyboardDidHide) { _ in
+			withAnimation {
+				scrollViewProxy.scrollTo(topID, anchor: .top)
+			}
+		}
+	}
+	
+	@ViewBuilder
+	func mnemonicsList() -> some View {
+		
+		// Design:
+		//
+		// #1 hammer  (x) #7 bacon  (x)
+		// #2 fat     (x) #8 animal (x)
+		// ...
+		//
+		// Architecture:
+		//
+		// There are 3 ways to layout the design:
+		//
+		// 1) VStack of HStack's
+		//
+		// So each row is its own HStack.
+		// And VStack puts all the rows together.
+		//
+		// VStack {
+		//   ForEach {
+		//     HStack {
+		//       {} #1
+		//       {} hammer (x)
+		//       {} #7
+		//       {} bacon (x)
+		//     }
+		//   }
+		// }
+		//
+		// The problem with this design is that items aren't aligned vertically.
+		// For example, it will end up looking like this:
+		//
+		// #9 bacon
+		// #10 animal
+		//
+		// What we want is for "bacon" & "animal" to be aligned vertically.
+		// But we can't get that with this design unless we:
+		// - hardcode the width of the number-row (difficult to do with adaptive text sizes)
+		// - use some hack to calculate the proper width based on current font size (possible option)
+		//
+		// 2) HStack of VStack's
+		//
+		// So each column is its own VStack.
+		// And HStack puts all the columns together.
+		//
+		// HStack {
+		//   VStack { ForEach{} } // column: #1
+		//   VStack { ForEach{} } // column: hammer (x)
+		//   VStack { ForEach{} } // column: #7
+		//   VStack { ForEach{} } // column: bacon (x)
+		// }
+		//
+		// This fixes the vertical alignment problem with the previous design.
+		// But we have to be very careful to ensure that each VStack is the same height.
+		// This works if:
+		// - we use the same font size for all text
+		// - the button size is <= the font size
+		//
+		// 3) Use a LazyVGrid and design the columns manually
+		//
+		// let columns: [GridItem] = [
+		//   GridItem(.flexible(?), spacing: 2),
+		//   GridItem(.flexible(?), spacing: 8),
+		//   GridItem(.flexible(?), spacing: 2),
+		//   GridItem(.flexible(?), spacing: 0)
+		// ]
+		//
+		// The problem is that GridItem isn't very flexible.
+		// What we want to say is:
+		// - make columns [0, 2] the minimum possible size
+		// - make columns [1, 3] the remainder
+		//
+		// But that's not an option. We have to define the min & max width.
+		// So we're back to the exact same problem we had with design #1.
+		//
+		// Thus, we're going with design #2 for now.
+		
+		let row_bottomSpacing: CGFloat = 6
+		
+		HStack(alignment: VerticalAlignment.center, spacing: 0) {
+			
+			// #1
+			VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+				ForEach(0..<6, id: \.self) { idx in
+					HStack(alignment: VerticalAlignment.center, spacing: 0) {
+						Text("#\(idx + 1) ")
+							.font(Font.headline.weight(.regular))
+							.foregroundColor(Color(UIColor.tertiaryLabel))
+					}
+					.padding(.bottom, row_bottomSpacing)
+				}
+			}
+			.padding(.trailing, 2)
+			
+			// hammer (x)
+			VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+				ForEach(0..<6, id: \.self) { idx in
+					HStack(alignment: VerticalAlignment.center, spacing: 0) {
+						Text(mnemonic(idx))
+							.font(.headline)
+							.frame(maxWidth: .infinity, alignment: .leading)
+						
+						Button {
+							mnemonics.removeSubrange(idx..<mnemonics.count)
+						} label: {
+							Image(systemName: "xmark")
+								.font(Font.caption.weight(.thin))
+								.foregroundColor(Color(UIColor.tertiaryLabel))
+						}
+						.isHidden(mnemonics.count <= idx)
+					}
+					.padding(.bottom, row_bottomSpacing)
+				}
+			}
+			.padding(.trailing, 8)
+			
+			// #7
+			VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+				ForEach(6..<12, id: \.self) { idx in
+					HStack(alignment: VerticalAlignment.center, spacing: 0) {
+						Text("#\(idx + 1) ")
+							.font(Font.headline.weight(.regular))
+							.foregroundColor(Color(UIColor.tertiaryLabel))
+					}
+					.padding(.bottom, row_bottomSpacing)
+				}
+			}
+			.padding(.trailing, 2)
+			
+			// bacon (x)
+			VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+				ForEach(6..<12, id: \.self) { idx in
+					HStack(alignment: VerticalAlignment.center, spacing: 0) {
+						Text(mnemonic(idx ))
+							.font(.headline)
+							.frame(maxWidth: .infinity, alignment: .leading)
+						
+						Button {
+							mnemonics.removeSubrange(idx..<mnemonics.count)
+						} label: {
+							Image(systemName: "xmark")
+								.font(Font.caption.weight(.thin))
+								.foregroundColor(Color(UIColor.tertiaryLabel))
+						}
+						.isHidden(mnemonics.count <= idx)
+					}
+					.padding(.bottom, row_bottomSpacing)
+				}
+			}
 		}
 	}
 	
@@ -276,19 +434,39 @@ struct RestoreView: View {
 		return (mnemonics.count > idx) ? mnemonics[idx] : " "
 	}
 	
+	func onModelChange(model: RestoreWallet.Model) -> Void {
+		log.trace("[RestoreView] onModelChange()")
+		
+		if let model = model as? RestoreWallet.ModelFilteredWordlist {
+			log.debug("ModelFilteredWordlist.words = \(model.words)")
+			if autocomplete == model.words {
+				// Careful:
+				// autocomplete = model.words
+				// ^ this won't do anything. Will not call: onAutocompleteListChanged()
+				//
+				// So we need to do it manually.
+				// For more info, see issue #109
+				//
+				onAutocompleteListChanged()
+			} else {
+				autocomplete = model.words
+			}
+		}
+	}
+	
 	func onInput() -> Void {
-		log.trace("onInput(): \"\(wordInput)\"")
+		log.trace("[RestoreView] onInput(): \"\(wordInput)\"")
 		
 		// When the user hits space, we auto-accept the first mnemonic in the autocomplete list
 		if maybeSelectMnemonic(isAutocompleteTrigger: false) {
 			return
+		} else {
+			updateAutocompleteList()
 		}
-		
-		updateAutocompleteList()
 	}
 	
 	func updateAutocompleteList() {
-		log.trace("updateAutocompleteList()")
+		log.trace("[RestoreView] updateAutocompleteList()")
 		
 		// Some keyboards will inject the entire word plus a space.
 		//
@@ -300,14 +478,22 @@ struct RestoreView: View {
 		
 		let tokens = wordInput.trimmingCharacters(in: .whitespaces).split(separator: " ")
 		if let firstToken = tokens.first {
-			postIntent(RestoreWallet.IntentFilterWordList(predicate: String(firstToken)))
+			log.debug("[RestoreView] Requesting autocomplete for: '\(firstToken)'")
+			mvi.intent(RestoreWallet.IntentFilterWordList(
+				predicate: String(firstToken),
+				uuid: UUID().uuidString
+			))
 		} else {
-			autocomplete = []
+			log.debug("[RestoreView] Clearing autocomplete list")
+			mvi.intent(RestoreWallet.IntentFilterWordList(
+				predicate: "",
+				uuid: UUID().uuidString
+			))
 		}
 	}
 	
 	func onAutocompleteListChanged() {
-		log.trace("onAutocompleteListChanged()")
+		log.trace("[RestoreView] onAutocompleteListChanged()")
 		
 		// Example flow that gets us here:
 		//
@@ -324,27 +510,7 @@ struct RestoreView: View {
 	
 	@discardableResult
 	func maybeSelectMnemonic(isAutocompleteTrigger: Bool) -> Bool {
-		
-		log.trace("maybeSelectMnemonic(isAutocompleteTrigger = \(isAutocompleteTrigger))")
-		
-		if wordInput.hasSuffix(" "),
-		   let acceptedWord = autocomplete.first
-		{
-			// Example:
-			// The input is "Bacon ", and the autocomplete list is ["bacon"],
-			// so we should automatically select the mnemonic.
-			//
-			// This needs to happen if:
-			//
-			// - the user hits space when typing, so we want to automatically accept
-			//   the first entry in the autocomplete list
-			//
-			// - the user is using a fancy keyboard (e.g. SwiftKey),
-			//   and the input was injected at one time as a word plus space: "Bacon "
-			
-			selectMnemonic(acceptedWord)
-			return true
-		}
+		log.trace("[RestoreView] maybeSelectMnemonic(isAutocompleteTrigger = \(isAutocompleteTrigger))")
 		
 		if isAutocompleteTrigger && autocomplete.count >= 1 {
 			
@@ -366,7 +532,7 @@ struct RestoreView: View {
 						// - let's process each token until we reach the end or a non-match
 						
 						isProcessingPaste = true
-						log.debug("isProcessingPaste = true")
+						log.debug("[RestoreView] isProcessingPaste = true")
 					}
 					
 					if isProcessingPaste {
@@ -380,37 +546,59 @@ struct RestoreView: View {
 		
 		if isAutocompleteTrigger && isProcessingPaste {
 			isProcessingPaste = false
-			log.debug("isProcessingPaste = false")
+			log.debug("[RestoreView] isProcessingPaste = false")
+		}
+		
+		if wordInput.hasSuffix(" "),
+		   let acceptedWord = autocomplete.first,
+		   autocomplete.count < maxAutocompleteCount // only if autocomplete list is visible
+		{
+			// Example:
+			// The input is "Bacon ", and the autocomplete list is ["bacon"],
+			// so we should automatically select the mnemonic.
+			//
+			// This needs to happen if:
+			//
+			// - the user hits space when typing, so we want to automatically accept
+			//   the first entry in the autocomplete list
+			//
+			// - the user is using a fancy keyboard (e.g. SwiftKey),
+			//   and the input was injected at one time as a word plus space: "Bacon "
+			
+			selectMnemonic(acceptedWord)
+			return true
 		}
 		
 		return false
 	}
 	
 	func selectMnemonic(_ word: String) -> Void {
-		log.trace("selectMnemonic()")
+		log.trace("[RestoreView] selectMnemonic()")
 		
 		if (mnemonics.count < 12) {
 			mnemonics.append(word)
 		}
 		
-		let tokens = wordInput.trimmingCharacters(in: .whitespaces).split(separator: " ")
-		if let token = tokens.first,
+		if let token = wordInput.trimmingCharacters(in: .whitespaces).split(separator: " ").first,
 		   let range = wordInput.range(of: token)
 		{
-			wordInput.removeSubrange(wordInput.startIndex ..< range.upperBound)
-			wordInput = wordInput.trimmingCharacters(in: .whitespaces)
+			var input = wordInput
+			input.removeSubrange(wordInput.startIndex ..< range.upperBound)
+			input = input.trimmingCharacters(in: .whitespaces)
+			
+			log.debug("[RestoreView] Remaining wordInput: \"\(input)\"")
+			wordInput = input
 			
 		} else {
+			log.debug("[RestoreView] Remaining wordInput: \"\"")
 			wordInput = ""
 		}
-		
-		log.debug("remaining wordInput: \"\(wordInput)\"")
-		updateAutocompleteList()
 	}
 	
 	func onImportButtonTapped() -> Void {
+		log.trace("[RestoreView] onImportButtonTapped()")
 		
-		postIntent(RestoreWallet.IntentValidate(mnemonics: self.mnemonics))
+		mvi.intent(RestoreWallet.IntentValidate(mnemonics: self.mnemonics))
 	}
 }
 

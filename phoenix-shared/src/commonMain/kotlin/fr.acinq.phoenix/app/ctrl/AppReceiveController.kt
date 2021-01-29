@@ -2,10 +2,10 @@ package fr.acinq.phoenix.app.ctrl
 
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.MilliSatoshi
-import fr.acinq.eclair.io.Peer
 import fr.acinq.eclair.io.ReceivePayment
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.eclair.utils.secure
+import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.ctrl.Receive
 import fr.acinq.phoenix.data.toMilliSatoshi
 import kotlinx.coroutines.*
@@ -14,7 +14,7 @@ import kotlin.random.Random
 
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class AppReceiveController(loggerFactory: LoggerFactory, private val peer: Peer) : AppController<Receive.Model, Receive.Intent>(loggerFactory, Receive.Model.Awaiting) {
+class AppReceiveController(loggerFactory: LoggerFactory, private val peerManager: PeerManager) : AppController<Receive.Model, Receive.Intent>(loggerFactory, Receive.Model.Awaiting) {
 
     private val Receive.Intent.Ask.paymentAmountMsat: MilliSatoshi? get() = amount?.toMilliSatoshi(unit)
 
@@ -28,7 +28,7 @@ class AppReceiveController(loggerFactory: LoggerFactory, private val peer: Peer)
                     try {
                         val deferred = CompletableDeferred<PaymentRequest>()
                         val preimage = ByteVector32(Random.secure().nextBytes(32)) // must be different everytime
-                        peer.send(
+                        peerManager.getPeer().send(
                             ReceivePayment(
                                 preimage,
                                 intent.paymentAmountMsat,
@@ -39,7 +39,8 @@ class AppReceiveController(loggerFactory: LoggerFactory, private val peer: Peer)
                         val request = deferred.await()
                         check(request.amount == intent.paymentAmountMsat) { "Payment request amount not corresponding to expected" }
                         check(request.description == intent.paymentDescription) { "Payment request description not corresponding to expected" }
-                        model(Receive.Model.Generated(request.write(), intent.amount, intent.unit, intent.desc))
+                        val paymentHash: String = request.paymentHash.toHex()
+                        model(Receive.Model.Generated(request.write(), paymentHash, intent.amount, intent.unit, intent.desc))
                     } catch (e: Throwable) {
                         logger.error(e) { "failed to process intent=$intent" }
                     }

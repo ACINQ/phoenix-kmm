@@ -51,7 +51,7 @@ kotlin {
 
     sourceSets {
 
-        val coroutinesVersion = "1.3.9-native-mt-2"
+        val coroutinesVersion = "1.4.2-native-mt"
         val serializationVersion = "1.0.0"
         val secp256k1Version = "0.4.1"
         val ktorVersion = "1.5.0"
@@ -68,12 +68,15 @@ kotlin {
                 api("org.kodein.db:kodein-db:$kodeinDBVersion")
                 api("org.kodein.db:kodein-db-serializer-kotlinx:$kodeinDBVersion")
                 api("org.kodein.memory:kodein-memory-files:0.4.0")
-                api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+                api("org.jetbrains.kotlinx:kotlinx-coroutines-core") {
+                    version { strictly(coroutinesVersion) }
+                }
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.1.0")
                 api("io.ktor:ktor-client-core:$ktorVersion")
                 api("io.ktor:ktor-client-json:$ktorVersion")
                 api("io.ktor:ktor-client-serialization:$ktorVersion")
                 implementation("com.squareup.sqldelight:runtime:$sqldelightVersion")
+                implementation("com.squareup.sqldelight:coroutines-extensions:$sqldelightVersion")
             }
         }
 
@@ -141,6 +144,10 @@ sqldelight {
     database("PaymentsDatabase") {
         packageName = "fr.acinq.phoenix.db"
         sourceFolders = listOf("paymentsdb")
+    }
+    database("AppDatabase") {
+        packageName = "fr.acinq.phoenix.db"
+        sourceFolders = listOf("appdb")
     }
 }
 
