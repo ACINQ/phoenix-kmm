@@ -16,6 +16,10 @@ struct ConnectionsPopover: View {
 			Divider()
 			ConnectionCell(label: "Internet", connection: monitor.connections.internet)
 			Divider()
+			if let tor = monitor.connections.tor {
+				ConnectionCell(label: "Tor", connection: tor)
+				Divider()
+			}
 			ConnectionCell(label: "Lightning peer", connection: monitor.connections.peer)
 			Divider()
 			ConnectionCell(label: "Electrum server", connection: monitor.connections.electrum)

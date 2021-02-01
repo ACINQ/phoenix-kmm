@@ -73,9 +73,10 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val peerManager by lazy { PeerManager(loggerFactory, walletManager, appConfigurationManager, paymentsDb, tcpSocketBuilder, electrumWatcher, chain, ctx) }
     private val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peerManager) }
     private val appConfigurationManager by lazy { AppConfigurationManager(noSqlAppDB, appDb, httpClient, electrumClient, chain, loggerFactory) }
+    private val torManager by lazy { TorManager(loggerFactory, ctx) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, noSqlAppDB, httpClient) }
-    val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor) }
+    val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor, torManager) }
     val util by lazy { Utilities(loggerFactory, chain) }
 
     init {
@@ -130,7 +131,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     fun incomingPaymentFlow() =
         paymentsManager.subscribeToLastIncomingPayment()
 
-    fun updateTorUsage(isEnabled: Boolean) = appConfigurationManager.updateTorUsage(isEnabled)
+    fun updateTorUsage(isEnabled: Boolean) = torManager.updateTorUsage(isEnabled)
 
     val controllers: ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)

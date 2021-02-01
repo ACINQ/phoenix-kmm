@@ -180,18 +180,31 @@ struct ConnectionStatusButton : View {
 	@Environment(\.popoverState) var popoverState: PopoverState
 
 	var body: some View {
+		let tor = connectionsMonitor.connections.tor
 		let status = connectionsMonitor.connections.global
-		
+		let connectedWithTor = status == Eclair_kmpConnection.established && tor != nil
+		let connectedWithoutTor = status == Eclair_kmpConnection.established && tor == nil
+
 		Group {
 			Button {
 				showConnectionsPopover()
 			} label: {
-				HStack {
-					Image("ic_connection_lost")
-						.resizable()
-						.frame(width: 16, height: 16)
-					Text(status.localizedText())
-						.font(.caption2)
+				if connectedWithTor {
+					HStack {
+						Image(systemName: "checkmark.shield")
+								.frame(width: 16, height: 16)
+								.foregroundColor(.appGreen)
+						Text("Tor enabled")
+								.font(.caption2)
+					}
+				} else {
+					HStack {
+						Image("ic_connection_lost")
+								.resizable()
+								.frame(width: 16, height: 16)
+						Text(status.localizedText())
+								.font(.caption2)
+					}
 				}
 			}
 			.buttonStyle(PlainButtonStyle())
@@ -203,8 +216,8 @@ struct ConnectionStatusButton : View {
 				RoundedRectangle(cornerRadius: 10)
 					.stroke(Color.gray, lineWidth: 1)
 			)
-			.opacity(dimStatus ? 0.2 : 1.0)
-			.isHidden(status == Eclair_kmpConnection.established)
+			.opacity((dimStatus && !connectedWithTor) ? 0.2 : 1.0)
+			.isHidden(connectedWithoutTor)
 		}
 		.onAppear {
 			DispatchQueue.main.async {
@@ -325,6 +338,7 @@ class HomeView_Previews: PreviewProvider {
 	
 	static let connections = Connections(
 		internet : .established,
+		tor      : .established,
 		peer     : .established,
 		electrum : .closed
 	)
