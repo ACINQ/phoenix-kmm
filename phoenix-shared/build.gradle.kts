@@ -61,7 +61,7 @@ kotlin {
         val commonMain by getting {
             dependencies {
                 api("fr.acinq.eclair:eclair-kmp:snapshot")
-                api("fr.acinq.tor:tor-mobile-kmp:1.0")
+                api("fr.acinq.tor:tor-mobile-kmp:0.1.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")

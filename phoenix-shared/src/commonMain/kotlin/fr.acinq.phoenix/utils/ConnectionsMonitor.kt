@@ -3,7 +3,7 @@ package fr.acinq.phoenix.utils
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.utils.Connection
 import fr.acinq.phoenix.app.PeerManager
-import fr.acinq.phoenix.app.TorManager
+import fr.acinq.phoenix.app.TcpConnectionManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,7 +25,7 @@ class ConnectionsMonitor(
     peerManager: PeerManager,
     electrumClient: ElectrumClient,
     networkMonitor: NetworkMonitor,
-    torManager: TorManager,
+    tcpConnectionManager: TcpConnectionManager,
 ): CoroutineScope {
 
     private val job = Job()
@@ -40,7 +40,7 @@ class ConnectionsMonitor(
                 peerManager.getPeer().connectionState,
                 electrumClient.connectionState,
                 networkMonitor.networkState,
-                torManager.torState,
+                tcpConnectionManager.torState,
             ) { peerState, electrumState, internetState, torState ->
                 Connections(
                     peer = peerState,
