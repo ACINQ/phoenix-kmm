@@ -36,7 +36,7 @@ class PeerManager(
     private val walletManager: WalletManager,
     private val configurationManager: AppConfigurationManager,
     private val paymentsDb: PaymentsDb,
-    private val tcpSocketBuilder: TcpSocket.Builder,
+    private val tcpConnectionManager: TcpConnectionManager,
     private val electrumWatcher: ElectrumWatcher,
     private val chain: Chain,
     private val ctx: PlatformContext
@@ -46,18 +46,43 @@ class PeerManager(
     private val _peer = MutableStateFlow<Peer?>(null)
     public val peerState: StateFlow<Peer?> = _peer
 
+    data class PeerConfiguration(val wallet: Wallet?, val walletParams: WalletParams?,val  tcpSocketBuilder: TcpSocket.Builder?) {
+        fun isComplete() = wallet != null && walletParams != null && tcpSocketBuilder != null
+    }
+
     init {
         launch {
-            _peer.value = buildPeer(
-                wallet = walletManager.wallet.filterNotNull().first(),
-                walletParams = configurationManager.walletParams.filterNotNull().first(),
-            )
+            combine(
+                walletManager.wallet,
+                configurationManager.walletParams,
+                tcpConnectionManager.socketBuilder) { wallet, walletParams, tcpSocketBuilder ->
+                PeerConfiguration(wallet, walletParams, tcpSocketBuilder)
+            }.filter { it.isComplete() }.collect { (wallet, walletParams, tcpSocketBuilder) ->
+                requireNotNull(wallet)
+                requireNotNull(walletParams)
+                requireNotNull(tcpSocketBuilder)
+
+                if (_peer.value == null) {
+                    _peer.value = buildPeer(
+                        wallet = wallet,
+                        walletParams = walletParams,
+                        tcpSocketBuilder = tcpSocketBuilder
+                    )
+                }
+
+                getPeer().socketBuilder = tcpSocketBuilder
+                getPeer().disconnect()
+                // TODO uncomment when TLS over Tor will be available
+                //                val electrumClient = getPeer().watcher.client
+                //                electrumClient.socketBuilder = socketBuilder
+                //                electrumClient.disconnect()
+            }
         }
     }
 
     suspend fun getPeer() = peerState.filterNotNull().first()
 
-    private fun buildPeer(wallet: Wallet, walletParams: WalletParams): Peer {
+    private fun buildPeer(wallet: Wallet, walletParams: WalletParams, tcpSocketBuilder: TcpSocket.Builder): Peer {
         val genesisBlock = when (chain) {
             Chain.MAINNET -> Block.LivenetGenesisBlock
             Chain.TESTNET -> Block.TestnetGenesisBlock
