@@ -8,9 +8,9 @@ import org.kodein.log.newLogger
 
 
 class Socks5Proxy(
-    val socketBuilder: TcpSocket.Builder,
+    private val socketBuilder: TcpSocket.Builder,
     loggerFactory: LoggerFactory,
-    val proxyHost: String, val proxyPort: Int
+    private val proxyHost: String, private val proxyPort: Int
     ) : TcpSocket.Builder {
 
     val logger = newLogger(loggerFactory)
