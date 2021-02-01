@@ -17,9 +17,9 @@
 package fr.acinq.phoenix.utils
 
 import fr.acinq.eclair.utils.Connection
-import plus
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFails
 
 class ConnectionTests {
     @Test
@@ -27,13 +27,20 @@ class ConnectionTests {
         assertEquals(Connection.ESTABLISHED, Connection.ESTABLISHED + Connection.ESTABLISHED)
         assertEquals(Connection.ESTABLISHING, Connection.ESTABLISHING + Connection.ESTABLISHING)
         assertEquals(Connection.CLOSED, Connection.CLOSED + Connection.CLOSED)
+        assertEquals(Connection.ESTABLISHED, Connection.ESTABLISHED + null)
+        assertEquals(Connection.ESTABLISHED, null + Connection.ESTABLISHED)
+        assertFails { null + null }
 
         assertEquals(Connection.ESTABLISHING, Connection.ESTABLISHED + Connection.ESTABLISHING)
         assertEquals(Connection.ESTABLISHING, Connection.ESTABLISHING + Connection.ESTABLISHED)
         assertEquals(Connection.ESTABLISHING, Connection.CLOSED + Connection.ESTABLISHING)
         assertEquals(Connection.ESTABLISHING, Connection.ESTABLISHING + Connection.CLOSED)
+        assertEquals(Connection.ESTABLISHING, null + Connection.ESTABLISHING)
+        assertEquals(Connection.ESTABLISHING, Connection.ESTABLISHING + null)
 
         assertEquals(Connection.CLOSED, Connection.ESTABLISHED + Connection.CLOSED)
         assertEquals(Connection.CLOSED, Connection.CLOSED + Connection.ESTABLISHED)
+        assertEquals(Connection.CLOSED, null + Connection.CLOSED)
+        assertEquals(Connection.CLOSED, Connection.CLOSED + null)
     }
 }
