@@ -5,10 +5,7 @@ import fr.acinq.eclair.utils.Connection
 import fr.acinq.phoenix.data.ElectrumServer
 import fr.acinq.phoenix.data.address
 import fr.acinq.phoenix.data.asServerAddress
-import fr.acinq.phoenix.utils.NetworkMonitor
-import fr.acinq.phoenix.utils.NetworkState
-import fr.acinq.phoenix.utils.RETRY_DELAY
-import fr.acinq.phoenix.utils.increaseDelay
+import fr.acinq.phoenix.utils.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -16,9 +13,7 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.*
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
 
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
@@ -28,6 +23,7 @@ class AppConnectionsDaemon(
     private val peerManager: PeerManager,
     private val currencyManager: CurrencyManager,
     private val monitor: NetworkMonitor,
+    private val tcpConnectionManager: TcpConnectionManager,
     private val electrumClient: ElectrumClient,
     loggerFactory: LoggerFactory,
 ) : CoroutineScope by MainScope() {
@@ -188,8 +184,14 @@ class AppConnectionsDaemon(
         launch {
             networkStatus.collect {
                 when(it) {
-                    NetworkState.Available -> httpApiControlChanges.send { copy(networkIsAvailable = true) }
-                    NetworkState.NotAvailable -> httpApiControlChanges.send { copy(networkIsAvailable = false) }
+                    NetworkState.Available -> {
+                        httpApiControlChanges.send { copy(networkIsAvailable = true) }
+                        tcpConnectionManager.updateNetworkAvailability(available = true)
+                    }
+                    NetworkState.NotAvailable -> {
+                        httpApiControlChanges.send { copy(networkIsAvailable = false) }
+                        tcpConnectionManager.updateNetworkAvailability(available = false)
+                    }
                 }
             }
         }
@@ -197,23 +199,27 @@ class AppConnectionsDaemon(
         launch {
             // Suspends until the wallet is initialized
             walletManager.wallet.filterNotNull().first()
-            networkStatus.collect {
-                when (it) {
-                    NetworkState.Available -> {
-                        peerControlChanges.send { copy(networkIsAvailable = true) }
-                        electrumControlChanges.send { copy(networkIsAvailable = true) }
-                    }
+            combine(networkStatus, tcpConnectionManager.torState) { networkStatus: NetworkState, torState: Connection? ->
+                networkStatus to torState
+            }.collect { (networkStatus: NetworkState, torState: Connection?) ->
+                when (networkStatus) {
                     NetworkState.NotAvailable -> {
                         peerControlChanges.send { copy(networkIsAvailable = false) }
                         electrumControlChanges.send { copy(networkIsAvailable = false) }
                     }
+                    NetworkState.Available -> when(torState) {
+                        Connection.ESTABLISHING, Connection.CLOSED -> {
+                            peerControlChanges.send { copy(networkIsAvailable = false) }
+                            electrumControlChanges.send { copy(networkIsAvailable = false) }
+                        }
+                        Connection.ESTABLISHED, null -> {
+                            peerControlChanges.send { copy(networkIsAvailable = true) }
+                            electrumControlChanges.send { copy(networkIsAvailable = true) }
+                        }
+                    }
                 }
             }
         }
-        // TODO Tor usage
-        launch { configurationManager.subscribeToIsTorEnabled().collect {
-            logger.info { "Tor is ${if (it) "enabled" else "disabled"}." }
-        } }
     }
 
     fun incrementDisconnectCount(): Unit {
