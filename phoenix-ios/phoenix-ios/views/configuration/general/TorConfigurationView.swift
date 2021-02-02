@@ -1,27 +1,44 @@
 import SwiftUI
+import PhoenixShared
 
 struct TorConfigurationView: View {
 
     @State var isTorEnabled = Prefs.shared.isTorEnabled
-    @State var theme = Prefs.shared.theme
 
     var body: some View {
-        Form {
-            Section(header: TorFormHeader(), content: {}).textCase(nil)
+        MVIView({ $0.torConfiguration() }) { model, postIntent in
+            Form {
+                Section(header: TorFormHeader(), content: {}).textCase(nil)
 
-            Toggle(isOn: $isTorEnabled.animation()) {
-                if isTorEnabled {
-                    Text("Tor is enabled")
-                } else {
-                    Text("Tor is disabled")
+                Toggle(isOn: $isTorEnabled.animation()) {
+                    if isTorEnabled {
+                        Text("Tor is enabled")
+                    } else {
+                        Text("Tor is disabled")
+                    }
+                }.onChange(of: isTorEnabled) { newValue in
+                    self.toggleTor(newValue)
                 }
-            }.onChange(of: isTorEnabled) { newValue in
-                self.toggleTor(newValue)
+
+                if let info = model.info {
+                    VStack {
+                        HStack {
+                            Text("Tor version: \(info.version)")
+                            Spacer()
+                        }
+                        HStack {
+                            Text("Network: \(info.networkLiveness)")
+                            Spacer()
+                        }
+                    }
+                            .padding(.top, 10)
+                            .font(.caption)
+                }
             }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .edgesIgnoringSafeArea(.bottom)
+                    .navigationBarTitle("Tor Settings", displayMode: .inline)
         }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .edgesIgnoringSafeArea(.bottom)
-                .navigationBarTitle("Tor Settings", displayMode: .inline)
     }
 
     struct TorFormHeader: View {
@@ -47,4 +64,6 @@ class TorConfigurationView_Previews: PreviewProvider {
         TorConfigurationView()
                 .previewDevice("iPhone 11")
     }
+
+    static let mockModel = TorConfiguration.Model(info: Tor_mobile_kmpTor.TorInfo(version: "1.0.0", networkLiveness: "UP"))
 }

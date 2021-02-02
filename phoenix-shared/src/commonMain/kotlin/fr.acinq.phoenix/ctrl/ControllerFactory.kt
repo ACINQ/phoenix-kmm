@@ -11,6 +11,7 @@ interface ControllerFactory {
     fun scan(): ScanController
     fun restoreWallet(): RestoreWalletController
     fun configuration(): ConfigurationController
+    fun torConfiguration(): TorConfigurationController
     fun electrumConfiguration(): ElectrumConfigurationController
     fun channelsConfiguration(): ChannelsConfigurationController
     fun logsConfiguration(): LogsConfigurationController

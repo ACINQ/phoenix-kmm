@@ -11,10 +11,7 @@ import fr.acinq.tor.TorState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
@@ -28,13 +25,13 @@ class TcpConnectionManager(
     private val logger = newLogger(loggerFactory)
 
     private val _socketBuilder = MutableStateFlow<TcpSocket.Builder?>(null)
-    val socketBuilder: StateFlow<TcpSocket.Builder?> = _socketBuilder
+    val socketBuilder: StateFlow<TcpSocket.Builder?> get() = _socketBuilder
 
-    private val tor by lazy { Tor(getApplicationCacheDirectoryPath(ctx), torLog(loggerFactory)) }
+    public val tor by lazy { Tor(getApplicationCacheDirectoryPath(ctx), torLog(loggerFactory)) }
 
     private val isNetworkAvailable = MutableStateFlow(false)
     private val _isTorEnabled = MutableStateFlow(false)
-    public val isTorEnabled = _isTorEnabled
+    public val isTorEnabled get() = _isTorEnabled
 
     public val torState = combine(_isTorEnabled, tor.state) { isTorEnabled, state ->
         when (isTorEnabled) {
