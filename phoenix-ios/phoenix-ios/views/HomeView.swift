@@ -186,10 +186,8 @@ struct ConnectionStatusButton : View {
 		let connectedWithoutTor = status == Eclair_kmpConnection.established && tor == nil
 
 		Group {
-			Button {
-				showConnectionsPopover()
-			} label: {
-				if connectedWithTor {
+			if connectedWithTor {
+				NavigationLink(destination: TorConfigurationView()) {
 					HStack {
 						Image(systemName: "checkmark.shield")
 								.frame(width: 16, height: 16)
@@ -197,7 +195,11 @@ struct ConnectionStatusButton : View {
 						Text("Tor enabled")
 								.font(.caption2)
 					}
-				} else {
+				}
+			} else {
+				Button {
+					showConnectionsPopover()
+				} label: {
 					HStack {
 						Image("ic_connection_lost")
 								.resizable()
@@ -207,27 +209,27 @@ struct ConnectionStatusButton : View {
 					}
 				}
 			}
-			.buttonStyle(PlainButtonStyle())
-			.padding([.leading, .top, .bottom], 4)
-			.padding([.trailing], 6)
-			.background(Color.buttonFill)
-			.cornerRadius(10)
-			.overlay(
-				RoundedRectangle(cornerRadius: 10)
-					.stroke(Color.gray, lineWidth: 1)
-			)
-			.opacity((dimStatus && !connectedWithTor) ? 0.2 : 1.0)
-			.isHidden(connectedWithoutTor)
 		}
-		.onAppear {
-			DispatchQueue.main.async {
-				withAnimation(Animation.linear(duration: 1.0).repeatForever()) {
-					self.dimStatus.toggle()
+				.buttonStyle(PlainButtonStyle())
+				.padding([.leading, .top, .bottom], 4)
+				.padding([.trailing], 6)
+				.background(Color.buttonFill)
+				.cornerRadius(10)
+				.overlay(
+						RoundedRectangle(cornerRadius: 10)
+								.stroke(Color.gray, lineWidth: 1)
+				)
+				.opacity((dimStatus && !connectedWithTor) ? 0.2 : 1.0)
+				.isHidden(connectedWithoutTor)
+				.onAppear {
+					DispatchQueue.main.async {
+						withAnimation(Animation.linear(duration: 1.0).repeatForever()) {
+							self.dimStatus.toggle()
+						}
+					}
 				}
-			}
-		}
 	}
-	
+
 	func showConnectionsPopover() -> Void {
 		log.trace("(ConnectionStatusButton) showConnectionsPopover()")
 		
