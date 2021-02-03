@@ -1,6 +1,8 @@
 package fr.acinq.phoenix.utils
 
 import fr.acinq.eclair.io.TcpSocket
+import fr.acinq.eclair.io.receiveFully
+import fr.acinq.eclair.io.send
 import fr.acinq.tor.Tor
 import fr.acinq.tor.socks.socks5Handshake
 import org.kodein.log.LoggerFactory
@@ -16,8 +18,6 @@ class Socks5Proxy(
     val logger = newLogger(loggerFactory)
 
     override suspend fun connect(host: String, port: Int, tls: TcpSocket.TLS?): TcpSocket {
-        require(tls == null) { "Socks5 proxy does not support TLS" }
-
         val socket = socketBuilder.connect(proxyHost, proxyPort)
 
         val (cHost, cPort) = socks5Handshake(
@@ -27,6 +27,8 @@ class Socks5Proxy(
         )
 
         logger.debug { "Connected through socks5 to $cHost:$cPort" }
+
+        if (tls != null) return socket.startTls(tls)
 
         return socket
     }
