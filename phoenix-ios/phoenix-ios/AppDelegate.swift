@@ -373,7 +373,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 
 			business.registerFcmToken(token: token) { result, error in
 				if let e = error {
-                    log.error("failed to register fcm token: \(e.localizedDescription)")
+					log.error("failed to register fcm token: \(e.localizedDescription)")
 				}
 			}
 			
