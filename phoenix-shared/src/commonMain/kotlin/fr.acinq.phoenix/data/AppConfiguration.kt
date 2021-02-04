@@ -76,10 +76,11 @@ data class ElectrumServer(
     // TODO if not customized, should be dynamic and random
     val host: String,
     val port: Int,
+    val tls: TcpSocket.TLS? = TcpSocket.TLS.SAFE,
     val customized: Boolean = false,
     val blockHeight: Int = 0,
     val tipTimestamp: Long = 0
 ) : Metadata
 
 fun ElectrumServer.address(): String = "$host:$port"
-fun ElectrumServer.asServerAddress(tls: TcpSocket.TLS? = null): ServerAddress = ServerAddress(host, port, tls)
+fun ElectrumServer.asServerAddress(): ServerAddress = ServerAddress(host, port, tls)

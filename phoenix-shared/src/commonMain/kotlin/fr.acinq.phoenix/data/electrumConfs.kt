@@ -10,8 +10,8 @@ data class ElectrumConf(
     val version: String = "1.4"
 )
 
-fun ElectrumConf.asElectrumServer(tls: TcpSocket.TLS? = null): ElectrumServer =
-    ElectrumServer(host = host, port = if (tls != null) sslPort else tcpPort)
+fun ElectrumConf.asElectrumServer(): ElectrumServer =
+    ElectrumServer(host = host, port = sslPort)
 
 val electrumMainnetConfigurations = listOf(
     ElectrumConf(host = "electrum.acinq.co"),

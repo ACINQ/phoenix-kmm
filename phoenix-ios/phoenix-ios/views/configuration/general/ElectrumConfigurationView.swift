@@ -488,6 +488,7 @@ class ElectrumConfigurationView_Previews: PreviewProvider {
 		id: 0,
 		host: "tn.not.fyi",
 		port: 55002,
+		tls: .safe,
 		customized: true,
 		blockHeight: 123456789,
 		tipTimestamp: 1599564210
@@ -497,6 +498,7 @@ class ElectrumConfigurationView_Previews: PreviewProvider {
 		id: 0,
 		host: "",
 		port: 0,
+		tls: nil,
 		customized: false,
 		blockHeight: 123456789,
 		tipTimestamp: 1599564210
