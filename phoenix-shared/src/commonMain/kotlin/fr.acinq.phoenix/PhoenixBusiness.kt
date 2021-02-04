@@ -123,8 +123,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     // The (node_id, fcm_token) tuple only needs to be registered once.
     // And after that, only if the tuple changes (e.g. different fcm_token).
-    fun registerFcmToken(token: String?) {
-        peerManager.peerState.value?.registerFcmToken(token)
+    suspend fun registerFcmToken(token: String?) {
+        peerManager.getPeer().registerFcmToken(token)
     }
 
     fun incomingPaymentFlow() =

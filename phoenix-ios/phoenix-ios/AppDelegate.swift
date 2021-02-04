@@ -370,8 +370,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			if UIApplication.shared.backgroundRefreshStatus != .available {
 				token = nil
 			}
-			
-			business.registerFcmToken(token: token)
+
+			business.registerFcmToken(token: token) { result, error in
+				if let e = error {
+					print("ERROR: \(e)")
+				}
+			}
 			
 			// Future optimization:
 			//
