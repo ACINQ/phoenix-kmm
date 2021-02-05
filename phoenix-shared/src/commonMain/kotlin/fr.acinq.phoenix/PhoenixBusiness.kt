@@ -17,7 +17,6 @@ import fr.acinq.tor.Tor
 import io.ktor.client.*
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.serialization.json.Json
@@ -42,9 +41,15 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         logMemory.withShortPackageKeepLast(1)
     )
 
-    private val tcpSocketBuilder = TcpSocket.Builder()
-
     public val tor by lazy { Tor(getApplicationCacheDirectoryPath(ctx), torLog(loggerFactory)) }
+
+    private val tcpSocketBuilder = TcpSocket.Builder()
+    private val tcpSockerBuilderFactory = {
+        if (appConfigurationManager.isTorEnabled.value)
+            tcpSocketBuilder.torProxy(loggerFactory)
+        else
+            tcpSocketBuilder
+    }
 
     private val networkMonitor by lazy { NetworkMonitor(loggerFactory, ctx) }
     private val httpClient by lazy {
@@ -94,7 +99,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
                 peerManager,
                 currencyManager,
                 networkMonitor,
-                tcpSocketBuilder,
+                tcpSockerBuilderFactory,
                 tor,
                 electrumClient,
                 loggerFactory,
