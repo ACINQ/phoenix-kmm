@@ -10,17 +10,13 @@ import fr.acinq.eclair.db.ChannelsDb
 import fr.acinq.eclair.db.Databases
 import fr.acinq.eclair.db.PaymentsDb
 import fr.acinq.eclair.io.Peer
-import fr.acinq.eclair.io.TcpSocket
 import fr.acinq.eclair.utils.msat
 import fr.acinq.eclair.utils.sat
 import fr.acinq.eclair.utils.toByteVector
-import fr.acinq.eclair.utils.toByteVector32
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.data.Wallet
 import fr.acinq.phoenix.db.SqliteChannelsDb
-import fr.acinq.phoenix.db.SqlitePaymentsDb
 import fr.acinq.phoenix.db.createChannelsDbDriver
-import fr.acinq.phoenix.db.createPaymentsDbDriver
 import fr.acinq.phoenix.utils.PlatformContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,7 +32,6 @@ class PeerManager(
     private val walletManager: WalletManager,
     private val configurationManager: AppConfigurationManager,
     private val paymentsDb: PaymentsDb,
-    private val tcpConnectionManager: TcpConnectionManager,
     private val electrumWatcher: ElectrumWatcher,
     private val chain: Chain,
     private val ctx: PlatformContext
@@ -46,43 +41,18 @@ class PeerManager(
     private val _peer = MutableStateFlow<Peer?>(null)
     public val peerState: StateFlow<Peer?> = _peer
 
-    data class PeerConfiguration(val wallet: Wallet?, val walletParams: WalletParams?,val  tcpSocketBuilder: TcpSocket.Builder?) {
-        fun isComplete() = wallet != null && walletParams != null && tcpSocketBuilder != null
-    }
-
     init {
         launch {
-            combine(
-                walletManager.wallet,
-                configurationManager.walletParams,
-                tcpConnectionManager.socketBuilder) { wallet, walletParams, tcpSocketBuilder ->
-                PeerConfiguration(wallet, walletParams, tcpSocketBuilder)
-            }.filter { it.isComplete() }.collect { (wallet, walletParams, tcpSocketBuilder) ->
-                requireNotNull(wallet)
-                requireNotNull(walletParams)
-                requireNotNull(tcpSocketBuilder)
-
-                if (_peer.value == null) {
-                    _peer.value = buildPeer(
-                        wallet = wallet,
-                        walletParams = walletParams,
-                        tcpSocketBuilder = tcpSocketBuilder
-                    )
-                }
-
-                getPeer().socketBuilder = tcpSocketBuilder
-                getPeer().disconnect()
-                // TODO uncomment when TLS over Tor will be available
-                //                val electrumClient = getPeer().watcher.client
-                //                electrumClient.socketBuilder = socketBuilder
-                //                electrumClient.disconnect()
-            }
+            _peer.value = buildPeer(
+                wallet = walletManager.wallet.filterNotNull().first(),
+                walletParams = configurationManager.walletParams.filterNotNull().first()
+            )
         }
     }
 
     suspend fun getPeer() = peerState.filterNotNull().first()
 
-    private fun buildPeer(wallet: Wallet, walletParams: WalletParams, tcpSocketBuilder: TcpSocket.Builder): Peer {
+    private fun buildPeer(wallet: Wallet, walletParams: WalletParams): Peer {
         val genesisBlock = when (chain) {
             Chain.MAINNET -> Block.LivenetGenesisBlock
             Chain.TESTNET -> Block.TestnetGenesisBlock
@@ -153,6 +123,9 @@ class PeerManager(
             override val payments: PaymentsDb get() = paymentsDb
         }
 
-        return Peer(nodeParams, walletParams, electrumWatcher, databases, tcpSocketBuilder, MainScope())
+        return Peer(
+            nodeParams = nodeParams, walletParams = walletParams, watcher = electrumWatcher,
+            db = databases, socketBuilder = null, scope = MainScope()
+        )
     }
 }

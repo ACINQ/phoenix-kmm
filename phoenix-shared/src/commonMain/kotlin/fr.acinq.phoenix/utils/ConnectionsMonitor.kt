@@ -2,13 +2,14 @@ package fr.acinq.phoenix.utils
 
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.utils.Connection
+import fr.acinq.phoenix.app.AppConfigurationManager
 import fr.acinq.phoenix.app.PeerManager
-import fr.acinq.phoenix.app.TcpConnectionManager
+import fr.acinq.tor.Tor
+import fr.acinq.tor.TorState
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.*
+import org.kodein.log.LoggerFactory
+import org.kodein.log.newLogger
 
 data class Connections(
     val internet: Connection = Connection.CLOSED,
@@ -25,14 +26,22 @@ class ConnectionsMonitor(
     peerManager: PeerManager,
     electrumClient: ElectrumClient,
     networkMonitor: NetworkMonitor,
-    tcpConnectionManager: TcpConnectionManager,
+    configurationManager: AppConfigurationManager,
+    tor: Tor,
 ): CoroutineScope {
 
     private val job = Job()
     override val coroutineContext = MainScope().coroutineContext + job
 
     private val _connections = MutableStateFlow(Connections())
-    public val connections: StateFlow<Connections> = _connections
+    public val connections: StateFlow<Connections> get() = _connections
+
+    private val torState: Flow<TorState?> = combine(configurationManager.isTorEnabled, tor.state) { torEnabled, torState ->
+        when {
+            torEnabled -> torState
+            else -> null
+        }
+    }
 
     init {
         launch {
@@ -40,7 +49,7 @@ class ConnectionsMonitor(
                 peerManager.getPeer().connectionState,
                 electrumClient.connectionState,
                 networkMonitor.networkState,
-                tcpConnectionManager.torState,
+                torState,
             ) { peerState, electrumState, internetState, torState ->
                 Connections(
                     peer = peerState,
@@ -49,7 +58,12 @@ class ConnectionsMonitor(
                         NetworkState.Available -> Connection.ESTABLISHED
                         NetworkState.NotAvailable -> Connection.CLOSED
                     },
-                    tor = torState
+                    tor = when(torState) {
+                        TorState.STARTING -> Connection.ESTABLISHING
+                        TorState.RUNNING -> Connection.ESTABLISHED
+                        TorState.STOPPED -> Connection.CLOSED
+                        null -> null
+                    }
                 )
             }.collect {
                 _connections.value = it

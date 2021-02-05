@@ -164,4 +164,12 @@ class AppConfigurationManager(
         )
     }
     //endregion
+
+    //region Tor configuration
+    private val _isTorEnabled = MutableStateFlow(false)
+    public val isTorEnabled get() = _isTorEnabled
+    public fun updateTorUsage(enabled: Boolean): Unit {
+        isTorEnabled.value = enabled
+    }
+    //endregion
 }

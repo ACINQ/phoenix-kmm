@@ -13,9 +13,11 @@ import fr.acinq.phoenix.ctrl.config.*
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.db.*
 import fr.acinq.phoenix.utils.*
+import fr.acinq.tor.Tor
 import io.ktor.client.*
 import io.ktor.client.features.json.JsonFeature
 import io.ktor.client.features.json.serializer.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.serialization.json.Json
@@ -42,6 +44,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val tcpSocketBuilder = TcpSocket.Builder()
 
+    public val tor by lazy { Tor(getApplicationCacheDirectoryPath(ctx), torLog(loggerFactory)) }
+
     private val networkMonitor by lazy { NetworkMonitor(loggerFactory, ctx) }
     private val httpClient by lazy {
         HttpClient {
@@ -64,19 +68,18 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val masterPubkeyPath = if (chain == Chain.MAINNET) "m/84'/0'/0'" else "m/84'/1'/0'"
 
-    private val electrumClient by lazy { ElectrumClient(tcpSocketBuilder, MainScope()) }
+    private val electrumClient by lazy { ElectrumClient(null, MainScope()) }
     private val electrumWatcher by lazy { ElectrumWatcher(electrumClient, MainScope()) }
 
     private var appConnectionsDaemon: AppConnectionsDaemon? = null
 
     private val walletManager by lazy { WalletManager() }
-    private val peerManager by lazy { PeerManager(loggerFactory, walletManager, appConfigurationManager, paymentsDb, tcpConnectionManager, electrumWatcher, chain, ctx) }
+    private val peerManager by lazy { PeerManager(loggerFactory, walletManager, appConfigurationManager, paymentsDb, electrumWatcher, chain, ctx) }
     private val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peerManager) }
     private val appConfigurationManager by lazy { AppConfigurationManager(noSqlAppDB, appDb, httpClient, electrumClient, chain, loggerFactory) }
-    private val tcpConnectionManager by lazy { TcpConnectionManager(tcpSocketBuilder, loggerFactory, ctx) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, noSqlAppDB, httpClient) }
-    val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor, tcpConnectionManager) }
+    val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor, appConfigurationManager, tor) }
     val util by lazy { Utilities(loggerFactory, chain) }
 
     init {
@@ -91,7 +94,8 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
                 peerManager,
                 currencyManager,
                 networkMonitor,
-                tcpConnectionManager,
+                tcpSocketBuilder,
+                tor,
                 electrumClient,
                 loggerFactory,
             )
@@ -132,7 +136,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     fun incomingPaymentFlow() =
         paymentsManager.subscribeToLastIncomingPayment()
 
-    fun updateTorUsage(isEnabled: Boolean) = tcpConnectionManager.updateTorUsage(isEnabled)
+    fun updateTorUsage(isEnabled: Boolean) = appConfigurationManager.updateTorUsage(isEnabled)
 
     val controllers: ControllerFactory = object : ControllerFactory {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
@@ -142,7 +146,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun scan(): ScanController = AppScanController(loggerFactory, peerManager)
         override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory)
         override fun configuration(): ConfigurationController = AppConfigurationController(loggerFactory, walletManager)
-        override fun torConfiguration(): TorConfigurationController = AppTorConfigurationController(loggerFactory, tcpConnectionManager)
+        override fun torConfiguration(): TorConfigurationController = AppTorConfigurationController(loggerFactory, tor)
         override fun electrumConfiguration(): ElectrumConfigurationController = AppElectrumConfigurationController(loggerFactory, appConfigurationManager, chain, masterPubkeyPath, walletManager, electrumClient)
         override fun channelsConfiguration(): ChannelsConfigurationController = AppChannelsConfigurationController(loggerFactory, peerManager, chain)
         override fun logsConfiguration(): LogsConfigurationController = AppLogsConfigurationController(ctx, loggerFactory, logMemory)

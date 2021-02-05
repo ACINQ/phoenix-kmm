@@ -42,5 +42,10 @@ class ConnectionTests {
         assertEquals(Connection.CLOSED, Connection.CLOSED + Connection.ESTABLISHED)
         assertEquals(Connection.CLOSED, null + Connection.CLOSED)
         assertEquals(Connection.CLOSED, Connection.CLOSED + null)
+
+        assertEquals(Connection.ESTABLISHING, Connection.ESTABLISHED + null + Connection.ESTABLISHING)
+        assertEquals(Connection.ESTABLISHING, Connection.ESTABLISHING + null + Connection.CLOSED)
+        assertEquals(Connection.CLOSED, Connection.ESTABLISHED + null + Connection.CLOSED)
+        assertEquals(Connection.ESTABLISHED, Connection.ESTABLISHED + null + Connection.ESTABLISHED)
     }
 }
