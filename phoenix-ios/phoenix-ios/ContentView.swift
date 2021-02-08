@@ -11,6 +11,15 @@ fileprivate var log = Logger(
 fileprivate var log = Logger(OSLog.disabled)
 #endif
 
+struct GlobalEnvironment: ViewModifier {
+	static var currencyPrefs = CurrencyPrefs()
+
+	func body(content: Self.Content) -> some View {
+		content
+			.environmentObject(Self.currencyPrefs)
+	}
+}
+
 struct ContentView: View {
 
     static func UIKitAppearance() {
@@ -78,7 +87,7 @@ struct ContentView: View {
 			}
 			
 		} // </ZStack>
-		.environmentObject(CurrencyPrefs())
+		.modifier(GlobalEnvironment())
 		.onReceive(didEnterBackgroundPublisher, perform: { _ in
 			onDidEnterBackground()
 		})
@@ -143,12 +152,12 @@ struct ContentView: View {
 			// Another way to think about it:
 			// - standard security => touchID only protects the UI, wallet can immediately be loaded
 			// - advanced security => touchID required to unlock both the UI and the seed
-			
+
 			if let mnemonics = mnemonics {
 				// unlock & load wallet
 				AppDelegate.get().loadWallet(mnemonics: mnemonics)
 			}
-			
+
 			self.isUnlocked = enabledSecurity.isEmpty
 			self.enabledSecurity = enabledSecurity
 		}
@@ -157,26 +166,32 @@ struct ContentView: View {
 	private func performVersionUpgradeChecks() -> Void {
 		
 		// Upgrade check(s)
-		
+
 		let key = "lastVersionCheck"
 		let previousBuild = UserDefaults.standard.string(forKey: key) ?? "3"
-		
+
 		// v0.7.3 (build 4)
 		// - serialization change for Channels
 		// - attempting to deserialize old version causes crash
 		// - we decided to delete old channels database (due to low number of test users)
 		//
 		if previousBuild.isVersion(lessThan: "4") {
-			
 			migrateChannelsDbFiles()
 		}
-		
+
 		// v0.7.4 (build 5)
+		// - serialization change for Channels
+		// - attempting to deserialize old version causes crash
+		//
+		if previousBuild.isVersion(lessThan: "5") {
+			migrateChannelsDbFiles()
+		}
+
+		// v0.7.6 (build 7)
 		// - adding support for both soft & hard biometrics
 		// - previously only supported hard biometics
 		//
-		if previousBuild.isVersion(lessThan: "5") {
-
+		if previousBuild.isVersion(lessThan: "7") {
 			AppSecurity.shared.performMigration(previousBuild: previousBuild)
 		}
 

@@ -85,6 +85,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		nc.publisher(for: UIApplication.willEnterForegroundNotification).sink { _ in
 			self._applicationWillEnterForeground(application)
 		}.store(in: &cancellables)
+
+		// Tor configuration observer
+		Prefs.shared.isTorEnabledPublisher.sink {[weak self](isTorEnabled: Bool) in
+			self?.business.updateTorUsage(isEnabled: isTorEnabled)
+		}.store(in: &cancellables)
 		
         return true
     }
@@ -285,8 +290,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			let formattedAmt = Utils.format(currencyPrefs, msat: payment.amountMsat())
 
 			var body: String
-			if payment.desc() != nil {
-				body = "\(formattedAmt.string): \(payment.desc())"
+			if let desc = payment.desc(), desc.count > 0 {
+				body = "\(formattedAmt.string): \(desc)"
 			} else {
 				body = formattedAmt.string
 			}
@@ -365,8 +370,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			if UIApplication.shared.backgroundRefreshStatus != .available {
 				token = nil
 			}
-			
-			business.registerFcmToken(token: token)
+
+			business.registerFcmToken(token: token) { result, error in
+				if let e = error {
+					log.error("failed to register fcm token: \(e.localizedDescription)")
+				}
+			}
 			
 			// Future optimization:
 			//

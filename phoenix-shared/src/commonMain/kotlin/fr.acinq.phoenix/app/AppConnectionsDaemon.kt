@@ -36,6 +36,7 @@ class AppConnectionsDaemon(
 
     private var peerConnectionJob :Job? = null
     private var electrumConnectionJob: Job? = null
+    private var httpControlFlowEnabled: Boolean = false
 
     private var networkStatus = MutableStateFlow(NetworkState.NotAvailable)
 
@@ -96,10 +97,12 @@ class AppConnectionsDaemon(
         launch {
             electrumControlFlow.collect {
                 when {
-                    it.networkIsAvailable && it.disconnectCount == 0 -> {
-                        electrumConnectionJob = connectionLoop("Electrum", electrumClient.connectionState) {
-                            val electrumServer = configurationManager.getElectrumServer()
-                            electrumClient.connect(electrumServer.asServerAddress())
+                    it.networkIsAvailable && it.disconnectCount <= 0 -> {
+                        if (electrumConnectionJob == null) {
+                            electrumConnectionJob = connectionLoop("Electrum", electrumClient.connectionState) {
+                                val electrumServer = configurationManager.getElectrumServer()
+                                electrumClient.connect(electrumServer.asServerAddress())
+                            }
                         }
                     }
                     else -> {
@@ -107,6 +110,7 @@ class AppConnectionsDaemon(
                             it.cancel()
                             electrumClient.disconnect()
                         }
+                        electrumConnectionJob = null
                     }
                 }
             }
@@ -118,7 +122,7 @@ class AppConnectionsDaemon(
                 }
 
                 var previousElectrumServer: ElectrumServer? = null
-                openElectrumServerUpdateSubscription().consumeEach {
+                subscribeToElectrumServer().collect {
                     if (previousElectrumServer?.address() != it.address()) {
                         logger.info { "Electrum server has changed. We need to refresh the connection." }
                         electrumControlChanges.send { incrementDisconnectCount() }
@@ -134,9 +138,11 @@ class AppConnectionsDaemon(
             peerControlFlow.collect {
                 val peer = peerManager.getPeer()
                 when {
-                    it.networkIsAvailable && it.disconnectCount == 0 -> {
-                        peerConnectionJob = connectionLoop("Peer", peer.connectionState) {
-                            peer.connect()
+                    it.networkIsAvailable && it.disconnectCount <= 0 -> {
+                        if (peerConnectionJob == null) {
+                            peerConnectionJob = connectionLoop("Peer", peer.connectionState) {
+                                peer.connect()
+                            }
                         }
                     }
                     else -> {
@@ -144,6 +150,7 @@ class AppConnectionsDaemon(
                             it.cancel()
                             peer.disconnect()
                         }
+                        peerConnectionJob = null
                     }
                 }
             }
@@ -152,13 +159,19 @@ class AppConnectionsDaemon(
         launch {
             httpApiControlFlow.collect {
                 when {
-                    it.networkIsAvailable && it.disconnectCount == 0 -> {
-                        configurationManager.startWalletParamsLoop()
-                        currencyManager.start()
+                    it.networkIsAvailable && it.disconnectCount <= 0 -> {
+                        if (!httpControlFlowEnabled) {
+                            httpControlFlowEnabled = true
+                            configurationManager.startWalletParamsLoop()
+                            currencyManager.start()
+                        }
                     }
                     else -> {
-                        configurationManager.stopWalletParamsLoop()
-                        currencyManager.stop()
+                        if (httpControlFlowEnabled) {
+                            httpControlFlowEnabled = false
+                            configurationManager.stopWalletParamsLoop()
+                            currencyManager.stop()
+                        }
                     }
                 }
             }
@@ -197,6 +210,10 @@ class AppConnectionsDaemon(
                 }
             }
         }
+        // TODO Tor usage
+        launch { configurationManager.subscribeToIsTorEnabled().collect {
+            logger.info { "Tor is ${if (it) "enabled" else "disabled"}." }
+        } }
     }
 
     fun incrementDisconnectCount(): Unit {
@@ -218,8 +235,6 @@ class AppConnectionsDaemon(
     private fun connectionLoop(name: String, statusStateFlow: StateFlow<Connection>, connect: () -> Unit) = launch {
         var retryDelay = RETRY_DELAY
         statusStateFlow.collect {
-            logger.debug { "New $name status $it" }
-
             if (it == Connection.CLOSED) {
                 logger.debug { "Wait for $retryDelay before retrying connection on $name" }
                 delay(retryDelay) ; retryDelay = increaseDelay(retryDelay)
