@@ -16,7 +16,6 @@
 
 package fr.acinq.phoenix.android
 
-import CF
 import Screen
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,13 +27,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import fr.acinq.phoenix.android.mvi.MVIView
+import fr.acinq.phoenix.android.security.EncryptedSeed
 import fr.acinq.phoenix.android.utils.logger
-import fr.acinq.phoenix.ctrl.config.RecoveryPhraseConfiguration
-import isReady
+import fr.acinq.secp256k1.Hex
+import keyState
 import navController
 import navigate
-import wallet
 
 
 @Composable
@@ -48,29 +46,22 @@ fun SettingsView() {
 }
 
 @Composable
-fun SeedView() {
+fun SeedView(seedViewModel: SeedViewModel) {
     val logger = logger()
-    if (!wallet.isReady()) {
+    val ks = keyState
+    if (ks !is KeyState.Present) {
         val nc = navController
         nc.navigate(Screen.Startup)
     } else {
-        MVIView(CF::recoveryPhraseConfiguration) { model, postIntent ->
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(stringResource(id = R.string.displayseed_instructions))
-                Box(Modifier.padding(top = 16.dp)) {
-                    when (model) {
-                        is RecoveryPhraseConfiguration.Model.Awaiting -> {
-                            Button(onClick = { postIntent(RecoveryPhraseConfiguration.Intent.Decrypt) }) {
-                                IconWithText(R.drawable.ic_shield, stringResource(R.string.displayseed_authenticate_button))
-                            }
-                        }
-                        is RecoveryPhraseConfiguration.Model.Decrypting -> {
-                            Text(stringResource(id = R.string.displayseed_loading))
-                        }
-                        is RecoveryPhraseConfiguration.Model.Decrypted -> {
-                            Text(model.mnemonics.joinToString(" "), modifier = Modifier.padding(16.dp))
-                        }
-                    }
+        val seed = seedViewModel.decryptSeed()
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(stringResource(id = R.string.displayseed_instructions))
+            Box(Modifier.padding(top = 16.dp)) {
+                if (seed != null) {
+                    val words = EncryptedSeed.toMnemonics(seed).joinToString(" ")
+                    Text(words, modifier = Modifier.padding(16.dp))
+                } else {
+                    Text("Could not decrypt the seed :(")
                 }
             }
         }

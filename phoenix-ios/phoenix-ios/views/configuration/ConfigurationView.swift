@@ -24,7 +24,7 @@ struct ConfigurationView: View {
 							Image(systemName: "link")
 						}
 					}
-					NavigationLink(destination:  EmptyView()) {
+					NavigationLink(destination: TorConfigurationView()) {
 						Label { Text("Tor") } icon: {
 							Image(systemName: "shield.lefthalf.fill")
 						}
@@ -33,8 +33,8 @@ struct ConfigurationView: View {
 
 				if fullMode {
 					Section(header: Text("Security")) {
-						NavigationLink(destination: EmptyView()) {
-							Label { Text("App access settings") } icon: {
+						NavigationLink(destination: AppAccessView()) {
+							Label { Text("App access") } icon: {
 								Image(systemName: "touchid")
 							}
 						}
@@ -47,23 +47,23 @@ struct ConfigurationView: View {
 				}
 
 				Section(header: Text("Advanced")) {
-					NavigationLink(destination: EmptyView()) {
+					NavigationLink(destination: LogsConfigurationView()) {
 						Label { Text("Logs") } icon: {
 							Image(systemName: "doc.text")
 						}
 					}
                     if fullMode {
 						NavigationLink(destination: ChannelsConfigurationView()) {
-							Label { Text("My payment channels") } icon: {
+							Label { Text("Payment channels") } icon: {
 								Image(systemName: "bolt")
 							}
 						}
-						NavigationLink(destination: EmptyView()) {
+						NavigationLink(destination: CloseChannelsView()) {
 							Label { Text("Close all channels") } icon: {
 								Image(systemName: "xmark.circle")
 							}
 						}
-						NavigationLink(destination: EmptyView()) {
+						NavigationLink(destination: ComingSoonView()) {
 							Label { Text("Danger zone") } icon: {
 								Image(systemName: "exclamationmark.triangle")
 							}

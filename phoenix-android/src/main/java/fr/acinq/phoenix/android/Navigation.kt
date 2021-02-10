@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.KEY_ROUTE
 import androidx.navigation.compose.currentBackStackEntryAsState
+import fr.acinq.phoenix.android.KeyState
 import fr.acinq.phoenix.android.utils.logger
 
 
@@ -42,13 +43,12 @@ fun requireWallet(
     from: Screen,
     children: @Composable () -> Unit
 ) {
-    val wallet = application.business.walletManager.getWallet()
-    if (from !is Screen.CreateWallet && wallet == null) {
-        logger().warning { "valid wallet is required on screen=$from" }
-        navController.navigate(Screen.CreateWallet)
+    if (keyState !is KeyState.Present) {
+        logger().warning { "accessing screen=$from with keyState=$keyState" }
+        navController.navigate(Screen.Startup)
         Text("redirecting...")
     } else {
-        logger().verbose { "creating screen=$from..." }
+        logger().debug { "access to screen=$from granted" }
         children()
     }
 }

@@ -5,12 +5,16 @@ typealias InitializationController = MVI.Controller<Initialization.Model, Initia
 object Initialization {
 
     sealed class Model : MVI.Model() {
-        object Initialization : Model()
-        object Creating : Model()
+        object Ready : Model()
+        data class GeneratedWallet(val mnemonics: List<String>, val seed: ByteArray) : Model() {
+            override fun toString() = "GeneratedWallet"
+        }
     }
 
     sealed class Intent : MVI.Intent() {
-        object CreateWallet : Intent()
+        data class GenerateWallet(val entropy: ByteArray) : Intent() {
+            override fun toString() = "GenerateWallet"
+        }
     }
 
 }

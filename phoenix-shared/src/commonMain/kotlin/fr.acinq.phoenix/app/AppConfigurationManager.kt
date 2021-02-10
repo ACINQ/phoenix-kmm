@@ -1,46 +1,43 @@
 package fr.acinq.phoenix.app
 
+import fr.acinq.eclair.WalletParams
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.blockchain.electrum.HeaderSubscriptionResponse
 import fr.acinq.phoenix.data.*
+import fr.acinq.phoenix.db.SqliteAppDb
+import fr.acinq.phoenix.utils.RETRY_DELAY
+import fr.acinq.phoenix.utils.increaseDelay
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.utils.io.errors.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.consumeAsFlow
-import kotlinx.coroutines.flow.filterIsInstance
+import kotlinx.coroutines.flow.*
+import kotlinx.datetime.Clock
 import org.kodein.db.*
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import kotlin.time.ExperimentalTime
-import kotlin.time.minutes
+import kotlin.math.max
+import kotlin.time.*
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class, ExperimentalStdlibApi::class)
 class AppConfigurationManager(
-    private val appDB: DB,
-    private val electrumClient: ElectrumClient,
+    private val noSqlDb: DB, // TODO to be replaced by [appDb]
+    private val appDb: SqliteAppDb,
     private val httpClient: HttpClient,
+    private val electrumClient: ElectrumClient,
     private val chain: Chain,
     loggerFactory: LoggerFactory
 ) : CoroutineScope by MainScope() {
 
     private val logger = newLogger(loggerFactory)
 
-    private val electrumServerUpdates = ConflatedBroadcastChannel<ElectrumServer>()
-    fun openElectrumServerUpdateSubscription(): ReceiveChannel<ElectrumServer> =
-        electrumServerUpdates.openSubscription()
-
-    /*
-        TODO Manage updates for connection configurations:
-            e.g. for Electrum Server : reconnect to new server
-     */
     init {
-        appDB.on<ElectrumServer>().register {
+        // Wallet Params
+        initWalletParams()
+        // Electrum Triggers
+        noSqlDb.on<ElectrumServer>().register {
             didPut {
-                launch { electrumServerUpdates.send(it) }
+                launch { electrumServer.value = it }
             }
         }
         launch {
@@ -58,51 +55,99 @@ class AppConfigurationManager(
                     )
                 }
         }
-        launchUpdateRates() // TODO do we need to manage cancellation?
     }
 
-    // General
-    private val appConfigurationKey = appDB.key<AppConfiguration>(0)
-    private fun createAppConfiguration(): AppConfiguration {
-        if (appDB[appConfigurationKey] == null) {
-            logger.info { "Create app configuration" }
-            appDB.put(AppConfiguration())
+    //endregion WalletParams fetch / store / initialization
+    private val currentWalletParamsVersion = ApiWalletParams.Version.V0
+    private val _walletParams = MutableStateFlow<WalletParams?>(null)
+    val walletParams: StateFlow<WalletParams?> = _walletParams
+
+    public fun initWalletParams() = launch {
+        val (instant, fallbackWalletParams) = appDb.getWalletParamsOrNull(currentWalletParamsVersion)
+
+        val freshness = Clock.System.now() - instant
+        logger.info { "local WalletParams loaded, not updated since=$freshness" }
+
+        val timeout =
+            if (freshness < 48.hours) 2.seconds
+            else max(freshness.inDays.toInt(), 5) * 2.seconds // max=10s
+
+        // TODO are we using TOR? -> increase timeout
+
+        val walletParams =
+            try {
+                withTimeout(timeout) {
+                    fetchAndStoreWalletParams() ?: fallbackWalletParams
+                }
+            } catch (t: TimeoutCancellationException) {
+                logger.warning { "Unable to fetch WalletParams, using fallback values=$fallbackWalletParams" }
+                fallbackWalletParams
+            }
+
+        // _walletParams can be updated by [updateWalletParamsLoop] before we reach this block.
+        // In that case, we don't update from here
+        if (_walletParams.value == null) {
+            logger.debug { "init WalletParams=$walletParams" }
+            _walletParams.value = walletParams
         }
-        return appDB[appConfigurationKey] ?: error("App configuration must be initialized.")
     }
 
-    fun getAppConfiguration(): AppConfiguration = appDB[appConfigurationKey] ?: createAppConfiguration()
-
-    fun putFiatCurrency(fiatCurrency: FiatCurrency) {
-        logger.info { "Change fiat currency [$fiatCurrency]" }
-        appDB.put(appConfigurationKey, getAppConfiguration().copy(fiatCurrency = fiatCurrency))
+    private var updateParametersJob: Job? = null
+    public fun startWalletParamsLoop() {
+        updateParametersJob = updateWalletParamsLoop()
+    }
+    public fun stopWalletParamsLoop() {
+        launch { updateParametersJob?.cancelAndJoin() }
     }
 
-    fun putBitcoinUnit(bitcoinUnit: BitcoinUnit) {
-        logger.info { "Change bitcoin unit [$bitcoinUnit]" }
-        appDB.put(appConfigurationKey, getAppConfiguration().copy(bitcoinUnit = bitcoinUnit))
+    @OptIn(ExperimentalTime::class)
+    private fun updateWalletParamsLoop() = launch {
+        var retryDelay = RETRY_DELAY
+
+        while (isActive) {
+            val walletParams = fetchAndStoreWalletParams()
+            // _walletParams can be updated just once.
+            if (_walletParams.value == null) {
+                retryDelay = increaseDelay(retryDelay)
+                logger.debug { "update WalletParams=$walletParams" }
+                _walletParams.value = walletParams
+            } else {
+                retryDelay = 60.minutes
+            }
+
+            delay(retryDelay)
+        }
     }
 
-    fun putAppTheme(appTheme: AppTheme) {
-        logger.info { "Change app theme [$appTheme]" }
-        appDB.put(appConfigurationKey, getAppConfiguration().copy(appTheme = appTheme))
+    private suspend fun fetchAndStoreWalletParams() : WalletParams? {
+        return try {
+            val rawData = httpClient.get<String>("https://acinq.co/phoenix/walletcontext.json")
+            appDb.setWalletParams(currentWalletParamsVersion, rawData)
+        } catch (t: Throwable) {
+            logger.error(t) { "${t.message}" }
+            null
+        }
     }
+    //endregion
 
-    // Electrum
-    private val electrumServerKey = appDB.key<ElectrumServer>(0)
+    //region Electrum configuration
+    private val electrumServer by lazy { MutableStateFlow(getElectrumServer()) }
+    fun subscribeToElectrumServer(): StateFlow<ElectrumServer> = electrumServer
+
+    private val electrumServerKey = noSqlDb.key<ElectrumServer>(0)
     private fun createElectrumConfiguration(): ElectrumServer {
-        if (appDB[electrumServerKey] == null) {
+        if (noSqlDb[electrumServerKey] == null) {
             logger.info { "Create ElectrumX configuration" }
             setRandomElectrumServer()
         }
-        return appDB[electrumServerKey] ?: error("ElectrumServer must be initialized.")
+        return noSqlDb[electrumServerKey] ?: error("ElectrumServer must be initialized.")
     }
 
-    fun getElectrumServer(): ElectrumServer = appDB[electrumServerKey] ?: createElectrumConfiguration()
+    fun getElectrumServer(): ElectrumServer = noSqlDb[electrumServerKey] ?: createElectrumConfiguration()
 
     private fun putElectrumServer(electrumServer: ElectrumServer) {
         logger.info { "Update electrum configuration [$electrumServer]" }
-        appDB.put(electrumServerKey, electrumServer)
+        noSqlDb.put(electrumServerKey, electrumServer)
     }
 
     fun putElectrumServerAddress(host: String, port: Int, customized: Boolean = false) {
@@ -118,46 +163,13 @@ class AppConfigurationManager(
             }.asElectrumServer()
         )
     }
+    //endregion
 
-    // Bitcoin exchange rates
-    public fun getBitcoinRates(): List<BitcoinPriceRate> = appDB.find<BitcoinPriceRate>().all().useModels {it.toList()}
-    public fun getBitcoinRate(fiatCurrency: FiatCurrency): BitcoinPriceRate = appDB.find<BitcoinPriceRate>().byId(fiatCurrency.name).model()
-
-    private fun launchUpdateRates() = launch {
-        while (isActive) {
-            val priceRates = buildMap<String, Double> {
-                try {
-                    val rates = httpClient.get<Map<String, PriceRate>>("https://blockchain.info/ticker")
-                    rates.forEach {
-                        put(it.key, it.value.last)
-                    }
-
-                    val response = httpClient.get<MxnApiResponse>("https://api.bitso.com/v3/ticker/?book=btc_mxn")
-                    if (response.success) put(FiatCurrency.MXN.name, response.payload.last)
-                } catch (t: Throwable) {
-                    logger.error { "An issue occurred while retrieving exchange rates from API." }
-                    logger.error(t)
-                }
-            }
-
-            val exchangeRates =
-                FiatCurrency.values()
-                    .filter { it.name in priceRates.keys }
-                    .mapNotNull { fiatCurrency ->
-                        priceRates[fiatCurrency.name]?.let { priceRate ->
-                            BitcoinPriceRate(fiatCurrency, priceRate)
-                        }
-                    }
-
-            appDB.execBatch {
-                logger.verbose { "Saving price rates: $exchangeRates" }
-                exchangeRates.forEach {
-                    appDB.put(it)
-                }
-            }
-
-            yield()
-            delay(5.minutes)
-        }
+    //region Tor configuration
+    private val isTorEnabled = MutableStateFlow(false)
+    fun subscribeToIsTorEnabled(): StateFlow<Boolean> = isTorEnabled
+    fun updateTorUsage(enabled: Boolean): Unit {
+        isTorEnabled.value = enabled
     }
+    //endregion
 }

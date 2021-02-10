@@ -17,56 +17,44 @@
 package fr.acinq.phoenix.android
 
 import AppView
-import UnknownWalletState
-import WalletState
 import android.Manifest
 import android.os.Bundle
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.setContent
 import androidx.core.app.ActivityCompat
 import androidx.ui.tooling.preview.Devices
 import androidx.ui.tooling.preview.Preview
-import fr.acinq.eclair.utils.Either
 import fr.acinq.phoenix.android.mvi.MockView
-import fr.acinq.phoenix.ctrl.Initialization
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 
 
 @ExperimentalCoroutinesApi
 class MainActivity : AppCompatActivity() {
 
+    private val seedViewModel by viewModels<SeedViewModel> { SeedViewModel.Factory(applicationContext) }
+
     @ExperimentalMaterialApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.CAMERA), 1234)
-        var wallet by mutableStateOf<WalletState>(Either.Left(UnknownWalletState))
-        MainScope().launch {
-            (application as PhoenixApplication).business.walletManager.openWalletUpdatesSubscription().consumeEach {
-                (application as PhoenixApplication).business.start()
-                wallet = Either.Right(it)
-                return@consumeEach
-            }
-        }
         setContent {
             PhoenixAndroidTheme {
-                AppView(wallet)
+                AppView(seedViewModel)
             }
         }
     }
 }
 
-val MockModelInitialization = Initialization.Model.Initialization
+//val MockModelInitialization = Initialization.Model.Ready
 
 @Preview(device = Devices.PIXEL_3)
 @Composable
 fun DefaultPreview() {
-    MockView { PhoenixAndroidTheme { InitWallet() } }
+    MockView { PhoenixAndroidTheme { Text("Preview") } }
 }

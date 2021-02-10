@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.ContextAmbient
+import androidx.compose.ui.platform.AmbientContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -49,7 +49,7 @@ import requireWallet
 @Composable
 fun ReadDataView() {
     requireWallet(from = Screen.ReadData) {
-        val context = ContextAmbient.current.applicationContext
+        val context = AmbientContext.current.applicationContext
         val nc = navController
         fun handleInput(input: String) {
             // check input is valid - hold it in a viewmodel, maybe using the controller's
@@ -101,7 +101,7 @@ fun FlatButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     shape: Shape = RectangleShape,
-    colors: ButtonColors = ButtonConstants.defaultButtonColors(backgroundColor = MaterialTheme.colors.surface),
+    colors: ButtonColors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.surface),
     contentPadding: PaddingValues = PaddingValues(16.dp),
     content: @Composable RowScope.() -> Unit
 ) {

@@ -16,33 +16,33 @@
 
 package fr.acinq.phoenix.android.mvi
 
-import ControllerFactoryAmbient
+import AmbientControllerFactory
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Providers
-import fr.acinq.phoenix.android.MockModelInitialization
 import fr.acinq.phoenix.ctrl.*
 import fr.acinq.phoenix.ctrl.config.*
 
 @Suppress("UNREACHABLE_CODE")
 val MockControllers = object : ControllerFactory {
-    override fun initialization(): InitializationController = MVI.Controller.Mock(MockModelInitialization)
+    override fun initialization(): InitializationController = MVI.Controller.Mock(TODO())
     override fun content(): ContentController = MVI.Controller.Mock(TODO())
     override fun home(): HomeController = MVI.Controller.Mock(TODO())
     override fun receive(): ReceiveController = MVI.Controller.Mock(TODO())
     override fun scan(): ScanController = MVI.Controller.Mock(TODO())
     override fun restoreWallet(): RestoreWalletController = MVI.Controller.Mock(TODO())
     override fun configuration(): ConfigurationController = MVI.Controller.Mock(TODO())
-    override fun displayConfiguration(): DisplayConfigurationController = MVI.Controller.Mock(TODO())
     override fun electrumConfiguration(): ElectrumConfigurationController = MVI.Controller.Mock(TODO())
     override fun channelsConfiguration(): ChannelsConfigurationController = MVI.Controller.Mock(TODO())
-    override fun recoveryPhraseConfiguration(): RecoveryPhraseConfigurationController {
-        TODO("Not yet implemented")
-    }
+//    override fun recoveryPhraseConfiguration(): RecoveryPhraseConfigurationController {
+//        TODO("Not yet implemented")
+//    }
+    override fun logsConfiguration(): LogsConfigurationController = MVI.Controller.Mock(TODO())
+    override fun closeChannelsConfiguration(): CloseChannelsConfigurationController = MVI.Controller.Mock(TODO())
 }
 
 @Composable
 fun MockView(children: @Composable () -> Unit) {
-    Providers(ControllerFactoryAmbient provides MockControllers) {
+    Providers(AmbientControllerFactory provides MockControllers) {
         children()
     }
 }

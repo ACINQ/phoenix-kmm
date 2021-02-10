@@ -28,7 +28,7 @@ class MVIControllerViewModel<M : MVI.Model, I : MVI.Intent>(val controller: MVI.
     val logger: Logger = newLogger(LoggerFactory.default)
 
     override fun onCleared() {
-        logger.verbose { "clearing controller view model with controller=$controller" }
+        logger.debug { "clearing controller view model with controller=$controller" }
         controller.stop()
     }
 

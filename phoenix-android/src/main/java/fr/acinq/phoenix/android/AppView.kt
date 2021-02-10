@@ -27,12 +27,13 @@ import fr.acinq.phoenix.android.*
 
 @ExperimentalMaterialApi
 @Composable
-fun AppView(wallet: WalletState) {
+fun AppView(seedVM: SeedViewModel) {
     val navController = rememberNavController()
     Providers(
-        ControllerFactoryAmbient provides application.business.controllers,
-        NavControllerAmbient provides navController,
-        WalletStateAmbient provides wallet
+        BusinessFactory provides application.business,
+        AmbientControllerFactory provides application.business.controllers,
+        AmbientNavController provides navController,
+        AmbientKeyState provides seedVM.keyState
     ) {
         Column {
             Text(currentRoute().toString())
@@ -44,10 +45,10 @@ fun AppView(wallet: WalletState) {
                     InitWallet()
                 }
                 composable(Screen.CreateWallet.fullRoute) {
-                    CreateWalletView()
+                    CreateWalletView(seedVM)
                 }
                 composable(Screen.RestoreWallet.fullRoute) {
-                    RestoreWalletView()
+                    RestoreWalletView(seedVM)
                 }
                 composable(Screen.Home.fullRoute) {
                     HomeView()
@@ -67,7 +68,7 @@ fun AppView(wallet: WalletState) {
                     SettingsView()
                 }
                 composable(Screen.DisplaySeed.fullRoute) {
-                    SeedView()
+                    SeedView(seedVM)
                 }
             }
         }

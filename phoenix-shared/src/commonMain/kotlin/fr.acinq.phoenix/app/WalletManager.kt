@@ -1,40 +1,29 @@
 package fr.acinq.phoenix.app
 
-import fr.acinq.bitcoin.ByteVector32
-import fr.acinq.bitcoin.MnemonicCode
+import fr.acinq.bitcoin.Block
+import fr.acinq.eclair.*
+import fr.acinq.eclair.blockchain.fee.FeerateTolerance
+import fr.acinq.eclair.blockchain.fee.OnChainFeeConf
+import fr.acinq.eclair.crypto.LocalKeyManager
+import fr.acinq.eclair.utils.msat
+import fr.acinq.eclair.utils.sat
+import fr.acinq.eclair.utils.toByteVector32
+import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.data.Wallet
+import fr.acinq.phoenix.utils.getValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
-import kotlinx.coroutines.channels.ReceiveChannel
+ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.kodein.db.*
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class WalletManager (private val appDb: DB) : CoroutineScope by MainScope() {
-    private val walletUpdates = ConflatedBroadcastChannel<Wallet>()
-    fun openWalletUpdatesSubscription(): ReceiveChannel<Wallet> = walletUpdates.openSubscription()
+class WalletManager : CoroutineScope by MainScope() {
+    private val _wallet = MutableStateFlow<Wallet?>(null)
+    public val wallet: StateFlow<Wallet?> = _wallet
 
-    init {
-        appDb.on<Wallet>().register {
-            didPut {
-                launch { walletUpdates.send(it) }
-            }
-        }
-        getWallet()?.let {
-            launch { walletUpdates.send(it) }
-        }
+    fun loadWallet(seed: ByteArray): Unit {
+        val newWallet = Wallet(seed = seed)
+        _wallet.value = newWallet
     }
-
-    fun createWallet(mnemonics: List<String>): Unit {
-        MnemonicCode.validate(mnemonics)
-        appDb.put(Wallet(mnemonics = mnemonics))
-    }
-
-    fun getWallet() : Wallet? {
-        val key = appDb.key<Wallet>(0)
-        return appDb[key]
-    }
-
 }

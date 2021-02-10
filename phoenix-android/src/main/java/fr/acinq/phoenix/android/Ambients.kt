@@ -16,51 +16,50 @@
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticAmbientOf
-import androidx.compose.ui.platform.ContextAmbient
+import androidx.compose.ui.platform.AmbientContext
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.navigate
-import fr.acinq.eclair.utils.Either
+import fr.acinq.phoenix.PhoenixBusiness
+import fr.acinq.phoenix.android.KeyState
 import fr.acinq.phoenix.android.PhoenixApplication
 import fr.acinq.phoenix.ctrl.ControllerFactory
-import fr.acinq.phoenix.data.Wallet
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
 
-typealias WalletState = Either<UnknownWalletState, Wallet?>
-
-object UnknownWalletState
-
-fun WalletState.isReady() = this.isRight && this.right != null
-
 typealias CF = ControllerFactory
 
-val ControllerFactoryAmbient = staticAmbientOf<ControllerFactory?>(null)
-val NavControllerAmbient = staticAmbientOf<NavHostController?>(null)
-val WalletStateAmbient = staticAmbientOf<WalletState>(null)
+val BusinessFactory = staticAmbientOf<PhoenixBusiness?>(null)
+val AmbientControllerFactory = staticAmbientOf<ControllerFactory?>(null)
+val AmbientNavController = staticAmbientOf<NavHostController?>(null)
+val AmbientKeyState = staticAmbientOf<KeyState>(null)
 
 @Composable
 val navController: NavHostController
-    get() = NavControllerAmbient.current ?: error("no navigation controller defined")
+    get() = AmbientNavController.current ?: error("no navigation controller defined")
 
 @Composable
-val wallet: WalletState
-    get() = WalletStateAmbient.current
+val keyState: KeyState
+    get() = AmbientKeyState.current
 
 @Composable
 val controllerFactory: ControllerFactory
-    get() = ControllerFactoryAmbient.current ?: error("No controller factory set. Please use appView or mockView.")
+    get() = AmbientControllerFactory.current ?: error("No controller factory set. Please use appView or mockView.")
+
+@Composable
+val business: PhoenixBusiness
+    get() = BusinessFactory.current ?: error("business is not available")
 
 @Composable
 val application: PhoenixApplication
-    get() = ContextAmbient.current.applicationContext as? PhoenixApplication
+    get() = AmbientContext.current.applicationContext as? PhoenixApplication
         ?: error("Application is not of type PhoenixApplication. Are you using appView in preview?")
 
 fun NavHostController.navigate(screen: Screen, arg: String? = null, builder: NavOptionsBuilder.() -> Unit = {}) {
     val route = if (arg.isNullOrBlank()) screen.route else "${screen.route}/$arg"
-    newLogger<NavController>(LoggerFactory.default).verbose { "navigating to $route" }
+    newLogger<NavController>(LoggerFactory.default).debug { "navigating to $route" }
     try {
         navigate(route, builder)
     } catch (e: Exception) {

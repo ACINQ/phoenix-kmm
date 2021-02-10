@@ -14,35 +14,39 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 
 @ExperimentalCoroutinesApi
 actual class NetworkMonitor actual constructor(loggerFactory: LoggerFactory, val ctx: PlatformContext) : CoroutineScope by MainScope() {
 
     val logger = newLogger(loggerFactory)
-    private val connectivityChannel = ConflatedBroadcastChannel<Connection>()
-    actual fun openNetworkStateSubscription(): ReceiveChannel<Connection> = connectivityChannel.openSubscription()
+
+    private val _networkState = MutableStateFlow(NetworkState.NotAvailable)
+    actual val networkState: StateFlow<NetworkState> = _networkState
 
     actual fun start() {
         val connectivityManager = ctx.application.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager?
         connectivityManager?.registerNetworkCallback(NetworkRequest.Builder().build(), object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 super.onAvailable(network)
-                launch { connectivityChannel.send(Connection.ESTABLISHED) }
+                logger.info { "network available" }
+                launch { _networkState.value = NetworkState.Available }
             }
 
             override fun onLost(network: Network) {
                 super.onLost(network)
-                launch { connectivityChannel.send(Connection.CLOSED) }
+                logger.info { "network lost" }
+                launch { _networkState.value = NetworkState.NotAvailable }
             }
 
             override fun onUnavailable() {
                 super.onUnavailable()
-                launch { connectivityChannel.send(Connection.CLOSED) }
+                logger.info { "network unavailable" }
+                launch { _networkState.value = NetworkState.NotAvailable }
             }
-
         })
-        logger.error { "Not yet implemented!" }
     }
 
     actual fun stop() {

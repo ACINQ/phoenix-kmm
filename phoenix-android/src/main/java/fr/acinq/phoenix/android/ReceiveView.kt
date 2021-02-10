@@ -24,7 +24,7 @@ import androidx.compose.material.Button
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ContextAmbient
+import androidx.compose.ui.platform.AmbientContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import copyToClipboard
@@ -40,7 +40,7 @@ fun ReceiveView() {
     requireWallet(from = Screen.Receive) {
         val logger = logger()
         val nc = navController
-        val context = ContextAmbient.current.applicationContext
+        val context = AmbientContext.current.applicationContext
         MVIView(CF::receive) { model, postIntent ->
             when (model) {
                 is Receive.Model.Awaiting -> {

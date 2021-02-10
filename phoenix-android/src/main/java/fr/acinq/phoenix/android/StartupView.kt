@@ -20,18 +20,33 @@ import Screen
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
+import business
+import fr.acinq.phoenix.android.security.EncryptedSeed
 import navController
 import navigate
-import wallet
+import keyState
 
 
 @Composable
 fun StartupView() {
     val nc = navController
-    val actualWallet = wallet
-    when {
-        actualWallet.isLeft -> Text(stringResource(id = R.string.startup_wait))
-        actualWallet.isRight && actualWallet.right == null -> nc.navigate(Screen.InitWallet)
-        else -> nc.navigate(Screen.Home)
+    val ks = keyState
+    when (ks) {
+        is KeyState.Unknown -> Text(stringResource(id = R.string.startup_wait))
+        is KeyState.Absent -> nc.navigate(Screen.InitWallet)
+        is KeyState.Error -> Text(stringResource(id = R.string.startup_error_unreadable))
+        is KeyState.Present -> {
+            when (val encryptedSeed = ks.encryptedSeed) {
+                is EncryptedSeed.V2.NoAuth -> {
+                    val seed = business.prepWallet(EncryptedSeed.toMnemonics(encryptedSeed.decrypt()))
+                    business.loadWallet(seed)
+                    nc.navigate(Screen.Home)
+                }
+                else -> {
+                    Text("Seed=${ks.encryptedSeed} version is not handled yet")
+                }
+            }
+
+        }
     }
 }

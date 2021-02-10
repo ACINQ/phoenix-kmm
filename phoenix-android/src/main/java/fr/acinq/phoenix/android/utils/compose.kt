@@ -18,8 +18,8 @@ package fr.acinq.phoenix.android.utils
 
 import android.app.Application
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.ContextAmbient
+import androidx.compose.ui.platform.AmbientContext
 
 
 @Composable
-val isPreview: Boolean get() = ContextAmbient.current.applicationContext !is Application
+val isPreview: Boolean get() = AmbientContext.current.applicationContext !is Application

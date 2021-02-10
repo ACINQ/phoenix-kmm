@@ -1,15 +1,19 @@
 buildscript {
-    val kotlin_version by extra("1.4.20")
+    val kotlin_version by extra("1.4.21-2")
     repositories {
         google()
         jcenter()
     }
 
     dependencies {
-        val androidVersion = if (System.getProperty("idea.paths.selector").orEmpty().startsWith("IntelliJIdea")) "4.0.1" else "4.2.0-alpha16"
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.21-2")
+
+        val isIntelliJ = System.getProperty("isIntelliJ")!!.toBoolean()
+        val androidVersion = if (isIntelliJ) "4.0.1" else "7.0.0-alpha05"
         classpath("com.android.tools.build:gradle:$androidVersion")
 
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.10")
+        val sqldelightVersion = "1.4.4"
+        classpath("com.squareup.sqldelight:gradle-plugin:$sqldelightVersion")
     }
 }
 
@@ -20,6 +24,7 @@ allprojects {
         maven("https://dl.bintray.com/kotlin/ktor")
         maven("https://kotlin.bintray.com/kotlinx")
         maven("https://dl.bintray.com/kodein-framework/Kodein-DB")
+        maven("https://dl.bintray.com/kodein-framework/Kodein-Memory")
         google()
         jcenter()
     }

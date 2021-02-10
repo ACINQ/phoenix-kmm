@@ -16,7 +16,7 @@
 
 package fr.acinq.phoenix.android.mvi
 
-import ControllerFactoryAmbient
+import AmbientControllerFactory
 import androidx.compose.runtime.*
 import androidx.compose.ui.viewinterop.viewModel
 import controllerFactory
@@ -37,7 +37,7 @@ fun <M : MVI.Model, I : MVI.Intent> MVIView(
         val viewModel: MVIControllerViewModel<M, I> = viewModel(factory = MVIControllerViewModel.Factory(controllerFactory, getController))
         viewModel.controller
     } else {
-        val cf = ControllerFactoryAmbient.current ?: MockControllers
+        val cf = AmbientControllerFactory.current ?: MockControllers
         remember { cf.getController() }
     }
 
