@@ -77,26 +77,50 @@ struct AppAccessView : View {
 			}
 			
 			Section {
-
-				Toggle(isOn: $advancedSecurityEnabled) {
-					HStack(alignment: VerticalAlignment.center) {
-						Text("Advanced security")
-							.padding(.trailing, 2)
-						Button {
-							advancedSecurityHelpButtonTapped()
-						} label: {
-							Image(systemName: "questionmark.circle")
-								.renderingMode(.original)
-								.imageScale(.large)
-						}
+				
+				// SwiftUI Design:
+				//
+				// We have 2 options:
+				// Toggle {
+				//    HStack {
+				//       Text
+				//       Button
+				// }
+				//
+				// HStack {
+				//   Text
+				//   Button
+				//   Spacer
+				//   Toggle.labelsHidden
+				// }
+				//
+				// The problem with the former option is that,
+				// when the Toggle is disabled, the Button is automatically disabled as well.
+				//
+				// We decided we wanted the (?) button to be tappable, even when the Toggle is disabled.
+				// So we went with the later design.
+				
+				HStack(alignment: VerticalAlignment.center) {
+					
+					Text("Advanced security")
+						.padding(.trailing, 2)
+					Button {
+						advancedSecurityHelpButtonTapped()
+					} label: {
+						Image(systemName: "questionmark.circle")
+							.renderingMode(.original)
+							.imageScale(.large)
 					}
-					.font(.body)
+					Spacer()
+					Toggle("", isOn: $advancedSecurityEnabled)
+						.labelsHidden()
+						.onChange(of: advancedSecurityEnabled) { value in
+							self.toggleAdvancedSecurity(value)
+						}
+						.disabled(!biometricsEnabled)
 				}
+				.font(.body)
 				.buttonStyle(PlainButtonStyle()) // disable row highlight when tapping help button
-				.onChange(of: advancedSecurityEnabled) { value in
-					self.toggleAdvancedSecurity(value)
-				}
-				.disabled(!biometricsEnabled)
 				
 				receiveStatus()
 			}
