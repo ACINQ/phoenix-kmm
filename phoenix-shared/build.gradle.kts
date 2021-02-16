@@ -1,10 +1,13 @@
-plugins {
+ plugins {
     val withAndroid = System.getProperty("withAndroid")!!.toBoolean()
     if (withAndroid) id("com.android.library")
     kotlin("multiplatform")
     kotlin("plugin.serialization") version "1.4.10"
+    kotlin("native.cocoapods")
     id("com.squareup.sqldelight")
 }
+
+version = 0.1
 
 val currentOs = org.gradle.internal.os.OperatingSystem.current()
 
@@ -42,11 +45,21 @@ kotlin {
     }
 
     ios {
-        binaries {
-            framework {
-                baseName = "PhoenixShared"
-            }
-        }
+//        binaries {
+//            framework {
+//                baseName = "PhoenixShared"
+//            }
+//        }
+    }
+
+    cocoapods {
+        frameworkName = "PhoenixShared"
+        ios.deploymentTarget = "14.0"
+
+        summary = "CocoaPods"
+        homepage = "https://github.com/JetBrains/kotlin"
+
+        pod("PhoenixCrypto", "1.0", file("/Users/salomonbrys/Code/Acinq/eclair-kmp/PhoenixCrypto/PhoenixCrypto.podspec"))
     }
 
     sourceSets {
@@ -60,7 +73,7 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
-                api("fr.acinq.eclair:eclair-kmp:1.0-beta5")
+                api("fr.acinq.eclair:eclair-kmp:snapshot")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
@@ -162,6 +175,10 @@ val packForXcode by tasks.creating(Sync::class) {
     inputs.property("mode", mode)
     dependsOn(framework.linkTask)
     from({ framework.outputDirectory })
+    kotlin.cocoapods.pods.forEach {
+        from("$buildDir/cocoapods/synthetic/$targetName/phoenix_shared/build/Release-$platformName/${it.name}")
+    }
+
     into(buildDir.resolve("xcode-frameworks"))
 }
 tasks.getByName("build").dependsOn(packForXcode)

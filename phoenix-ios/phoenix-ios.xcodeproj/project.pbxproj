@@ -74,6 +74,8 @@
 		DCF360D02591018300E92031 /* CloseChannelsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF360CF2591018300E92031 /* CloseChannelsView.swift */; };
 		F4AED297257A50CD009485C1 /* LogsConfigurationViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4AED295257A50CD009485C1 /* LogsConfigurationViewerView.swift */; };
 		F4AED298257A50CD009485C1 /* LogsConfigurationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4AED296257A50CD009485C1 /* LogsConfigurationView.swift */; };
+		F4C0D82325DC12F40059C9CD /* PhoenixCrypto.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F4C0D82225DC12F40059C9CD /* PhoenixCrypto.framework */; };
+		F4C0D82425DC12F40059C9CD /* PhoenixCrypto.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = F4C0D82225DC12F40059C9CD /* PhoenixCrypto.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -108,6 +110,7 @@
 			dstSubfolderSpec = 10;
 			files = (
 				DCB0DBB1255AEE22005B29C8 /* PhoenixShared.framework in Embed Frameworks */,
+				F4C0D82425DC12F40059C9CD /* PhoenixCrypto.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -187,6 +190,7 @@
 		DCF360CF2591018300E92031 /* CloseChannelsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CloseChannelsView.swift; sourceTree = "<group>"; };
 		F4AED295257A50CD009485C1 /* LogsConfigurationViewerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LogsConfigurationViewerView.swift; sourceTree = "<group>"; };
 		F4AED296257A50CD009485C1 /* LogsConfigurationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LogsConfigurationView.swift; sourceTree = "<group>"; };
+		F4C0D82225DC12F40059C9CD /* PhoenixCrypto.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = PhoenixCrypto.framework; path = "../phoenix-shared/build/xcode-frameworks/PhoenixCrypto.framework"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +198,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F4C0D82325DC12F40059C9CD /* PhoenixCrypto.framework in Frameworks */,
 				DCC46F1625C3521C005D32D9 /* FirebaseMessaging in Frameworks */,
 				DCB0DB8A255AE42F005B29C8 /* PhoenixShared.framework in Frameworks */,
 			);
@@ -399,6 +404,7 @@
 		DC72C31725A3CF87008A927A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				F4C0D82225DC12F40059C9CD /* PhoenixCrypto.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
