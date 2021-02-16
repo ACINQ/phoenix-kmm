@@ -189,15 +189,15 @@ class AppSecurity {
 		if previousBuild.isVersion(lessThan: "5") {
 			
 			let keychain = GenericPasswordStore()
-			var hardBiomtricsEnabled = false
+			var hardBiometricsEnabled = false
 			
 			do {
-				hardBiomtricsEnabled = try keychain.keyExists(account: keychain_accountName_biometrics)
+				hardBiometricsEnabled = try keychain.keyExists(account: keychain_accountName_biometrics)
 			} catch {
 				log.error("keychain.keyExists(account: hardBiometrics): error: \(String(describing: error))")
 			}
 			
-			if hardBiomtricsEnabled {
+			if hardBiometricsEnabled {
 				// Then soft biometrics are implicitly enabled.
 				// So we need to set that flag.
 				
