@@ -30,7 +30,7 @@ struct CloseChannelsView : View {
 	) -> some View {
 		
 		if let model = model as? CloseChannelsConfiguration.ModelReady {
-			if model.channelCount == 0 {
+			if model.channels.count == 0 {
 				EmptyWalletView()
 			} else {
 				StandardWalletView(model: model, postIntent: postIntent)
@@ -110,16 +110,17 @@ fileprivate struct StandardWalletView : View {
 		
 		VStack(alignment: .leading) {
 			
-			let formattedSats = Utils.formatBitcoin(sat: model.sats, bitcoinUnit: .satoshi)
+			let totalSats = model.channels.map { $0.sats }.reduce(0, +)
+			let formattedSats = Utils.formatBitcoin(sat: totalSats, bitcoinUnit: .satoshi)
 			
-			if model.channelCount == 1 {
+			if model.channels.count == 1 {
 				Text(
 					"You currenly have 1 Lightning channel" +
 					" with a balance of \(formattedSats.string)."
 				)
 			} else {
 				Text(
-					"You currently have \(String(model.channelCount)) Lightning channels" +
+					"You currently have \(String(model.channels.count)) Lightning channels" +
 					" with an aggragated balance of \(formattedSats.string)."
 				)
 			}
@@ -233,7 +234,13 @@ fileprivate struct StandardWalletView : View {
 	//		NotImplementedPopover().anyView
 	//	)
 		
-		postIntent(CloseChannelsConfiguration.IntentCloseAllChannels(address: bitcoinAddress))
+		let channelIds = model.channels.map { $0.id }
+		postIntent(
+			CloseChannelsConfiguration.IntentCloseChannels(
+				channelIds: channelIds,
+				address: bitcoinAddress
+			)
+		)
 	}
 }
 
@@ -251,20 +258,20 @@ fileprivate struct FundsSentView : View {
 					.aspectRatio(contentMode: .fit)
 					.frame(width: 64, height: 64)
 					.foregroundColor(Color.appGreen)
-				
+
 				Text("Funds sent")
 					.font(.title)
 			}
 			.padding(.bottom, 30)
-			
+
 			VStack(alignment: .leading) {
-				
-				if model.channelCount > 1 {
-					Text("Expect to receive \(model.channelCount) separate payments.")
+
+				if model.channels.count > 1 {
+					Text("Expect to receive \(model.channels.count) separate payments.")
 						.padding(.bottom, 10)
 				}
-				
-				let intro = (model.channelCount == 1)
+
+				let intro = (model.channels.count == 1)
 					? NSLocalizedString(
 						"The closing transaction is in your transactions list on the ",
 						comment: "label text"
@@ -273,13 +280,14 @@ fileprivate struct FundsSentView : View {
 						"The closing transactions are in your transactions list on the ",
 						comment: "label text"
 					)
-				
+
 				Text(intro) +
 				Text("main").italic() +
 				Text(" screen. And you can view the status of your channels in the ") +
 				Text("channels list").italic() +
 				Text(" screen.")
-			}
+
+			} // </VStack>
 		}
 	}
 }
@@ -394,8 +402,30 @@ class CloseChannelsView_Previews: PreviewProvider {
 //	static let model_2 = CloseChannelsConfiguration.ModelReady(channelCount: 0, sats: 0)
 //	static let model_3 = CloseChannelsConfiguration.ModelReady(channelCount: 1, sats: 500_000)
 //	static let model_4 = CloseChannelsConfiguration.ModelReady(channelCount: 3, sats: 1_500_000)
-	static let model_5 = CloseChannelsConfiguration.ModelChannelsClosed(channelCount: 1, sats: 500_000)
-	static let model_6 = CloseChannelsConfiguration.ModelChannelsClosed(channelCount: 3, sats: 1_500_500)
+	static let model_5 = CloseChannelsConfiguration.ModelChannelsClosed(channels: [
+		CloseChannelsConfiguration.ModelChannelInfo(
+			id: Bitcoin_kmpByteVector32.random(),
+			sats: 500_000,
+			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+		)
+	])
+	static let model_6 = CloseChannelsConfiguration.ModelChannelsClosed(channels: [
+		CloseChannelsConfiguration.ModelChannelInfo(
+			id: Bitcoin_kmpByteVector32.random(),
+			sats: 500_000,
+			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+		),
+		CloseChannelsConfiguration.ModelChannelInfo(
+			id: Bitcoin_kmpByteVector32.random(),
+			sats: 500_000,
+			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+		),
+		CloseChannelsConfiguration.ModelChannelInfo(
+			id: Bitcoin_kmpByteVector32.random(),
+			sats: 500_000,
+			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+		)
+	])
 	
 	static let mockModel = model_5
 	
