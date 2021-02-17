@@ -6,6 +6,8 @@ plugins {
     id("kotlin-android")
 }
 
+val chain: String by project
+
 val composeVersion = "1.0.0-alpha11"
 val navComposeVersion = "1.0.0-alpha06"
 val zxingVersion = "4.1.0"
@@ -22,9 +24,20 @@ android {
     }
 
     buildTypes {
-        val release by getting {
+        debug {
+            resValue("string", "CHAIN", chain)
+            buildConfigField("String", "CHAIN", chain)
+            isDebuggable = true
+        }
+        release {
+            resValue("string", "CHAIN", chain)
+            buildConfigField("String", "CHAIN", chain)
             isMinifyEnabled = false
-//            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            isDebuggable = false
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 
