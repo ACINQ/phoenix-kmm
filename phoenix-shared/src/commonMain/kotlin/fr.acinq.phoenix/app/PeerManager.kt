@@ -117,7 +117,8 @@ class PeerManager(
             minFundingSatoshis = 1000.sat,
             maxFundingSatoshis = 16777215.sat,
             maxPaymentAttempts = 5,
-            enableTrampolinePayment = true
+            enableTrampolinePayment = true,
+            maxRemoteDustLimit = 600.sat
         )
 
         logger.info { "nodeParams=$nodeParams" }
