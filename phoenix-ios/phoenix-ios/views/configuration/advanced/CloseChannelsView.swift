@@ -3,39 +3,41 @@ import PhoenixShared
 import os.log
 
 #if DEBUG && true
-fileprivate var logger = Logger(
+fileprivate var log = Logger(
 	subsystem: Bundle.main.bundleIdentifier!,
 	category: "CloseChannelsView"
 )
 #else
-fileprivate var logger = Logger(OSLog.disabled)
+fileprivate var log = Logger(OSLog.disabled)
 #endif
 
-struct CloseChannelsView : View {
+struct CloseChannelsView : AltMviView {
 	
-	var body: some View {
+	@StateObject var mvi = AltMVI({ $0.closeChannelsConfiguration() })
+	
+	@Environment(\.controllerFactory) var factoryEnv
+	var factory: ControllerFactory { return factoryEnv }
+	
+	@ViewBuilder
+	var view: some View {
 		
-		MVIView({ $0.closeChannelsConfiguration() }) { model, postIntent in
-			
-			main(model, postIntent)
-		}
-		.padding(.top, 40)
-		.padding([.leading, .trailing, .bottom])
-		.navigationBarTitle("Close channels", displayMode: .inline)
+		main
+			.padding(.top, 30)
+			.padding([.leading, .trailing], 30)
+			.padding(.bottom, 10)
+			.navigationBarTitle("Close channels", displayMode: .inline)
 	}
 	
-	@ViewBuilder func main(
-		_ model: CloseChannelsConfiguration.Model,
-		_ postIntent: @escaping (CloseChannelsConfiguration.Intent) -> Void
-	) -> some View {
+	@ViewBuilder
+	var main: some View {
 		
-		if let model = model as? CloseChannelsConfiguration.ModelReady {
+		if let model = mvi.model as? CloseChannelsConfiguration.ModelReady {
 			if model.channels.count == 0 {
 				EmptyWalletView()
 			} else {
-				StandardWalletView(model: model, postIntent: postIntent)
+				StandardWalletView(model: model, postIntent: mvi.intent)
 			}
-		} else if let model = model as? CloseChannelsConfiguration.ModelChannelsClosed {
+		} else if let model = mvi.model as? CloseChannelsConfiguration.ModelChannelsClosed {
 			FundsSentView(model: model)
 		} else {
 			LoadingWalletView()
@@ -101,13 +103,6 @@ fileprivate struct StandardWalletView : View {
 	
 	var body: some View {
 		
-		ZStack {
-			main()
-		}
-	}
-	
-	@ViewBuilder func main() -> some View {
-		
 		VStack(alignment: .leading) {
 			
 			let totalSats = model.channels.map { $0.sats }.reduce(0, +)
@@ -121,7 +116,7 @@ fileprivate struct StandardWalletView : View {
 			} else {
 				Text(
 					"You currently have \(String(model.channels.count)) Lightning channels" +
-					" with an aggragated balance of \(formattedSats.string)."
+					" with an aggragate balance of \(formattedSats.string)."
 				)
 			}
 			
@@ -185,7 +180,7 @@ fileprivate struct StandardWalletView : View {
 	}
 	
 	func checkBitcoinAddress() -> Void {
-		logger.trace("checkBitcoinAddress()")
+		log.trace("checkBitcoinAddress()")
 		
 		let business = AppDelegate.get().business
 		let result = business.util.parseBitcoinAddress(addr: bitcoinAddress)
@@ -218,7 +213,7 @@ fileprivate struct StandardWalletView : View {
 	}
 	
 	func drainWallet() -> Void {
-		logger.trace("drainWallet()")
+		log.trace("drainWallet()")
 		
 		popoverState.dismissable.send(false)
 		popoverState.displayContent.send(
@@ -227,12 +222,7 @@ fileprivate struct StandardWalletView : View {
 	}
 	
 	func confirmDrainWallet() -> Void {
-		logger.trace("confirmDrainWallet()")
-	
-	//	popoverState.dismissable.send(true)
-	//	popoverState.displayContent.send(
-	//		NotImplementedPopover().anyView
-	//	)
+		log.trace("confirmDrainWallet()")
 		
 		let channelIds = model.channels.map { $0.id }
 		postIntent(
@@ -349,48 +339,14 @@ fileprivate struct ConfirmationPopover : View {
 	}
 	
 	func didTapCancel() -> Void {
-		logger.trace("cancel()")
+		log.trace("cancel()")
 		popoverState.close.send()
 	}
 	
 	func didTapConfirm() -> Void {
-		logger.trace("confirm()")
+		log.trace("confirm()")
 		popoverState.close.send()
 		confirmAction()
-	}
-}
-
-fileprivate struct NotImplementedPopover: View {
-	
-	@Environment(\.popoverState) var popoverState: PopoverState
-	
-	var body: some View {
-		
-		VStack(alignment: .trailing) {
-		
-			VStack(alignment: .leading) {
-				Text("Coming soon")
-					.font(.title2)
-					.padding(.bottom)
-				
-				Text("Sorry, we're still working on this. Check back later.")
-			}
-			.padding(.bottom, 20)
-			
-			HStack {
-				Button {
-					dismiss()
-				} label : {
-					Text("OK").font(.title2)
-				}
-			}
-		
-		}// </VStack>
-		.padding()
-	}
-	
-	func dismiss() -> Void {
-		popoverState.close.send()
 	}
 }
 
@@ -398,54 +354,63 @@ fileprivate struct NotImplementedPopover: View {
 
 class CloseChannelsView_Previews: PreviewProvider {
 	
-//	static let model_1 = CloseChannelsConfiguration.ModelLoading()
-//	static let model_2 = CloseChannelsConfiguration.ModelReady(channelCount: 0, sats: 0)
-//	static let model_3 = CloseChannelsConfiguration.ModelReady(channelCount: 1, sats: 500_000)
-//	static let model_4 = CloseChannelsConfiguration.ModelReady(channelCount: 3, sats: 1_500_000)
-	static let model_5 = CloseChannelsConfiguration.ModelChannelsClosed(channels: [
-		CloseChannelsConfiguration.ModelChannelInfo(
-			id: Bitcoin_kmpByteVector32.random(),
-			sats: 500_000,
-			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
-		)
-	])
-	static let model_6 = CloseChannelsConfiguration.ModelChannelsClosed(channels: [
-		CloseChannelsConfiguration.ModelChannelInfo(
-			id: Bitcoin_kmpByteVector32.random(),
-			sats: 500_000,
-			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
-		),
-		CloseChannelsConfiguration.ModelChannelInfo(
-			id: Bitcoin_kmpByteVector32.random(),
-			sats: 500_000,
-			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
-		),
-		CloseChannelsConfiguration.ModelChannelInfo(
-			id: Bitcoin_kmpByteVector32.random(),
-			sats: 500_000,
-			status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
-		)
-	])
-	
-	static let mockModel = model_5
+	static let mockModel = CloseChannelsConfiguration.ModelLoading() // deprecated
 	
 	static var previews: some View {
 		
 		NavigationView {
-			mockView(CloseChannelsView())
+			CloseChannelsView().mock(
+				CloseChannelsConfiguration.ModelLoading()
+			)
 		}
 		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")
 		
 		NavigationView {
-			mockView(CloseChannelsView())
+			CloseChannelsView().mock(
+				CloseChannelsConfiguration.ModelReady(channels: [
+					CloseChannelsConfiguration.ModelChannelInfo(
+						id: Bitcoin_kmpByteVector32.random(),
+						sats: 500_000,
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
+					)
+				], publicKey: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
+			)
 		}
-		.preferredColorScheme(.dark)
+		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")
 		
-		NotImplementedPopover()
-			.padding()
-			.preferredColorScheme(.light)
-			.previewDevice("iPhone 8")
+		NavigationView {
+			CloseChannelsView().mock(
+				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
+					CloseChannelsConfiguration.ModelChannelInfo(
+						id: Bitcoin_kmpByteVector32.random(),
+						sats: 500_000,
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+					)
+				])
+			)
+		}
+		.preferredColorScheme(.light)
+		.previewDevice("iPhone 8")
+		
+		NavigationView {
+			CloseChannelsView().mock(
+				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
+					CloseChannelsConfiguration.ModelChannelInfo(
+						id: Bitcoin_kmpByteVector32.random(),
+						sats: 500_000,
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+					),
+					CloseChannelsConfiguration.ModelChannelInfo(
+						id: Bitcoin_kmpByteVector32.random(),
+						sats: 500_000,
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+					)
+				])
+			)
+		}
+		.preferredColorScheme(.light)
+		.previewDevice("iPhone 8")
 	}
 }

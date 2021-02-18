@@ -2,12 +2,16 @@ package fr.acinq.phoenix.app.ctrl.config
 
 import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
+import fr.acinq.bitcoin.DeterministicWallet
 import fr.acinq.eclair.channel.*
 import fr.acinq.eclair.io.WrappedChannelEvent
 import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.app.Utilities
+import fr.acinq.phoenix.app.WalletManager
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.CloseChannelsConfiguration
+import fr.acinq.phoenix.data.Chain
+import fr.acinq.phoenix.data.Wallet
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -16,6 +20,9 @@ import org.kodein.log.LoggerFactory
 class AppCloseChannelsConfigurationController(
     loggerFactory: LoggerFactory,
     private val peerManager: PeerManager,
+    private val walletManager: WalletManager,
+    private val masterPubkeyPath: String,
+    private val chain: Chain,
     private val util: Utilities
 ) : AppController<CloseChannelsConfiguration.Model, CloseChannelsConfiguration.Intent>(
     loggerFactory,
@@ -51,6 +58,12 @@ class AppCloseChannelsConfigurationController(
                     }
                     model(CloseChannelsConfiguration.Model.ChannelsClosed(updatedChannelsList))
                 } else {
+                    val wallet = walletManager.wallet.value!!
+                    val pubKey = wallet.onchainAddress(
+                        path = masterPubkeyPath,
+                        isMainnet = chain == Chain.MAINNET
+                    )
+
                     // UI is waiting for list of channels (user hasn't requested close yet).
                     // We want to send Model.Ready,
                     // with a list that contains only channels in Normal state.
@@ -66,7 +79,7 @@ class AppCloseChannelsConfigurationController(
                             else -> null
                         }
                     }
-                    model(CloseChannelsConfiguration.Model.Ready(normalChannelsList))
+                    model(CloseChannelsConfiguration.Model.Ready(normalChannelsList, pubKey))
                 }
             }
         }

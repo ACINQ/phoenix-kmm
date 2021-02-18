@@ -11,7 +11,7 @@ object CloseChannelsConfiguration {
     sealed class Model : MVI.Model() {
 
         object Loading : Model()
-        data class Ready(val channels: List<ChannelInfo>) : Model()
+        data class Ready(val channels: List<ChannelInfo>, val publicKey: String) : Model()
         data class ChannelsClosed(val channels: List<ChannelInfo>) : Model()
 
         data class ChannelInfo(
