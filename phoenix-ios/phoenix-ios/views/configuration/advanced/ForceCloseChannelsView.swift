@@ -164,7 +164,7 @@ fileprivate struct StandardWalletView : View {
 						.imageScale(.large)
 						.padding(.trailing, 4)
 					
-					Text(model.publicKey)
+					Text(model.address)
 						.font(.system(.body, design: .monospaced))
 						.lineLimit(nil)
 						.minimumScaleFactor(0.5) // problems with truncation
@@ -348,7 +348,7 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 						sats: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
 					)
-				], publicKey: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
+				], address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
 			)
 		}
 		.preferredColorScheme(.light)

@@ -374,7 +374,7 @@ class CloseChannelsView_Previews: PreviewProvider {
 						sats: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
 					)
-				], publicKey: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
+				], address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
 			)
 		}
 		.preferredColorScheme(.light)

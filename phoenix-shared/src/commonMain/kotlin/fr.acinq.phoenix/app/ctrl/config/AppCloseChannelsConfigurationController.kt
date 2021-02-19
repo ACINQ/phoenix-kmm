@@ -58,12 +58,6 @@ class AppCloseChannelsConfigurationController(
                     }
                     model(CloseChannelsConfiguration.Model.ChannelsClosed(updatedChannelsList))
                 } else {
-                    val wallet = walletManager.wallet.value!!
-                    val pubKey = wallet.onchainAddress(
-                        path = masterPubkeyPath,
-                        isMainnet = chain == Chain.MAINNET
-                    )
-
                     // UI is waiting for list of channels (user hasn't requested close yet).
                     // We want to send Model.Ready,
                     // with a list that contains only channels in Normal state.
@@ -79,7 +73,14 @@ class AppCloseChannelsConfigurationController(
                             else -> null
                         }
                     }
-                    model(CloseChannelsConfiguration.Model.Ready(normalChannelsList, pubKey))
+
+                    val wallet = walletManager.wallet.value!!
+                    val address = wallet.onchainAddress(
+                        path = masterPubkeyPath,
+                        isMainnet = chain == Chain.MAINNET
+                    )
+
+                    model(CloseChannelsConfiguration.Model.Ready(normalChannelsList, address))
                 }
             }
         }
