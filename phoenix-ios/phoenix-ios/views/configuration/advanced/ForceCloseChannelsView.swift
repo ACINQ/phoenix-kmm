@@ -36,13 +36,13 @@ struct ForceCloseChannelsView : AltMviView {
 	@ViewBuilder
 	var main: some View {
 		
-		if let model = mvi.model as? ForceCloseChannelsConfiguration.ModelReady {
+		if let model = mvi.model as? CloseChannelsConfiguration.ModelReady {
 			if model.channels.count == 0 {
 				EmptyWalletView()
 			} else {
 				StandardWalletView(model: model, postIntent: mvi.intent)
 			}
-		} else if let model = mvi.model as? ForceCloseChannelsConfiguration.ModelChannelsClosed {
+		} else if let model = mvi.model as? CloseChannelsConfiguration.ModelChannelsClosed {
 			FundsSentView(model: model)
 		} else {
 			LoadingWalletView()
@@ -103,8 +103,8 @@ fileprivate struct EmptyWalletView : View {
 
 fileprivate struct StandardWalletView : View {
 	
-	let model: ForceCloseChannelsConfiguration.ModelReady
-	let postIntent: (ForceCloseChannelsConfiguration.Intent) -> Void
+	let model: CloseChannelsConfiguration.ModelReady
+	let postIntent: (CloseChannelsConfiguration.Intent) -> Void
 	
 	@Environment(\.popoverState) var popoverState: PopoverState
 	
@@ -223,14 +223,14 @@ fileprivate struct StandardWalletView : View {
 		log.trace("confirmForceCloseChannels()")
 		
 		postIntent(
-			ForceCloseChannelsConfiguration.IntentForceCloseAllChannels()
+			CloseChannelsConfiguration.IntentForceCloseAllChannels()
 		)
 	}
 }
 
 fileprivate struct FundsSentView : View {
 	
-	let model: ForceCloseChannelsConfiguration.ModelChannelsClosed
+	let model: CloseChannelsConfiguration.ModelChannelsClosed
 	
 	var body: some View {
 		
@@ -337,13 +337,13 @@ fileprivate struct ConfirmationPopover : View {
 
 class ForceCloseChannelsView_Previews: PreviewProvider {
 	
-	static let mockModel = ForceCloseChannelsConfiguration.ModelLoading() // deprecated
+	static let mockModel = CloseChannelsConfiguration.ModelLoading() // deprecated
 	
 	static var previews: some View {
 		
 		NavigationView {
 			ForceCloseChannelsView().mock(
-				ForceCloseChannelsConfiguration.ModelLoading()
+				CloseChannelsConfiguration.ModelLoading()
 			)
 		}
 		.preferredColorScheme(.light)
@@ -351,11 +351,11 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 		
 		NavigationView {
 			ForceCloseChannelsView().mock(
-				ForceCloseChannelsConfiguration.ModelReady(channels: [
-					ForceCloseChannelsConfiguration.ModelChannelInfo(
+				CloseChannelsConfiguration.ModelReady(channels: [
+					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
 						balance: 500_000,
-						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.normal
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
 					)
 				], address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
 			)
@@ -365,11 +365,11 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 		
 		NavigationView {
 			ForceCloseChannelsView().mock(
-				ForceCloseChannelsConfiguration.ModelChannelsClosed(channels: [
-					ForceCloseChannelsConfiguration.ModelChannelInfo(
+				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
+					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
 						balance: 500_000,
-						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.closing
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					)
 				])
 			)
@@ -379,16 +379,16 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 		
 		NavigationView {
 			ForceCloseChannelsView().mock(
-				ForceCloseChannelsConfiguration.ModelChannelsClosed(channels: [
-					ForceCloseChannelsConfiguration.ModelChannelInfo(
+				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
+					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
 						balance: 500_000,
-						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.closing
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					),
-					ForceCloseChannelsConfiguration.ModelChannelInfo(
+					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
 						balance: 500_000,
-						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.closing
+						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					)
 				])
 			)

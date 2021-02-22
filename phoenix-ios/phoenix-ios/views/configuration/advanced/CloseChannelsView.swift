@@ -372,7 +372,7 @@ class CloseChannelsView_Previews: PreviewProvider {
 						balance: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
 					)
-				])
+				], address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
 			)
 		}
 		.preferredColorScheme(.light)

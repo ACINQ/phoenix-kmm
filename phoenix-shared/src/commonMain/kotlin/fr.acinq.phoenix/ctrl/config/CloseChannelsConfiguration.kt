@@ -11,7 +11,7 @@ object CloseChannelsConfiguration {
     sealed class Model : MVI.Model() {
 
         object Loading : Model()
-        data class Ready(val channels: List<ChannelInfo>) : Model()
+        data class Ready(val channels: List<ChannelInfo>, val address: String) : Model()
         data class ChannelsClosed(val channels: List<ChannelInfo>) : Model()
 
         data class ChannelInfo(
@@ -22,6 +22,8 @@ object CloseChannelsConfiguration {
 
         enum class ChannelInfoStatus {
             Normal,
+            Offline,
+            Syncing,
             Closing,
             Closed,
             Aborted
@@ -30,5 +32,6 @@ object CloseChannelsConfiguration {
 
     sealed class Intent : MVI.Intent() {
         data class MutualCloseAllChannels(val address: String) : Intent()
+        object ForceCloseAllChannels : Intent()
     }
 }

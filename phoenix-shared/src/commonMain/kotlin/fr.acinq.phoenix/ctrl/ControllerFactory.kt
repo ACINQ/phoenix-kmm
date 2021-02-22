@@ -15,5 +15,5 @@ interface ControllerFactory {
     fun channelsConfiguration(): ChannelsConfigurationController
     fun logsConfiguration(): LogsConfigurationController
     fun closeChannelsConfiguration(): CloseChannelsConfigurationController
-    fun forceCloseChannelsConfiguration(): ForceCloseChannelsConfigurationController
+    fun forceCloseChannelsConfiguration(): CloseChannelsConfigurationController
 }

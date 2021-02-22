@@ -6,9 +6,11 @@ import fr.acinq.eclair.channel.*
 import fr.acinq.eclair.io.WrappedChannelEvent
 import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.app.Utilities
+import fr.acinq.phoenix.app.WalletManager
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.CloseChannelsConfiguration
 import fr.acinq.phoenix.ctrl.config.CloseChannelsConfiguration.Model.ChannelInfoStatus
+import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -17,7 +19,11 @@ import org.kodein.log.LoggerFactory
 class AppCloseChannelsConfigurationController(
     loggerFactory: LoggerFactory,
     private val peerManager: PeerManager,
-    private val util: Utilities
+    private val walletManager: WalletManager,
+    private val masterPubkeyPath: String,
+    private val chain: Chain,
+    private val util: Utilities,
+    private val isForceClose: Boolean
 ) : AppController<CloseChannelsConfiguration.Model, CloseChannelsConfiguration.Intent>(
     loggerFactory,
     CloseChannelsConfiguration.Model.Loading
@@ -37,8 +43,21 @@ class AppCloseChannelsConfigurationController(
         else -> false
     }
 
-    fun isMutualClosable(channel: ChannelState): Boolean = channelInfoStatus(channel)?.let {
-        isMutualClosable(it)
+    fun isForceClosable(channelInfoStatus: ChannelInfoStatus): Boolean = when (channelInfoStatus) {
+        ChannelInfoStatus.Normal -> true
+        ChannelInfoStatus.Offline -> true
+        ChannelInfoStatus.Syncing -> true
+        else -> false
+    }
+
+    fun isClosable(channelInfoStatus: ChannelInfoStatus): Boolean = if (isForceClose) {
+        isForceClosable(channelInfoStatus)
+    } else {
+        isMutualClosable(channelInfoStatus)
+    }
+
+    fun isClosable(channel: ChannelState): Boolean = channelInfoStatus(channel)?.let {
+        isClosable(it)
     } ?: false
 
     init {
@@ -62,10 +81,17 @@ class AppCloseChannelsConfigurationController(
                 if (closingChannelIds != null) {
                     model(CloseChannelsConfiguration.Model.ChannelsClosed(updatedChannelsList))
                 } else {
-                    val mutualClosableChannelsList = updatedChannelsList.filter {
-                        isMutualClosable(it.status)
+                    val closableChannelsList = updatedChannelsList.filter {
+                        isClosable(it.status)
                     }
-                    model(CloseChannelsConfiguration.Model.Ready(mutualClosableChannelsList))
+
+                    val wallet = walletManager.wallet.value!!
+                    val address = wallet.onchainAddress(
+                        path = masterPubkeyPath,
+                        isMainnet = chain == Chain.MAINNET
+                    )
+
+                    model(CloseChannelsConfiguration.Model.Ready(closableChannelsList, address))
                 }
             }
         }
@@ -79,17 +105,17 @@ class AppCloseChannelsConfigurationController(
         var scriptPubKey : ByteArray? = null
         if (intent is CloseChannelsConfiguration.Intent.MutualCloseAllChannels) {
             scriptPubKey = util.addressToPublicKeyScript(address = intent.address)
-        }
-        if (scriptPubKey == null) {
-            throw IllegalArgumentException(
-                "Address is invalid. Caller MUST validate user input via parseBitcoinAddress"
-            )
+            if (scriptPubKey == null) {
+                throw IllegalArgumentException(
+                    "Address is invalid. Caller MUST validate user input via parseBitcoinAddress"
+                )
+            }
         }
 
         launch {
             val peer = peerManager.getPeer()
             val filteredChannels = peer.channels.filter {
-                isMutualClosable(it.value)
+                isClosable(it.value)
             }
 
             closingChannelIds = closingChannelIds?.let {
@@ -97,7 +123,11 @@ class AppCloseChannelsConfigurationController(
             } ?: filteredChannels.keys
 
             filteredChannels.keys.forEach { channelId ->
-                val command = CMD_CLOSE(scriptPubKey = ByteVector(scriptPubKey))
+                val command: CloseCommand = if (scriptPubKey != null) {
+                    CMD_CLOSE(scriptPubKey = ByteVector(scriptPubKey))
+                } else {
+                    CMD_FORCECLOSE
+                }
                 val channelEvent = ChannelEvent.ExecuteCommand(command)
                 val peerEvent = WrappedChannelEvent(channelId, channelEvent)
                 peer.send(peerEvent)
