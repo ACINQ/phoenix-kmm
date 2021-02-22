@@ -20,7 +20,6 @@ class AppCloseChannelsConfigurationController(
     loggerFactory: LoggerFactory,
     private val peerManager: PeerManager,
     private val walletManager: WalletManager,
-    private val masterPubkeyPath: String,
     private val chain: Chain,
     private val util: Utilities,
     private val isForceClose: Boolean
@@ -85,9 +84,13 @@ class AppCloseChannelsConfigurationController(
                         isClosable(it.status)
                     }
 
+                    val path = when (chain) {
+                        Chain.MAINNET -> "m/84'/0'/0'/0/0"
+                        else -> "m/84'/1'/0'/0/0"
+                    }
                     val wallet = walletManager.wallet.value!!
                     val address = wallet.onchainAddress(
-                        path = masterPubkeyPath,
+                        path = path,
                         isMainnet = chain == Chain.MAINNET
                     )
 
