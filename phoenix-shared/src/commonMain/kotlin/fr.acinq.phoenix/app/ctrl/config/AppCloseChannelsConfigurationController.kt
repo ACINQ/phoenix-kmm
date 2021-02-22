@@ -51,7 +51,7 @@ class AppCloseChannelsConfigurationController(
                         status?.let { mappedStatus ->
                             CloseChannelsConfiguration.Model.ChannelInfo(
                                 id = it.key,
-                                sats = sats(it.value),
+                                balance = sats(it.value),
                                 status = mappedStatus
                             )
                         }
@@ -66,7 +66,7 @@ class AppCloseChannelsConfigurationController(
                             is Normal -> {
                                 CloseChannelsConfiguration.Model.ChannelInfo(
                                     id = it.key,
-                                    sats = sats(it.value),
+                                    balance = sats(it.value),
                                     status = CloseChannelsConfiguration.Model.ChannelInfoStatus.Normal
                                 )
                             }

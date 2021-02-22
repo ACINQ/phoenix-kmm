@@ -352,7 +352,7 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 				CloseChannelsConfiguration.ModelReady(channels: [
 					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
-						sats: 500_000,
+						balance: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
 					)
 				], address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
@@ -366,7 +366,7 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
 					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
-						sats: 500_000,
+						balance: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					)
 				])

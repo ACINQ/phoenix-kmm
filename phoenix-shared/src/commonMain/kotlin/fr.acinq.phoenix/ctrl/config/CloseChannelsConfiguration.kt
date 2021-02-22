@@ -16,7 +16,7 @@ object CloseChannelsConfiguration {
 
         data class ChannelInfo(
             val id: ByteVector32,
-            val sats: Long,
+            val balance: Long, // in sats
             val status: ChannelInfoStatus
         )
 

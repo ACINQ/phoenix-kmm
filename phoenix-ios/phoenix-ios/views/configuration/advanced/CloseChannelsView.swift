@@ -105,7 +105,7 @@ fileprivate struct StandardWalletView : View {
 		
 		VStack(alignment: .leading) {
 			
-			let totalSats = model.channels.map { $0.sats }.reduce(0, +)
+			let totalSats = model.channels.map { $0.balance }.reduce(0, +)
 			let formattedSats = Utils.formatBitcoin(sat: totalSats, bitcoinUnit: .satoshi)
 			
 			if model.channels.count == 1 {
@@ -371,7 +371,7 @@ class CloseChannelsView_Previews: PreviewProvider {
 				CloseChannelsConfiguration.ModelReady(channels: [
 					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
-						sats: 500_000,
+						balance: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
 					)
 				], address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
@@ -385,7 +385,7 @@ class CloseChannelsView_Previews: PreviewProvider {
 				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
 					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
-						sats: 500_000,
+						balance: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					)
 				])
@@ -399,12 +399,12 @@ class CloseChannelsView_Previews: PreviewProvider {
 				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
 					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
-						sats: 500_000,
+						balance: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					),
 					CloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
-						sats: 500_000,
+						balance: 500_000,
 						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					)
 				])
