@@ -43,6 +43,9 @@ class MockControllerFactory : ControllerFactory {
 	func closeChannelsConfiguration() -> MVIController<CloseChannelsConfiguration.Model, CloseChannelsConfiguration.Intent> {
 		MVIControllerMock(model: CloseChannelsView_Previews.mockModel)
 	}
+	func forceCloseChannelsConfiguration() -> MVIController<ForceCloseChannelsConfiguration.Model, ForceCloseChannelsConfiguration.Intent> {
+		return MVIControllerMock(model: ForceCloseChannelsView_Previews.mockModel)
+	}
 }
 
 func appView<V : View>(_ content: V) -> some View {

@@ -132,6 +132,9 @@ extension View {
 	func mock(_ mock: ElectrumConfiguration.Model) -> some View {
 		environment(\.controllerFactory, AltControllerFactory(mock))
 	}
+	func mock(_ mock: ForceCloseChannelsConfiguration.Model) -> some View {
+		environment(\.controllerFactory, AltControllerFactory(mock))
+	}
 	func mock(_ mock: Home.Model) -> some View {
 		environment(\.controllerFactory, AltControllerFactory(mock))
 	}
@@ -213,6 +216,18 @@ class AltControllerFactory : ControllerFactory {
 			return MVIControllerMock(model: mock)
 		} else {
 			return base.electrumConfiguration()
+		}
+	}
+	
+	var mock_forceCloseChannels: ForceCloseChannelsConfiguration.Model? = nil
+	init(_ mock: ForceCloseChannelsConfiguration.Model) {
+		mock_forceCloseChannels = mock
+	}
+	func forceCloseChannelsConfiguration() -> MVIController<ForceCloseChannelsConfiguration.Model, ForceCloseChannelsConfiguration.Intent> {
+		if let mock = mock_forceCloseChannels {
+			return MVIControllerMock(model: mock)
+		} else {
+			return base.forceCloseChannelsConfiguration()
 		}
 	}
 	

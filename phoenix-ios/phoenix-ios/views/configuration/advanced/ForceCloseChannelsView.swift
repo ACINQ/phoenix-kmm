@@ -5,7 +5,7 @@ import os.log
 #if DEBUG && true
 fileprivate var log = Logger(
 	subsystem: Bundle.main.bundleIdentifier!,
-	category: "CloseChannelsView"
+	category: "ForceCloseChannelsView"
 )
 #else
 fileprivate var log = Logger(OSLog.disabled)
@@ -17,7 +17,7 @@ fileprivate let CONTENT_PADDING_BOTTOM: CGFloat = 20
 
 struct ForceCloseChannelsView : AltMviView {
 	
-	@StateObject var mvi = AltMVI({ $0.closeChannelsConfiguration() })
+	@StateObject var mvi = AltMVI({ $0.forceCloseChannelsConfiguration() })
 	
 	@Environment(\.controllerFactory) var factoryEnv
 	var factory: ControllerFactory { return factoryEnv }
@@ -36,13 +36,13 @@ struct ForceCloseChannelsView : AltMviView {
 	@ViewBuilder
 	var main: some View {
 		
-		if let model = mvi.model as? CloseChannelsConfiguration.ModelReady {
+		if let model = mvi.model as? ForceCloseChannelsConfiguration.ModelReady {
 			if model.channels.count == 0 {
 				EmptyWalletView()
 			} else {
 				StandardWalletView(model: model, postIntent: mvi.intent)
 			}
-		} else if let model = mvi.model as? CloseChannelsConfiguration.ModelChannelsClosed {
+		} else if let model = mvi.model as? ForceCloseChannelsConfiguration.ModelChannelsClosed {
 			FundsSentView(model: model)
 		} else {
 			LoadingWalletView()
@@ -103,8 +103,8 @@ fileprivate struct EmptyWalletView : View {
 
 fileprivate struct StandardWalletView : View {
 	
-	let model: CloseChannelsConfiguration.ModelReady
-	let postIntent: (CloseChannelsConfiguration.Intent) -> Void
+	let model: ForceCloseChannelsConfiguration.ModelReady
+	let postIntent: (ForceCloseChannelsConfiguration.Intent) -> Void
 	
 	@Environment(\.popoverState) var popoverState: PopoverState
 	
@@ -222,18 +222,15 @@ fileprivate struct StandardWalletView : View {
 	func confirmForceCloseChannels() -> Void {
 		log.trace("confirmForceCloseChannels()")
 		
-		let channelIds = model.channels.map { $0.id }
 		postIntent(
-			CloseChannelsConfiguration.IntentForceCloseChannels(
-				channelIds: channelIds
-			)
+			ForceCloseChannelsConfiguration.IntentForceCloseAllChannels()
 		)
 	}
 }
 
 fileprivate struct FundsSentView : View {
 	
-	let model: CloseChannelsConfiguration.ModelChannelsClosed
+	let model: ForceCloseChannelsConfiguration.ModelChannelsClosed
 	
 	var body: some View {
 		
@@ -259,28 +256,31 @@ fileprivate struct FundsSentView : View {
 				.font(.title)
 				.padding(.bottom, 30)
 
-			if model.channels.count > 1 {
-				Text("Expect to receive \(model.channels.count) separate payments.")
-					.padding(.bottom, 10)
-			}
+			VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+				
+				if model.channels.count > 1 {
+					Text("Expect to receive \(model.channels.count) separate payments.")
+						.padding(.bottom, 10)
+				}
 
-			let intro = (model.channels.count == 1)
-				? NSLocalizedString(
-					"The closing transaction is in your transactions list on the ",
-					comment: "label text"
-				)
-				: NSLocalizedString(
-					"The closing transactions are in your transactions list on the ",
-					comment: "label text"
-				)
-
-			Group {
-				Text(intro) +
-				Text("main").italic() +
-				Text(" screen. And you can view the status of your channels in the ") +
-				Text("channels list").italic() +
-				Text(" screen.")
-			}
+				let intro = (model.channels.count == 1)
+					? NSLocalizedString(
+						"The closing transaction is in your transactions list on the ",
+						comment: "label text"
+					)
+					: NSLocalizedString(
+						"The closing transactions are in your transactions list on the ",
+						comment: "label text"
+					)
+	
+				Group {
+					Text(intro) +
+					Text("main").italic() +
+					Text(" screen. And you can view the status of your channels in the ") +
+					Text("channels list").italic() +
+					Text(" screen.")
+				}
+			} // </VStack>
 
 		} // </VStack>
 		.padding(.top, CONTENT_PADDING_TOP)
@@ -337,11 +337,13 @@ fileprivate struct ConfirmationPopover : View {
 
 class ForceCloseChannelsView_Previews: PreviewProvider {
 	
+	static let mockModel = ForceCloseChannelsConfiguration.ModelLoading() // deprecated
+	
 	static var previews: some View {
 		
 		NavigationView {
 			ForceCloseChannelsView().mock(
-				CloseChannelsConfiguration.ModelLoading()
+				ForceCloseChannelsConfiguration.ModelLoading()
 			)
 		}
 		.preferredColorScheme(.light)
@@ -349,11 +351,11 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 		
 		NavigationView {
 			ForceCloseChannelsView().mock(
-				CloseChannelsConfiguration.ModelReady(channels: [
-					CloseChannelsConfiguration.ModelChannelInfo(
+				ForceCloseChannelsConfiguration.ModelReady(channels: [
+					ForceCloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
 						balance: 500_000,
-						status: CloseChannelsConfiguration.ModelChannelInfoStatus.normal
+						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.normal
 					)
 				], address: "tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx")
 			)
@@ -363,11 +365,30 @@ class ForceCloseChannelsView_Previews: PreviewProvider {
 		
 		NavigationView {
 			ForceCloseChannelsView().mock(
-				CloseChannelsConfiguration.ModelChannelsClosed(channels: [
-					CloseChannelsConfiguration.ModelChannelInfo(
+				ForceCloseChannelsConfiguration.ModelChannelsClosed(channels: [
+					ForceCloseChannelsConfiguration.ModelChannelInfo(
 						id: Bitcoin_kmpByteVector32.random(),
 						balance: 500_000,
-						status: CloseChannelsConfiguration.ModelChannelInfoStatus.closing
+						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.closing
+					)
+				])
+			)
+		}
+		.preferredColorScheme(.light)
+		.previewDevice("iPhone 8")
+		
+		NavigationView {
+			ForceCloseChannelsView().mock(
+				ForceCloseChannelsConfiguration.ModelChannelsClosed(channels: [
+					ForceCloseChannelsConfiguration.ModelChannelInfo(
+						id: Bitcoin_kmpByteVector32.random(),
+						balance: 500_000,
+						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.closing
+					),
+					ForceCloseChannelsConfiguration.ModelChannelInfo(
+						id: Bitcoin_kmpByteVector32.random(),
+						balance: 500_000,
+						status: ForceCloseChannelsConfiguration.ModelChannelInfoStatus.closing
 					)
 				])
 			)

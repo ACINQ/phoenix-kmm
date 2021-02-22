@@ -1,44 +1,53 @@
 package fr.acinq.phoenix.app.ctrl.config
 
-import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.channel.*
 import fr.acinq.eclair.io.WrappedChannelEvent
 import fr.acinq.phoenix.app.PeerManager
-import fr.acinq.phoenix.app.Utilities
+import fr.acinq.phoenix.app.WalletManager
 import fr.acinq.phoenix.app.ctrl.AppController
-import fr.acinq.phoenix.ctrl.config.CloseChannelsConfiguration
-import fr.acinq.phoenix.ctrl.config.CloseChannelsConfiguration.Model.ChannelInfoStatus
+import fr.acinq.phoenix.ctrl.config.ForceCloseChannelsConfiguration
+import fr.acinq.phoenix.ctrl.config.ForceCloseChannelsConfiguration.Model.ChannelInfoStatus
+import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 
-class AppCloseChannelsConfigurationController(
+class AppForceCloseChannelsConfigurationController(
     loggerFactory: LoggerFactory,
     private val peerManager: PeerManager,
-    private val util: Utilities
-) : AppController<CloseChannelsConfiguration.Model, CloseChannelsConfiguration.Intent>(
+    private val walletManager: WalletManager,
+    private val masterPubkeyPath: String,
+    private val chain: Chain
+) : AppController<ForceCloseChannelsConfiguration.Model, ForceCloseChannelsConfiguration.Intent>(
     loggerFactory,
-    CloseChannelsConfiguration.Model.Loading
+    ForceCloseChannelsConfiguration.Model.Loading
 ) {
+    // When the view first appears, the channelList may already contain channels that are in
+    // a closing state. We want to avoid including them when broadcasting Model.ChannelsClosed.
+    // So we track the channelIds that we've issued close commands for.
     var closingChannelIds: Set<ByteVector32>? = null
 
     fun channelInfoStatus(channel: ChannelState): ChannelInfoStatus? = when (channel) {
         is Normal -> ChannelInfoStatus.Normal
+        is Offline -> ChannelInfoStatus.Offline
+        is Syncing -> ChannelInfoStatus.Syncing
         is Closing -> ChannelInfoStatus.Closing
         is Closed -> ChannelInfoStatus.Closed
         is Aborted -> ChannelInfoStatus.Aborted
         else -> null
     }
 
-    fun isMutualClosable(channelInfoStatus: ChannelInfoStatus): Boolean = when (channelInfoStatus) {
+    fun isForceClosable(channelInfoStatus: ChannelInfoStatus): Boolean = when (channelInfoStatus) {
         ChannelInfoStatus.Normal -> true
+        ChannelInfoStatus.Offline -> true
+        ChannelInfoStatus.Syncing -> true
         else -> false
     }
 
-    fun isMutualClosable(channel: ChannelState): Boolean = channelInfoStatus(channel)?.let {
-        isMutualClosable(it)
+    fun isForceClosable(channel: ChannelState): Boolean = channelInfoStatus(channel)?.let {
+        isForceClosable(it)
     } ?: false
 
     init {
@@ -51,7 +60,7 @@ class AppCloseChannelsConfigurationController(
                     } ?: true
                 }.mapNotNull {
                     channelInfoStatus(it.value)?.let { mappedStatus ->
-                        CloseChannelsConfiguration.Model.ChannelInfo(
+                        ForceCloseChannelsConfiguration.Model.ChannelInfo(
                             id = it.key,
                             balance = sats(it.value),
                             status = mappedStatus
@@ -60,12 +69,19 @@ class AppCloseChannelsConfigurationController(
                 }
 
                 if (closingChannelIds != null) {
-                    model(CloseChannelsConfiguration.Model.ChannelsClosed(updatedChannelsList))
+                    model(ForceCloseChannelsConfiguration.Model.ChannelsClosed(updatedChannelsList))
                 } else {
-                    val mutualClosableChannelsList = updatedChannelsList.filter {
-                        isMutualClosable(it.status)
+                    val forceClosableChannelsList = updatedChannelsList.filter {
+                        isForceClosable(it.status)
                     }
-                    model(CloseChannelsConfiguration.Model.Ready(mutualClosableChannelsList))
+
+                    val wallet = walletManager.wallet.value!!
+                    val address = wallet.onchainAddress(
+                        path = masterPubkeyPath,
+                        isMainnet = chain == Chain.MAINNET
+                    )
+
+                    model(ForceCloseChannelsConfiguration.Model.Ready(forceClosableChannelsList, address))
                 }
             }
         }
@@ -75,21 +91,11 @@ class AppCloseChannelsConfigurationController(
         return channel.localCommitmentSpec?.toLocal?.truncateToSatoshi()?.toLong() ?: 0
     }
 
-    override fun process(intent: CloseChannelsConfiguration.Intent) {
-        var scriptPubKey : ByteArray? = null
-        if (intent is CloseChannelsConfiguration.Intent.MutualCloseAllChannels) {
-            scriptPubKey = util.addressToPublicKeyScript(address = intent.address)
-        }
-        if (scriptPubKey == null) {
-            throw IllegalArgumentException(
-                "Address is invalid. Caller MUST validate user input via parseBitcoinAddress"
-            )
-        }
-
+    override fun process(intent: ForceCloseChannelsConfiguration.Intent) {
         launch {
             val peer = peerManager.getPeer()
             val filteredChannels = peer.channels.filter {
-                isMutualClosable(it.value)
+                isForceClosable(it.value)
             }
 
             closingChannelIds = closingChannelIds?.let {
@@ -97,8 +103,7 @@ class AppCloseChannelsConfigurationController(
             } ?: filteredChannels.keys
 
             filteredChannels.keys.forEach { channelId ->
-                val command = CMD_CLOSE(scriptPubKey = ByteVector(scriptPubKey))
-                val channelEvent = ChannelEvent.ExecuteCommand(command)
+                val channelEvent = ChannelEvent.ExecuteCommand(CMD_FORCECLOSE)
                 val peerEvent = WrappedChannelEvent(channelId, channelEvent)
                 peer.send(peerEvent)
             }

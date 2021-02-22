@@ -3,15 +3,15 @@ package fr.acinq.phoenix.ctrl.config
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.phoenix.ctrl.MVI
 
-typealias CloseChannelsConfigurationController =
-        MVI.Controller<CloseChannelsConfiguration.Model, CloseChannelsConfiguration.Intent>
+typealias ForceCloseChannelsConfigurationController =
+        MVI.Controller<ForceCloseChannelsConfiguration.Model, ForceCloseChannelsConfiguration.Intent>
 
-object CloseChannelsConfiguration {
+object ForceCloseChannelsConfiguration {
 
     sealed class Model : MVI.Model() {
 
         object Loading : Model()
-        data class Ready(val channels: List<ChannelInfo>) : Model()
+        data class Ready(val channels: List<ChannelInfo>, val address: String) : Model()
         data class ChannelsClosed(val channels: List<ChannelInfo>) : Model()
 
         data class ChannelInfo(
@@ -22,6 +22,8 @@ object CloseChannelsConfiguration {
 
         enum class ChannelInfoStatus {
             Normal,
+            Offline,
+            Syncing,
             Closing,
             Closed,
             Aborted
@@ -29,6 +31,6 @@ object CloseChannelsConfiguration {
     }
 
     sealed class Intent : MVI.Intent() {
-        data class MutualCloseAllChannels(val address: String) : Intent()
+        object ForceCloseAllChannels : Intent()
     }
 }
