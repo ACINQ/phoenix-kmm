@@ -168,6 +168,13 @@ fileprivate struct StandardWalletView : View {
 						.font(.system(.body, design: .monospaced))
 						.lineLimit(nil)
 						.minimumScaleFactor(0.5) // problems with truncation
+						.contextMenu {
+							Button(action: {
+								UIPasteboard.general.string = model.address
+							}) {
+								Text("Copy")
+							}
+						}
 				}
 				.padding(.bottom)
 				
