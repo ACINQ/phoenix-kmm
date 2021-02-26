@@ -31,6 +31,8 @@ class AppCloseChannelsConfigurationController(
 
     fun channelInfoStatus(channel: ChannelState): ChannelInfoStatus? = when (channel) {
         is Normal -> ChannelInfoStatus.Normal
+        is Offline -> ChannelInfoStatus.Offline
+        is Syncing -> ChannelInfoStatus.Syncing
         is Closing -> ChannelInfoStatus.Closing
         is Closed -> ChannelInfoStatus.Closed
         is Aborted -> ChannelInfoStatus.Aborted
