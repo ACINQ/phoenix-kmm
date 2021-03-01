@@ -32,27 +32,106 @@ import fr.acinq.eclair.db.*
 import fr.acinq.eclair.payment.FinalFailure
 import fr.acinq.eclair.payment.OutgoingPaymentFailure
 import fr.acinq.eclair.payment.PaymentRequest
-import fr.acinq.eclair.utils.Either
-import fr.acinq.eclair.utils.UUID
-import fr.acinq.eclair.utils.currentTimestampMillis
-import fr.acinq.eclair.utils.toByteVector32
+import fr.acinq.eclair.serialization.ByteVector32KSerializer
+import fr.acinq.eclair.utils.*
 import fr.acinq.eclair.wire.FailureMessage
 import fracinqphoenixdb.Incoming_payments
 import fracinqphoenixdb.Outgoing_payment_parts
-import fracinqphoenixdb.Outgoing_payments
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.core.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
 import org.kodein.memory.text.toHexString
 
 class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
-    enum class OutgoingFinalFailureDbEnum {
-        InvalidPaymentAmount, InsufficientBalance, InvalidPaymentId, NoAvailableChannels, NoRouteToRecipient, RetryExhausted, UnknownError, WalletRestarted, RecipientUnreachable;
+    // The database table has these columns:
+    // - details_type INTEGER NOT NULL
+    // - details BLOB NOT NULL
+    //
+    // The `details_type` column is populated with a value from this enum.
+    //
+    enum class OutgoingDetailsType(val type: Long) {
+        // WARNING: These values are saved to disk. Do not modify.
+        //
+        // Versioning: Each type supports up to 100 versions.
+        // For example: Normal_v1(type = 101)
+        //
+        Normal_v0(100),
+        KeySend_v0(200),
+        SwapOut_v0(300),
+        ChannelClosing_v0(400);
+
+        fun version(): Long = type % 100L
+    }
+
+    // The database table has these columns:
+    // - details_type INTEGER NOT NULL
+    // - details BLOB NOT NULL
+    //
+    // When storing `OutgoingPayment.details.ChannelClosing`, we map the data to
+    // this serializable class, and use JSON for serialization & deserialization.
+    //
+    @Serializable
+    data class ChannelClosingJSON(val closingAddress: String, val fundingKeyPath: String?) {
+        companion object {
+            fun serialize(src: OutgoingPayment.Details.ChannelClosing): ByteArray {
+                val json = ChannelClosingJSON(src.closingAddress, src.fundingKeyPath)
+                return Json.encodeToString(json).toByteArray(Charsets.UTF_8)
+            }
+            fun deserialize(blob: ByteArray, paymentHash: ByteVector32): OutgoingPayment.Details.ChannelClosing {
+                val str = String(bytes = blob, charset = Charsets.UTF_8)
+                val json = Json.decodeFromString<ChannelClosingJSON>(str)
+                return OutgoingPayment.Details.ChannelClosing(json.closingAddress, json.fundingKeyPath, paymentHash)
+            }
+        }
+    }
+
+    // The database table has these columns:
+    // - status_type INTEGER DEFAULT 0
+    // - status BLOB DEFAULT NULL
+    //
+    // The `status_type` column is populated with a value from this enum.
+    //
+    enum class OutgoingStatusType(val type: Long) {
+        // WARNING: These values are saved to disk. Do not modify.
+        //
+        // Versioning: Each type supports up to 100 versions.
+        // For example, Succeeded_v1(type = 101)
+        //
+        Succeeded_v0(100),
+        Failed_v0(200),
+        Mined_v0(300);
+
+        fun version(): Long = type % 100L
+    }
+
+    // The database table has these columns:
+    // - status_type INTEGER DEFAULT 0
+    // - status BLOB DEFAULT NULL
+    //
+    // If the payment fails, we need to store the `sealed class FinalFailure`
+    // in the `status BLOB`. We accomplish this by mapping subclasses to an enum,
+    // and then storing the enum.name.toByteArray() in the column.
+    //
+    enum class OutgoingFinalFailureDbEnum(val finalFailure: FinalFailure) {
+        InvalidPaymentAmount(FinalFailure.InvalidPaymentAmount),
+        InsufficientBalance(FinalFailure.InsufficientBalance),
+        InvalidPaymentId(FinalFailure.InvalidPaymentId),
+        NoAvailableChannels(FinalFailure.NoAvailableChannels),
+        NoRouteToRecipient(FinalFailure.NoRouteToRecipient),
+        RetryExhausted(FinalFailure.RetryExhausted),
+        UnknownError(FinalFailure.UnknownError),
+        WalletRestarted(FinalFailure.WalletRestarted);
 
         companion object {
-            fun toDb(failure: FinalFailure) = when (failure) {
+            // This function could be implemented via looping over OutgoingFinalFailure.values(),
+            // but then we'd lose our compiler check to ensure we map all possible inputs.
+            fun from(failure: FinalFailure): OutgoingFinalFailureDbEnum = when (failure) {
                 FinalFailure.InvalidPaymentAmount -> InvalidPaymentAmount
                 FinalFailure.InsufficientBalance -> InsufficientBalance
                 FinalFailure.InvalidPaymentId -> InvalidPaymentId
@@ -61,7 +140,37 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                 FinalFailure.RetryExhausted -> RetryExhausted
                 FinalFailure.UnknownError -> UnknownError
                 FinalFailure.WalletRestarted -> WalletRestarted
-                FinalFailure.RecipientUnreachable -> RecipientUnreachable
+            }
+            fun serialize(src: FinalFailure): ByteArray {
+                val dbEnum = OutgoingFinalFailureDbEnum.from(src)
+                return dbEnum.name.toByteArray(Charsets.UTF_8)
+            }
+            fun deserialize(blob: ByteArray): FinalFailure {
+                val str = String(bytes = blob, charset = Charsets.UTF_8)
+                val dbEnum = OutgoingFinalFailureDbEnum.valueOf(str)
+                return dbEnum.finalFailure
+            }
+        }
+    }
+
+    // The database table has these columns:
+    // - status_type INTEGER DEFAULT 0
+    // - status BLOB DEFAULT NULL
+    //
+    // If we need to store a `OutgoingPayment.Status.Completed.Mined`
+    // in the `status BLOB`, we use JSON serialization.
+    //
+    @Serializable
+    data class MinedJSON(val txids: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>) {
+        companion object {
+            fun serialize(src: OutgoingPayment.Status.Completed.Mined): ByteArray {
+                val json = MinedJSON(src.txids)
+                return Json.encodeToString(json).toByteArray(Charsets.UTF_8)
+            }
+            fun deserialize(blob: ByteArray, completedAt: Long): OutgoingPayment.Status.Completed.Mined {
+                val str = String(bytes = blob, charset = Charsets.UTF_8)
+                val json = Json.decodeFromString<MinedJSON>(str)
+                return OutgoingPayment.Status.Completed.Mined(json.txids, completedAt)
             }
         }
     }
@@ -107,7 +216,6 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     private val database = PaymentsDatabase(
         driver = driver,
-        outgoing_paymentsAdapter = Outgoing_payments.Adapter(final_failureAdapter = EnumColumnAdapter()),
         outgoing_payment_partsAdapter = Outgoing_payment_parts.Adapter(routeAdapter = hopDescAdapter),
         incoming_paymentsAdapter = Incoming_payments.Adapter(payment_typeAdapter = EnumColumnAdapter(), received_withAdapter = EnumColumnAdapter())
     )
@@ -135,15 +243,33 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
     override suspend fun addOutgoingPayment(outgoingPayment: OutgoingPayment) {
         withContext(Dispatchers.Default) {
             outQueries.transaction {
+                val details = outgoingPayment.details
+                val (details_type, details_blob) = when (details) {
+                    is OutgoingPayment.Details.Normal -> {
+                        val blob = details.paymentRequest.write().toByteArray(Charsets.UTF_8)
+                        Pair(OutgoingDetailsType.Normal_v0, blob)
+                    }
+                    is OutgoingPayment.Details.KeySend -> {
+                        val blob = details.preimage.toByteArray()
+                        Pair(OutgoingDetailsType.KeySend_v0, blob)
+                    }
+                    is OutgoingPayment.Details.SwapOut -> {
+                        val blob = details.address.toByteArray(Charsets.UTF_8)
+                        Pair(OutgoingDetailsType.SwapOut_v0, blob)
+                    }
+                    is OutgoingPayment.Details.ChannelClosing -> {
+                        val blob = ChannelClosingJSON.serialize(details)
+                        Pair(OutgoingDetailsType.ChannelClosing_v0, blob)
+                    }
+                }
                 outQueries.addOutgoingPayment(
                     id = outgoingPayment.id.toString(),
                     recipient_amount_msat = outgoingPayment.recipientAmount.msat,
                     recipient_node_id = outgoingPayment.recipient.toString(),
                     payment_hash = outgoingPayment.details.paymentHash.toByteArray(),
                     created_at = currentTimestampMillis(),
-                    normal_payment_request = (outgoingPayment.details as? OutgoingPayment.Details.Normal)?.paymentRequest?.write(),
-                    keysend_preimage = (outgoingPayment.details as? OutgoingPayment.Details.KeySend)?.preimage?.toByteArray(),
-                    swapout_address = (outgoingPayment.details as? OutgoingPayment.Details.SwapOut)?.address,
+                    details_type = details_type.type,
+                    details = details_blob
                 )
                 outgoingPayment.parts.map {
                     outQueries.addOutgoingPart(
@@ -151,13 +277,44 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                         parent_id = outgoingPayment.id.toString(),
                         amount_msat = it.amount.msat,
                         route = it.route,
-                        created_at = it.createdAt)
+                        created_at = it.createdAt
+                    )
                 }
             }
         }
     }
 
-    // ---- successful outgoing payment
+    // ---- complete outgoing payment details
+
+    override suspend fun updateOutgoingPayment(id: UUID, completed: OutgoingPayment.Status.Completed) {
+        withContext(Dispatchers.Default) {
+            outQueries.transaction {
+                val (statusType, statusBlob) = when (completed) {
+                    is OutgoingPayment.Status.Completed.Failed -> { Pair(
+                        OutgoingStatusType.Failed_v0.type,
+                        OutgoingFinalFailureDbEnum.serialize(completed.reason)
+                    )}
+                    is OutgoingPayment.Status.Completed.Succeeded -> { Pair(
+                        OutgoingStatusType.Succeeded_v0.type,
+                        completed.preimage.toByteArray()
+                    )}
+                    is OutgoingPayment.Status.Completed.Mined -> { Pair(
+                        OutgoingStatusType.Mined_v0.type,
+                        MinedJSON.serialize(completed)
+                    )}
+                }
+                outQueries.updateOutgoingPayment(
+                    id = id.toString(),
+                    completed_at = completed.completedAt,
+                    status_type = statusType,
+                    status = statusBlob
+                )
+                if (outQueries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(id)
+            }
+        }
+    }
+
+    // ---- successful outgoing part
 
     override suspend fun updateOutgoingPart(partId: UUID, preimage: ByteVector32, completedAt: Long) {
         withContext(Dispatchers.Default) {
@@ -168,16 +325,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         }
     }
 
-    override suspend fun updateOutgoingPayment(id: UUID, preimage: ByteVector32, completedAt: Long) {
-        withContext(Dispatchers.Default) {
-            outQueries.transaction {
-                outQueries.succeedOutgoingPayment(id = id.toString(), preimage = preimage.toByteArray(), completed_at = completedAt)
-                if (outQueries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(id)
-            }
-        }
-    }
-
-    // ---- fail outgoing payment
+    // ---- fail outgoing part
 
     override suspend fun updateOutgoingPart(partId: UUID, failure: Either<ChannelException, FailureMessage>, completedAt: Long) {
         withContext(Dispatchers.Default) {
@@ -189,15 +337,6 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                     err_message = f.details,
                     completed_at = completedAt)
                 if (outQueries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(partId)
-            }
-        }
-    }
-
-    override suspend fun updateOutgoingPayment(id: UUID, failure: FinalFailure, completedAt: Long) {
-        withContext(Dispatchers.Default) {
-            outQueries.transaction {
-                outQueries.failOutgoingPayment(id = id.toString(), final_failure = OutgoingFinalFailureDbEnum.toDb(failure), completed_at = completedAt)
-                if (outQueries.changes().executeAsOne() != 1L) throw OutgoingPaymentNotFound(id)
             }
         }
     }
@@ -333,7 +472,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     // if a payment is successful do not take into accounts failed/pending parts.
     private fun filterUselessParts(payment: OutgoingPayment): OutgoingPayment = when (payment.status) {
-        is OutgoingPayment.Status.Succeeded -> payment.copy(parts = payment.parts.filter { it.status is OutgoingPayment.Part.Status.Succeeded })
+        is OutgoingPayment.Status.Completed.Succeeded -> payment.copy(parts = payment.parts.filter { it.status is OutgoingPayment.Part.Status.Succeeded })
         else -> payment
     }
 
@@ -343,12 +482,11 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         recipient_node_id: String,
         payment_hash: ByteArray,
         created_at: Long,
-        normal_payment_request: String?,
-        keysend_preimage: ByteArray?,
-        swapout_address: String?,
-        final_failure: OutgoingFinalFailureDbEnum?,
-        preimage: ByteArray?,
+        details_type: Long,
+        details_blob: ByteArray,
         completed_at: Long?,
+        status_type: Long?,
+        status: ByteArray?,
         // part
         part_id: String?,
         amount_msat: Long?,
@@ -373,15 +511,43 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
             id = UUID.fromString(id),
             recipientAmount = MilliSatoshi(recipient_amount_msat),
             recipient = PublicKey(ByteVector(recipient_node_id)),
-            details = mapOutgoingDetails(ByteVector32(payment_hash), swapout_address, keysend_preimage, normal_payment_request),
+            details = mapOutgoingDetails(
+                paymentHash = ByteVector32(payment_hash),
+                detailsType = details_type,
+                detailsBlob = details_blob
+            ),
             parts = part,
-            status = mapOutgoingPaymentStatus(final_failure, preimage, completed_at)
+            status = mapOutgoingPaymentStatus(
+                completed_at = completed_at,
+                status_type = status_type ?: 0,
+                status = status ?: ByteArray(0)
+            )
         )
     }
 
-    private fun mapOutgoingPaymentStatus(final_failure: OutgoingFinalFailureDbEnum?, preimage: ByteArray?, completed_at: Long?): OutgoingPayment.Status = when {
-        preimage != null && completed_at != null -> OutgoingPayment.Status.Succeeded(ByteVector32(preimage), completed_at)
-        final_failure != null && completed_at != null -> OutgoingPayment.Status.Failed(reason = mapFinalFailure(final_failure), completedAt = completed_at)
+    private fun mapOutgoingPaymentStatus(
+        completed_at: Long?,
+        status_type: Long,
+        status: ByteArray
+    ): OutgoingPayment.Status = when {
+        completed_at != null && status_type == OutgoingStatusType.Succeeded_v0.type -> {
+            OutgoingPayment.Status.Completed.Succeeded(
+                preimage = ByteVector32(status),
+                completedAt = completed_at
+            )
+        }
+        completed_at != null && status_type == OutgoingStatusType.Failed_v0.type -> {
+            OutgoingPayment.Status.Completed.Failed(
+                reason = OutgoingFinalFailureDbEnum.deserialize(status),
+                completedAt = completed_at
+            )
+        }
+        completed_at != null && status_type == OutgoingStatusType.Mined_v0.type -> {
+            OutgoingPayment.Status.Completed.Mined(
+                txids = listOf<ByteVector32>(),
+                completedAt = completed_at
+            )
+        }
         else -> OutgoingPayment.Status.Pending
     }
 
@@ -396,23 +562,34 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         else -> OutgoingPayment.Part.Status.Pending
     }
 
-    private fun mapOutgoingDetails(paymentHash: ByteVector32, swapoutAddress: String?, keysendPreimage: ByteArray?, normalPaymentRequest: String?): OutgoingPayment.Details = when {
-        swapoutAddress != null -> OutgoingPayment.Details.SwapOut(address = swapoutAddress, paymentHash = ByteVector32(paymentHash))
-        keysendPreimage != null -> OutgoingPayment.Details.KeySend(preimage = ByteVector32(keysendPreimage))
-        normalPaymentRequest != null -> OutgoingPayment.Details.Normal(paymentRequest = PaymentRequest.read(normalPaymentRequest))
+    private fun mapOutgoingDetails(
+        paymentHash: ByteVector32,
+        detailsType: Long,
+        detailsBlob: ByteArray
+    ): OutgoingPayment.Details = when (detailsType) {
+        OutgoingDetailsType.Normal_v0.type -> {
+            OutgoingPayment.Details.Normal(
+                paymentRequest = PaymentRequest.read(String(detailsBlob))
+            )
+        }
+        OutgoingDetailsType.KeySend_v0.type -> {
+            OutgoingPayment.Details.KeySend(
+                preimage = ByteVector32(detailsBlob)
+            )
+        }
+        OutgoingDetailsType.SwapOut_v0.type -> {
+            OutgoingPayment.Details.SwapOut(
+                address = String(detailsBlob),
+                paymentHash = ByteVector32(paymentHash)
+            )
+        }
+        OutgoingDetailsType.ChannelClosing_v0.type -> {
+            ChannelClosingJSON.deserialize(
+                blob = detailsBlob,
+                paymentHash = ByteVector32(paymentHash)
+            )
+        }
         else -> throw UnhandledOutgoingDetails
-    }
-
-    private fun mapFinalFailure(finalFailure: OutgoingFinalFailureDbEnum): FinalFailure = when (finalFailure) {
-        OutgoingFinalFailureDbEnum.InvalidPaymentAmount -> FinalFailure.InvalidPaymentAmount
-        OutgoingFinalFailureDbEnum.InsufficientBalance -> FinalFailure.InsufficientBalance
-        OutgoingFinalFailureDbEnum.InvalidPaymentId -> FinalFailure.InvalidPaymentId
-        OutgoingFinalFailureDbEnum.NoAvailableChannels -> FinalFailure.NoAvailableChannels
-        OutgoingFinalFailureDbEnum.NoRouteToRecipient -> FinalFailure.NoRouteToRecipient
-        OutgoingFinalFailureDbEnum.RetryExhausted -> FinalFailure.RetryExhausted
-        OutgoingFinalFailureDbEnum.UnknownError -> FinalFailure.UnknownError
-        OutgoingFinalFailureDbEnum.WalletRestarted -> FinalFailure.WalletRestarted
-        OutgoingFinalFailureDbEnum.RecipientUnreachable -> FinalFailure.RecipientUnreachable
     }
 
     private fun mapIncomingPayment(
@@ -458,14 +635,14 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         direction: String,
         outgoing_payment_id: String?,
         payment_hash: ByteArray,
-        preimage: ByteArray?,
         parts_amount: Long?,
         amount: Long,
         outgoing_recipient: String?,
-        outgoing_normal_payment_request: String?,
-        outgoing_keysend_preimage: ByteArray?,
-        outgoing_swapout_address: String?,
-        outgoing_failure: OutgoingFinalFailureDbEnum?,
+        outgoing_details_type: Long,
+        outgoing_details_blob: ByteArray?,
+        outgoing_status_type: Long?,
+        outgoing_status_blob: ByteArray?,
+        incoming_preimage: ByteArray?,
         incoming_payment_type: IncomingOriginDbEnum?,
         incoming_payment_request: String?,
         incoming_swap_address: String?,
@@ -478,16 +655,31 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
             id = UUID.fromString(outgoing_payment_id!!),
             recipientAmount = parts_amount?.let { MilliSatoshi(it) } ?: MilliSatoshi(amount), //  when possible, prefer using sum of parts' amounts instead of recipient amount
             recipient = PublicKey(ByteVector(outgoing_recipient!!)),
-            details = mapOutgoingDetails(ByteVector32(payment_hash), outgoing_swapout_address, outgoing_keysend_preimage, outgoing_normal_payment_request),
+            details = mapOutgoingDetails(
+                paymentHash = ByteVector32(payment_hash),
+                detailsType = outgoing_details_type,
+                detailsBlob = outgoing_details_blob ?: ByteArray(0)
+            ),
             parts = listOf(),
-            status = when {
-                outgoing_failure != null && completed_at != null -> OutgoingPayment.Status.Failed(reason = mapFinalFailure(outgoing_failure), completedAt = completed_at)
-                preimage != null && completed_at != null -> OutgoingPayment.Status.Succeeded(preimage = ByteVector32(preimage), completedAt = completed_at)
-                else -> OutgoingPayment.Status.Pending
-            }
+            status = mapOutgoingPaymentStatus(
+                completed_at = completed_at,
+                status_type = outgoing_status_type ?: 0,
+                status = outgoing_status_blob ?: ByteArray(0)
+            )
         )
-        "incoming" -> mapIncomingPayment(payment_hash, created_at, preimage!!, incoming_payment_type!!, incoming_payment_request, incoming_swap_address,
-            amount, completed_at, incoming_received_with, incoming_received_with_fees, null)
+        "incoming" -> mapIncomingPayment(
+            payment_hash = payment_hash,
+            created_at = created_at,
+            preimage =  incoming_preimage!!,
+            payment_type = incoming_payment_type!!,
+            payment_request = incoming_payment_request,
+            swap_address = incoming_swap_address,
+            received_amount_msat = amount,
+            received_at = completed_at,
+            received_with = incoming_received_with,
+            received_with_fees = incoming_received_with_fees,
+            received_with_channel_id = null
+        )
         else -> throw UnhandledDirection(direction)
     }
 }

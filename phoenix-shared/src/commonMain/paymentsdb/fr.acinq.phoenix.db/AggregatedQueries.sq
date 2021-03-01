@@ -5,7 +5,6 @@ FROM (
         'outgoing' AS direction,
         id AS outgoing_payment_id,
         payment_hash,
-        payment.preimage,
 
         SUM(CASE
              WHEN parts.preimage IS NULL THEN 0
@@ -14,11 +13,12 @@ FROM (
         payment.recipient_amount_msat AS amount,
 
         recipient_node_id AS outgoing_recipient,
-        normal_payment_request AS outgoing_normal_payment_request,
-        keysend_preimage AS outgoing_keysend_preimage,
-        swapout_address AS outgoing_swapout_address,
-        final_failure AS outgoing_failure,
+        details_type AS outgoing_details_type,
+        details AS outgoing_details,
+        status_type AS outgoing_status_type,
+        status AS outgoing_status,
 
+        NULL AS incoming_preimage,
         NULL AS incoming_payment_type,
         NULL AS incoming_payment_request,
         NULL AS incoming_swap_address,
@@ -35,16 +35,16 @@ UNION ALL
         'incoming' AS direction,
         NULL AS outgoing_payment_id,
         payment_hash,
-        preimage,
         NULL AS parts_amount,
         received_amount_msat AS amount,
 
         NULL AS outgoing_recipient,
-        NULL AS outgoing_normal_payment_request,
-        NULL AS outgoing_keysend_preimage,
-        NULL AS outgoing_swapout_address,
-        NULL AS outgoing_failure,
+        0 AS outgoing_details_type,
+        NULL AS outgoing_details,
+        0 AS outgoing_status_type,
+        NULL AS outgoing_status,
 
+        preimage AS incoming_preimage,
         payment_type AS incoming_payment_type,
         payment_request AS incoming_payment_request,
         swap_address AS incoming_swap_address,
@@ -58,3 +58,22 @@ UNION ALL
 )
 ORDER BY COALESCE(completed_at, created_at) DESC
 LIMIT ?, ?;
+
+--  0: ['outgoing', 'incoming']
+--  1: outgoing_payment_id
+--  2: payment_hash
+--  3: parts_amount
+--  4: amount
+--  5: outgoing_recipient
+--  6: outgoing_details_type
+--  7: outgoing_details
+--  8: outgoing_status_type
+--  9: outgoing_status
+-- 10: incoming_preimage
+-- 11: incoming_payment_type
+-- 12: incoming_payment_request
+-- 13: incoming_swap_address
+-- 14: incoming_received_with
+-- 15: incoming_received_with_fees
+-- 16: created_at
+-- 17: completed_at
