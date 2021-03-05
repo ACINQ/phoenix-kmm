@@ -16,11 +16,17 @@
 
 package fr.acinq.phoenix.android
 
+import android.content.Context
+import android.util.TypedValue
+import androidx.annotation.AttrRes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +61,8 @@ val gray400 = Color(0xff838da4)
 val gray300 = Color(0xff99a2b6)
 val gray200 = Color(0xffb5bccc)
 val gray100 = Color(0xffd1d7e3)
-val gray50 = Color(0xffedeef6)
+val gray70 = Color(0xffe1eBeD)
+val gray40 = Color(0xfff0f5f7)
 
 private val LightColorPalette = lightColors(
     // primary
@@ -95,12 +102,51 @@ private val DarkColorPalette = darkColors(
     onError = red50,
 )
 
+@Composable
 // Set of Material typography styles to start with
-val typography = Typography(
+fun typography(palette: Colors) = Typography(
+    subtitle1 = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
+        color = palette.primary
+    ),
+    subtitle2 = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
+        color = palette.onSurface,
+    ),
+    h3 = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Light,
+        fontSize = 48.sp,
+        color = palette.onSurface,
+    ),
+    h6 = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Light,
+        fontSize = 20.sp,
+        color = palette.onSurface,
+    ),
     body1 = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp
+        fontSize = 16.sp,
+        color = palette.onSurface,
+    ),
+    button = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        letterSpacing = 1.15.sp,
+        color = palette.onSurface,
+    ),
+    caption = TextStyle(
+        fontFamily = FontFamily.SansSerif,
+        fontWeight = FontWeight.Normal,
+        fontSize = 16.sp,
+        color = mutedTextColor()
     )
 )
 
@@ -111,20 +157,54 @@ val shapes = Shapes(
 )
 
 @Composable
-fun PhoenixAndroidTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable() () -> Unit) {
+fun PhoenixAndroidTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    val palette = if (darkTheme) DarkColorPalette else LightColorPalette
     MaterialTheme(
-        colors = if (darkTheme) DarkColorPalette else LightColorPalette,
-        typography = typography,
+        colors = palette,
+        typography = typography(palette),
         shapes = shapes,
         content = content
     )
 }
 
 @Composable
-fun errorColor(): Color = if (isSystemInDarkTheme()) red500 else red300
+fun monoTypo(): TextStyle = MaterialTheme.typography.body1.copy(fontFamily = FontFamily.Monospace, fontSize = 12.sp)
 
 @Composable
-fun successColor(): Color = if (isSystemInDarkTheme()) green else applegreen
+fun negativeColor(): Color = if (isSystemInDarkTheme()) red500 else red300
+
+@Composable
+fun positiveColor(): Color = if (isSystemInDarkTheme()) green else applegreen
+
+@Composable
+fun mutedTextColor(): Color = if (isSystemInDarkTheme()) gray700 else gray200
+
+@Composable
+fun mutedBgColor(): Color = if (isSystemInDarkTheme()) gray800 else gray40
+
+@Composable
+fun baseBackgroundColor(): Color = if (isSystemInDarkTheme()) gray700 else gray70
+
+@Composable
+fun borderColor(): Color = if (isSystemInDarkTheme()) gray700 else gray70
 
 @Composable
 fun whiteLowOp(): Color = Color(0x33ffffff)
+
+@Composable
+fun textFieldColors() = TextFieldDefaults.textFieldColors(backgroundColor = mutedBgColor())
+
+/** Get a color using the old way. Use in legacy AndroidView. */
+fun getColor(context: Context, @AttrRes attrRes: Int): Int {
+    val typedValue = TypedValue()
+    context.theme.resolveAttribute(attrRes, typedValue, true)
+    return typedValue.data
+}
+
+@Composable
+fun appBackground(): Brush = Brush.linearGradient(
+    0.2f to MaterialTheme.colors.surface,
+    1.0f to baseBackgroundColor(),
+    start = Offset.Zero, //Offset(80.0f, 80.0f),
+    end = Offset.Infinite, //Offset(100.0f, 100.0f)
+)

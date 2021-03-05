@@ -18,20 +18,22 @@ package fr.acinq.phoenix.android
 
 import CF
 import Screen
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.Button
-import androidx.compose.material.Text
-import androidx.compose.material.TextField
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import business
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.payment.PaymentRequest
+import fr.acinq.phoenix.android.components.AmountInput
+import fr.acinq.phoenix.android.components.FilledButton
 import fr.acinq.phoenix.android.mvi.MVIView
+import fr.acinq.phoenix.android.utils.Prefs
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.Scan
-import fr.acinq.phoenix.data.BitcoinUnit
 import navController
 import navigate
 import requireWallet
@@ -39,29 +41,40 @@ import requireWallet
 @Composable
 fun SendView(request: PaymentRequest?) {
     requireWallet(from = Screen.Send) {
-        val logger = logger()
+        val log = logger()
+        val context = LocalContext.current
+        val prefBitcoinUnit = Prefs.getBitcoinUnit(context)
+        val prefFiatCurrency = Prefs.getFiatCurrency(context)
+        val fiatRate = business.currencyManager.getBitcoinRate(prefFiatCurrency)
+        log.info { "amount=${request?.amount} desc=${request?.description}" }
         MVIView(CF::scan) { model, postIntent ->
             val nc = navController
-            Column {
-                Text("do you want to pay $request")
-                Text("amount=${request?.amount?.truncateToSatoshi()}sat")
-                var amount by remember { mutableStateOf((request?.amount ?: MilliSatoshi(0)).truncateToSatoshi().toLong().toDouble()) }
-                TextField(
-                    backgroundColor = Color.Transparent,
-                    maxLines = 1,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    value = amount.toString(),
-                    onValueChange = {
-                        amount = it.toDouble()
+            Column(
+                modifier = Modifier.padding(32.dp).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                var amount by remember { mutableStateOf(request?.amount ?: MilliSatoshi(0)) }
+
+                Spacer(modifier = Modifier.height(80.dp))
+                AmountInput(
+                    initialAmount = amount,
+                    onAmountChange = { a, fiat, fiatUnit -> amount = a ?: MilliSatoshi(0) },
+                    prefBitcoinUnit = prefBitcoinUnit,
+                    prefFiatUnit = prefFiatCurrency,
+                    fiatRate = fiatRate.price,
+                    useBasicInput = true,
+                    inputTextSize = 48.sp,
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                FilledButton(
+                    text = R.string.send_pay_button,
+                    icon = R.drawable.ic_send,
+                    onClick = {
+                        if (request != null) {
+                            postIntent(Scan.Intent.Send(request.write(), amount))
+                            nc.navigate(Screen.Home)
+                        }
                     })
-                Button({
-                    if (request != null) {
-                        postIntent(Scan.Intent.Send(request.write(), amount, BitcoinUnit.Satoshi))
-                        nc.navigate(Screen.Home)
-                    }
-                }) {
-                    Text("Send")
-                }
             }
         }
     }

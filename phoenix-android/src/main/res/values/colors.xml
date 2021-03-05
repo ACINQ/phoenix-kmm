@@ -22,4 +22,6 @@
     <color name="horizon">#91B4D1</color>
     <color name="gray900">#2b313e</color>
     <color name="white">#ffffff</color>
+    <color name="mutedbg">#f0f5f7</color>
+    <color name="mutedbg_night">#3e4556</color>
 </resources>

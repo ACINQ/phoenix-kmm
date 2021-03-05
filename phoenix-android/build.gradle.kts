@@ -8,8 +8,11 @@ plugins {
 
 val chain: String by project
 
-val composeVersion = "1.0.0-alpha11"
-val navComposeVersion = "1.0.0-alpha06"
+val xCoreKtxVersion = "1.3.2"
+val xLifecycleVersion = "2.3.0"
+val xPrefsVersion = "1.1.1"
+val composeVersion = "1.0.0-beta01"
+val navComposeVersion = "1.0.0-alpha08"
 val zxingVersion = "4.1.0"
 
 android {
@@ -58,7 +61,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerVersion = "1.4.21-2"
+        kotlinCompilerVersion = "1.4.30"
         kotlinCompilerExtensionVersion = composeVersion
     }
 
@@ -74,24 +77,32 @@ kotlin {
 
 dependencies {
     implementation(project(":phoenix-shared"))
-
     implementation("com.google.android.material:material:1.3.0")
-    implementation("androidx.core:core-ktx:1.3.2")
-    implementation("androidx.appcompat:appcompat:1.2.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.3.0-beta01")
+
+    // -- AndroidX
+    implementation("androidx.core:core-ktx:$xCoreKtxVersion")
+//    implementation("androidx.appcompat:appcompat:1.2.0")
+    // -- AndroidX: preferences
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:$xLifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:$xLifecycleVersion")
+    // -- AndroidX: preferences
+    implementation("androidx.preference:preference-ktx:$xPrefsVersion")
 
     // -- jetpack compose
     implementation("androidx.compose.ui:ui:$composeVersion")
+    implementation("androidx.compose.foundation:foundation:$composeVersion")
+    implementation("androidx.compose.foundation:foundation-layout:$composeVersion")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.0-alpha03")
+    implementation("androidx.compose.ui:ui-tooling:$composeVersion")
     implementation("androidx.compose.ui:ui-viewbinding:$composeVersion")
     implementation("androidx.compose.runtime:runtime-livedata:$composeVersion")
-//    implementation("androidx.ui:ui-tooling:$composeVersion")
+    implementation("androidx.compose.material:material:$composeVersion")
     implementation("androidx.compose.material:material:$composeVersion")
     // -- jetpack compose: navigation
     implementation("androidx.navigation:navigation-compose:$navComposeVersion")
 
     // -- scanner zxing
     implementation("com.journeyapps:zxing-android-embedded:$zxingVersion")
-    implementation("androidx.ui:ui-tooling:1.0.0-alpha07")
 
     testImplementation("junit:junit:4.13.1")
     androidTestImplementation("androidx.test.ext:junit:1.1.2")

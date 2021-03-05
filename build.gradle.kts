@@ -1,15 +1,15 @@
 buildscript {
-    val kotlin_version by extra("1.4.21-2")
+    val kotlin_version by extra("1.4.30")
     repositories {
         google()
         jcenter()
     }
 
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.21-2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.30")
 
         val isIntelliJ = System.getProperty("isIntelliJ")!!.toBoolean()
-        val androidVersion = if (isIntelliJ) "4.0.1" else "7.0.0-alpha05"
+        val androidVersion = if (isIntelliJ) "4.0.1" else "7.0.0-alpha08"
         classpath("com.android.tools.build:gradle:$androidVersion")
 
         val sqldelightVersion = "1.4.4"

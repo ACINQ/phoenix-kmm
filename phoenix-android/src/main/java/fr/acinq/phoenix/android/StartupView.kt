@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import business
 import fr.acinq.phoenix.android.security.EncryptedSeed
+import fr.acinq.phoenix.android.security.KeyState
 import navController
 import navigate
 import keyState
@@ -40,13 +41,13 @@ fun StartupView() {
                 is EncryptedSeed.V2.NoAuth -> {
                     val seed = business.prepWallet(EncryptedSeed.toMnemonics(encryptedSeed.decrypt()))
                     business.loadWallet(seed)
+                    business.start()
                     nc.navigate(Screen.Home)
                 }
                 else -> {
-                    Text("Seed=${ks.encryptedSeed} version is not handled yet")
+                    Text("seed=${ks.encryptedSeed} version is not handled yet")
                 }
             }
-
         }
     }
 }

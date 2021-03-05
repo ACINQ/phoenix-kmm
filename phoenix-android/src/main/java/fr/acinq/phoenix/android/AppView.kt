@@ -14,29 +14,38 @@
  * limitations under the License.
  */
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Providers
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.phoenix.android.*
+import fr.acinq.phoenix.android.utils.logger
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
+@ExperimentalCoroutinesApi
 @ExperimentalMaterialApi
 @Composable
-fun AppView(seedVM: SeedViewModel) {
+fun AppView(appVM: AppViewModel) {
+    val log = logger()
     val navController = rememberNavController()
-    Providers(
-        BusinessFactory provides application.business,
-        AmbientControllerFactory provides application.business.controllers,
-        AmbientNavController provides navController,
-        AmbientKeyState provides seedVM.keyState
+    CompositionLocalProvider(
+        LocalBusiness provides application.business,
+        LocalControllerFactory provides application.business.controllers,
+        LocalNavController provides navController,
+        LocalKeyState provides appVM.keyState,
+        LocalBitcoinUnit provides appVM.bitcoinUnit,
+        LocalFiatCurrency provides appVM.fiatCurrency,
+        LocalShowInFiat provides appVM.showInFiat,
     ) {
-        Column {
-            Text(currentRoute().toString())
+        Column(Modifier.background(appBackground()).fillMaxWidth().fillMaxHeight()) {
             NavHost(navController = navController, startDestination = Screen.Startup.route) {
                 composable(Screen.Startup.fullRoute) {
                     StartupView()
@@ -45,13 +54,13 @@ fun AppView(seedVM: SeedViewModel) {
                     InitWallet()
                 }
                 composable(Screen.CreateWallet.fullRoute) {
-                    CreateWalletView(seedVM)
+                    CreateWalletView(appVM)
                 }
                 composable(Screen.RestoreWallet.fullRoute) {
-                    RestoreWalletView(seedVM)
+                    RestoreWalletView(appVM)
                 }
                 composable(Screen.Home.fullRoute) {
-                    HomeView()
+                    HomeView(appVM)
                 }
                 composable(Screen.Receive.fullRoute) {
                     ReceiveView()
@@ -61,6 +70,7 @@ fun AppView(seedVM: SeedViewModel) {
                 }
                 composable(Screen.Send.fullRoute) { backStackEntry ->
                     SendView(backStackEntry.arguments?.getString("request")?.run {
+                        log.info { "redirecting to send view with invoice=$this" }
                         PaymentRequest.read(cleanUpInvoice(this))
                     })
                 }
@@ -68,7 +78,7 @@ fun AppView(seedVM: SeedViewModel) {
                     SettingsView()
                 }
                 composable(Screen.DisplaySeed.fullRoute) {
-                    SeedView(seedVM)
+                    SeedView(appVM)
                 }
             }
         }

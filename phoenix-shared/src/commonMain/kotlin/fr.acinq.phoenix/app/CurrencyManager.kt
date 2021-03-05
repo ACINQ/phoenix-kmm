@@ -40,7 +40,6 @@ class CurrencyManager(
     // Returns the exchange rate, if it exists in the database.
     // Otherwise, returns a rate with a negative value.
     fun getBitcoinRate(fiatCurrency: FiatCurrency): BitcoinPriceRate {
-
         val key = appDB.key<BitcoinPriceRate>(fiatCurrency.name)
         return appDB[key] ?: BitcoinPriceRate(fiatCurrency, -1.0)
     }
@@ -48,6 +47,7 @@ class CurrencyManager(
     public fun start() {
         updateRatesJob = updateRates()
     }
+
     public fun stop() {
         launch { updateRatesJob?.cancelAndJoin() }
     }
@@ -55,38 +55,29 @@ class CurrencyManager(
     var updateRatesJob: Job? = null
     private fun updateRates() = launch {
         while (isActive) {
-            val priceRates = buildMap<String, Double> {
+            val priceRates = buildMap<FiatCurrency, Double> {
                 try {
                     val rates = httpClient.get<Map<String, PriceRate>>("https://blockchain.info/ticker")
-                    rates.forEach {
-                        put(it.key, it.value.last)
+                    rates.forEach { entry ->
+                        FiatCurrency.valueOfOrNull(entry.key)?.let { put(it, entry.value.last) }
                     }
 
                     val response = httpClient.get<MxnApiResponse>("https://api.bitso.com/v3/ticker/?book=btc_mxn")
-                    if (response.success) put(FiatCurrency.MXN.name, response.payload.last)
+                    if (response.success) put(FiatCurrency.MXN, response.payload.last)
                 } catch (t: Throwable) {
                     logger.error { "An issue occurred while retrieving exchange rates from API." }
                     logger.error(t)
                 }
-            }
-
-            val exchangeRates =
-                FiatCurrency.values()
-                    .filter { it.name in priceRates.keys }
-                    .mapNotNull { fiatCurrency ->
-                        priceRates[fiatCurrency.name]?.let { priceRate ->
-                            BitcoinPriceRate(fiatCurrency, priceRate)
-                        }
-                    }
+            }.map { BitcoinPriceRate(it.key, it.value) }.toList()
 
             appDB.execBatch {
-                logger.debug { "Saving price rates: $exchangeRates" }
-                exchangeRates.forEach {
+                logger.debug { "Saving price rates: $priceRates" }
+                priceRates.forEach {
                     appDB.put(it)
                 }
             }
 
-            events.send(FiatExchangeRatesUpdated(exchangeRates))
+            events.send(FiatExchangeRatesUpdated(priceRates))
             yield()
             delay(5.minutes)
         }

@@ -18,7 +18,8 @@ package fr.acinq.phoenix.android.utils
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.ui.platform.AmbientContext
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import fr.acinq.phoenix.android.PhoenixApplication
 import org.kodein.log.Logger
 import org.kodein.log.LoggerFactory
@@ -28,7 +29,7 @@ import org.kodein.log.newLogger
 
 @Composable
 fun logger(): Logger {
-    val context = AmbientContext.current
+    val context = LocalContext.current
     val application = context.applicationContext
 
     if (application !is PhoenixApplication) { // Preview mode

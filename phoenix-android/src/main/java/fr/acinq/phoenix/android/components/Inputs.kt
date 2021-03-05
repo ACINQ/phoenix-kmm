@@ -1,0 +1,257 @@
+/*
+ * Copyright 2021 ACINQ SAS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package fr.acinq.phoenix.android.components
+
+import android.graphics.Typeface
+import android.text.InputType
+import android.util.TypedValue
+import android.view.View.TEXT_ALIGNMENT_VIEW_END
+import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.ImageView
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.constraintlayout.compose.ConstraintLayout
+import androidx.constraintlayout.compose.ConstraintSet
+import androidx.constraintlayout.compose.Dimension
+import androidx.core.widget.doOnTextChanged
+import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.phoenix.android.R
+import fr.acinq.phoenix.android.getColor
+import fr.acinq.phoenix.android.textFieldColors
+import fr.acinq.phoenix.android.utils.Converter.toFiat
+import fr.acinq.phoenix.android.utils.Converter.toPlainString
+import fr.acinq.phoenix.android.utils.logger
+import fr.acinq.phoenix.data.*
+
+@Composable
+fun InputText(
+    text: String,
+    onTextChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val focusManager = LocalFocusManager.current
+    TextField(
+        value = text,
+        onValueChange = onTextChange,
+        maxLines = 1,
+        keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done, keyboardType = KeyboardType.Text),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        colors = textFieldColors(),
+        modifier = modifier
+    )
+}
+
+@Composable
+fun AmountInput(
+    initialAmount: MilliSatoshi?,
+    onAmountChange: (MilliSatoshi?, Double?, FiatCurrency) -> Unit,
+    prefBitcoinUnit: BitcoinUnit,
+    prefFiatUnit: FiatCurrency,
+    fiatRate: Double,
+    modifier: Modifier = Modifier,
+    inputModifier: Modifier = Modifier,
+    dropdownModifier: Modifier = Modifier,
+    useBasicInput: Boolean = false,
+    inputTextSize: TextUnit = 16.sp,
+    unitTextSize: TextUnit = 16.sp,
+) {
+    val log = logger()
+    val amountRef = "amount_input"
+    val unitRef = "unit_dropdown"
+    val amountLineRef = "amount_line"
+    val focusManager = LocalFocusManager.current
+    // unit selected in the dropdown menu
+    var unit: CurrencyUnit by remember { mutableStateOf(prefBitcoinUnit) }
+    // stores the raw String input entered by the user.
+    var rawAmount: String by remember { mutableStateOf(initialAmount?.toUnit(prefBitcoinUnit).toPlainString()) }
+    // stores the numeric value of rawAmount, as a Double. Null if rawAmount is invalid or empty.
+    var amount: Double? by remember { mutableStateOf(initialAmount?.toUnit(prefBitcoinUnit)) }
+
+    log.info { "amount input initial [ amount=${amount.toPlainString()} unit=$unit with rate=$fiatRate ]" }
+
+    fun convertInputToAmount(): Pair<MilliSatoshi?, Double?> {
+        log.info { "amount input update [ amount=$amount unit=$unit with rate=$fiatRate ]" }
+        return amount?.let { d ->
+            when (val u = unit) {
+                is FiatCurrency -> Pair(d.toMilliSatoshi(fiatRate), amount)
+                is BitcoinUnit -> d.toMilliSatoshi(u).run {
+                    Pair(this, toFiat(fiatRate))
+                }
+                else -> Pair(null, null)
+            }
+        } ?: Pair(null, null)
+    }
+
+    ConstraintLayout(constraintSet = ConstraintSet {
+        val amountInput = createRefFor(amountRef)
+        val unitDropdown = createRefFor(unitRef)
+        constrain(amountInput) {
+            if (!useBasicInput) {
+                width = Dimension.fillToConstraints
+                end.linkTo(unitDropdown.start)
+            }
+            top.linkTo(parent.top)
+            start.linkTo(parent.start)
+        }
+        constrain(unitDropdown) {
+            if (useBasicInput) {
+                bottom.linkTo(amountInput.bottom)
+                top.linkTo(amountInput.top)
+            } else {
+                baseline.linkTo(amountInput.baseline)
+            }
+            start.linkTo(amountInput.end)
+            end.linkTo(parent.end)
+        }
+        if (useBasicInput) {
+            val amountLine = createRefFor(amountLineRef)
+            constrain(amountLine) {
+                width = Dimension.fillToConstraints
+                bottom.linkTo(amountInput.bottom)
+                start.linkTo(amountInput.start)
+                end.linkTo(unitDropdown.end)
+            }
+        }
+    }, modifier = modifier) {
+        val onValueChange: (String) -> Unit = {
+            val d = it.toDoubleOrNull()
+            if (d == null) {
+                rawAmount = ""
+                amount = null
+            } else {
+                rawAmount = it
+                amount = d
+            }
+            convertInputToAmount().let { conv ->
+                onAmountChange(conv.first, conv.second, prefFiatUnit)
+            }
+        }
+        if (useBasicInput) {
+            AndroidView(factory = { ctx ->
+                EditText(ctx).apply {
+                    setText(rawAmount)
+                    doOnTextChanged { text, start, before, count ->
+                        onValueChange(text.toString())
+                    }
+                    background = null
+                    inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+                    textAlignment = TEXT_ALIGNMENT_VIEW_END
+                    textSize = inputTextSize.value
+                    setTextColor(getColor(ctx, R.attr.colorPrimary))
+                    typeface = Typeface.create("sans-serif-light", Typeface.NORMAL)
+                    minWidth = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80.0f, ctx.resources.displayMetrics).toInt()
+                    maxLines = 1
+                }
+            }, modifier = Modifier.layoutId(amountRef))
+        } else {
+            TextField(
+                value = rawAmount,
+                onValueChange = onValueChange,
+                modifier = inputModifier.layoutId(amountRef),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None,
+                    autoCorrect = false,
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                colors = textFieldColors(),
+                singleLine = true,
+                maxLines = 1,
+            )
+        }
+
+        UnitDropdown(
+            selectedUnit = unit,
+            prefFiat = prefFiatUnit,
+            onUnitChange = {
+                unit = it
+                convertInputToAmount().let { conv ->
+                    onAmountChange(conv.first, conv.second, prefFiatUnit)
+                }
+            },
+            onDismiss = { },
+            modifier = dropdownModifier.layoutId(unitRef)
+        )
+
+        if (useBasicInput) {
+            AndroidView(modifier = Modifier
+                .height(2.dp)
+                .layoutId(amountLineRef), factory = {
+                ImageView(it).apply {
+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    setBackgroundResource(R.drawable.line_dots)
+                }
+            })
+        }
+    }
+}
+
+@Composable
+private fun UnitDropdown(
+    selectedUnit: CurrencyUnit,
+    prefFiat: FiatCurrency,
+    onUnitChange: (CurrencyUnit) -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val items = listOf<CurrencyUnit>(BitcoinUnit.Sat, BitcoinUnit.Bit, BitcoinUnit.MBtc, BitcoinUnit.Btc, prefFiat)
+    var selectedIndex by remember { mutableStateOf(maxOf(items.lastIndexOf(selectedUnit), 0)) }
+    Box(modifier = modifier
+        .wrapContentSize(Alignment.TopStart)) {
+        Button(
+            text = items[selectedIndex].label(),
+            icon = R.drawable.ic_chevron_down,
+            onClick = { expanded = true },
+            padding = PaddingValues(8.dp),
+            space = 8.dp,
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = {
+                expanded = false
+                onDismiss()
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            items.forEachIndexed { index, s ->
+                DropdownMenuItem(onClick = {
+                    selectedIndex = index
+                    expanded = false
+                    onDismiss()
+                    onUnitChange(items[index])
+                }) {
+                    Text(text = s.label())
+                }
+            }
+        }
+    }
+}

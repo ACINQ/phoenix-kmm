@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.platform.AmbientContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.dimensionResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -38,7 +38,9 @@ import com.google.zxing.ResultPoint
 import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
+import fr.acinq.phoenix.android.components.IconWithText
 import fr.acinq.phoenix.android.databinding.ScanViewBinding
+import fr.acinq.phoenix.android.utils.logger
 import navController
 import navigate
 import readClipboard
@@ -49,10 +51,12 @@ import requireWallet
 @Composable
 fun ReadDataView() {
     requireWallet(from = Screen.ReadData) {
-        val context = AmbientContext.current.applicationContext
+        val context = LocalContext.current.applicationContext
         val nc = navController
+        val log = logger()
         fun handleInput(input: String) {
             // check input is valid - hold it in a viewmodel, maybe using the controller's
+            log.info { "read data=$input" }
             nc.navigate(Screen.Send, input)
         }
         Box(modifier = Modifier) {

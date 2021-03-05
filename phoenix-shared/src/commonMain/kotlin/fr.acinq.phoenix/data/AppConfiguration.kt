@@ -9,63 +9,44 @@ import kotlin.math.roundToLong
 
 enum class Chain { MAINNET, TESTNET, REGTEST }
 
-@Serializable
-enum class BitcoinUnit(
-    val label: String,
-    val explanation: String,
-    val abbrev: String
-) {
-    Satoshi("Satoshi","0.00000001 BTC", "sat"),
-    Bits("Bits", "0.000001 BTC", "bits"),
-    MilliBitcoin("Milli-Bitcoin", "0.001 BTC", "mbtc"),
-    Bitcoin("Bitcoin", "", "btc"),
-    ;
-
-    companion object default {
-        val values = BitcoinUnit.values().toList()
-    }
+interface CurrencyUnit {
+    fun label(): String = toString().toLowerCase()
 }
 
-fun Double.toMilliSatoshi(unit: BitcoinUnit): MilliSatoshi =
-    when (unit) {
-        BitcoinUnit.Satoshi -> MilliSatoshi((this * 1_000.0).roundToLong())
-        BitcoinUnit.Bits -> MilliSatoshi((this * 100_000.0).roundToLong())
-        BitcoinUnit.MilliBitcoin -> MilliSatoshi((this * 100_000_000.0).roundToLong())
-        BitcoinUnit.Bitcoin -> MilliSatoshi((this * 100_000_000_000.0).roundToLong())
-    }
+@Serializable
+enum class BitcoinUnit : CurrencyUnit {
+    Sat, Bit, MBtc, Btc
+}
+
+/** Converts a [Double] amount to [MilliSatoshi], assuming that this amount is in fiat. */
+fun Double.toMilliSatoshi(fiatRate: Double): MilliSatoshi = (this / fiatRate).toMilliSatoshi(BitcoinUnit.Btc)
+
+/** Converts a [Double] amount to [MilliSatoshi], assuming that this amount is in Bitcoin. */
+fun Double.toMilliSatoshi(unit: BitcoinUnit): MilliSatoshi = when (unit) {
+    BitcoinUnit.Sat -> MilliSatoshi((this * 1_000.0).roundToLong())
+    BitcoinUnit.Bit -> MilliSatoshi((this * 100_000.0).roundToLong())
+    BitcoinUnit.MBtc -> MilliSatoshi((this * 100_000_000.0).roundToLong())
+    BitcoinUnit.Btc -> MilliSatoshi((this * 100_000_000_000.0).roundToLong())
+}
+
+/** Converts [MilliSatoshi] to another Bitcoin unit. */
+fun MilliSatoshi.toUnit(unit: BitcoinUnit): Double = when (unit) {
+    BitcoinUnit.Sat -> this.msat / 1_000.0
+    BitcoinUnit.Bit -> this.msat / 100_000.0
+    BitcoinUnit.MBtc -> this.msat / 100_000_000.0
+    BitcoinUnit.Btc -> this.msat / 100_000_000_000.0
+}
 
 @Serializable
-enum class FiatCurrency(
-    val shortLabel: String,
-    val longLabel: String
-) {
+enum class FiatCurrency : CurrencyUnit {
+    AUD, BRL, CAD, CHF, CLP, CNY, DKK, EUR, GBP, HKD, INR, ISK, JPY, KRW, MXN, NZD, PLN, RUB, SEK, SGD, THB, TWD, USD;
 
-    AUD("AUD", "Australian Dollar"),
-    BRL("BRL", "Brazilian Real"),
-    CAD("CAD", "Canadian Dollar"),
-    CHF("CHF", "Swiss Franc"),
-    CLP("CLP", "Chilean Peso"),
-    CNY("CNY", "Chinese Yuan"),
-    DKK("DKK", "Danish Krone"),
-    EUR("EUR", "Euro"),
-    GBP("GBP", "Great British Pound"),
-    HKD("HKD", "Hong Kong Dollar"),
-    INR("INR", "Indian Rupee"),
-    ISK("ISK", "Icelandic Kròna"),
-    JPY("JPY", "Japanese Yen"),
-    KRW("KRW", "Korean Won"),
-    MXN("MXN", "Mexican Peso"),
-    NZD("NZD", "New Zealand Dollar"),
-    PLN("PLN", "Polish Zloty"),
-    RUB("RUB", "Russian Ruble"),
-    SEK("SEK", "Swedish Krona"),
-    SGD("SGD", "Singapore Dollar"),
-    THB("THB", "Thai Baht"),
-    TWD("TWD", "Taiwan New Dollar"),
-    USD("USD", "United States Dollar");
-
-    companion object default {
-        val values = FiatCurrency.values().toList()
+    companion object {
+        fun valueOfOrNull(code: String): FiatCurrency? = try {
+            valueOf(code)
+        } catch (e: IllegalArgumentException) {
+            null
+        }
     }
 }
 

@@ -180,7 +180,7 @@ class AppConnectionsDaemon(
         launch {
             monitor.start()
             monitor.networkState.filter { it != networkStatus.value }.collect {
-                logger.info { "New internet status: $it" }
+                logger.info { "network state=$it" }
                 networkStatus.value = it
             }
         }

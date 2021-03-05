@@ -15,7 +15,7 @@
   -->
 
 <resources>
-    <string name="app_name">KMM (Testnet)</string>
+    <string name="app_name">Phoenix KMM Testnet</string>
 
     <!-- //////////////// system notification channels //////////////// -->
 
@@ -93,45 +93,45 @@
 
     <!-- //////////////// payment holder //////////////// -->
 
-    <string name="paymentholder_sending">Sending…</string>
-    <string name="paymentholder_processing">Processing…</string>
-    <string name="paymentholder_waiting">Waiting…</string>
-    <string name="paymentholder_failed">Failed</string>
-    <string name="paymentholder_sent_prefix">-</string>
-    <string name="paymentholder_received_prefix">+</string>
-    <string name="paymentholder_no_desc">No description</string>
-    <string name="paymentholder_closing_desc">Closing #%1$s</string>
-    <string name="paymentholder_swap_in_desc">On-chain payment to %1$s</string>
+    <string name="paymentline_sending">Sending…</string>
+    <string name="paymentline_processing">Processing…</string>
+    <string name="paymentline_waiting">Waiting…</string>
+    <string name="paymentline_failed">Failed</string>
+    <string name="paymentline_sent_prefix">-</string>
+    <string name="paymentline_received_prefix">+</string>
+    <string name="paymentline_no_desc">No description</string>
+    <string name="paymentline_closing_desc">Closing #%1$s</string>
+    <string name="paymentline_swap_in_desc">On-chain payment to %1$s</string>
 
     <!-- //////////////// receive //////////////// -->
 
-    <string name="receive_edit_title">Edit my invoice</string>
-    <string name="receive_edit_subtitle">You can change the requested amount and the description of the invoice.</string>
-    <string name="receive_in_progress_message">Please hold…</string>
-    <string name="receive_error_message">There was an error when generating the invoice…\n\nPlease try again.</string>
-    <string name="receive_amount_label">Amount (optional)</string>
-    <string name="receive_desc_label">Payment description (optional):</string>
-    <string name="receive_default_desc">Phoenix payment</string>
-    <string name="receive_generate_button">Create invoice</string>
+    <string name="receive__generating">Generating invoice…</string>
+    <string name="receive__error_message">There was an error when generating the invoice (%1$s).\n\nPlease try again.</string>
+    <string name="receive__min_amount_pay_to_open"><![CDATA[Your wallet is empty. First payment you receive must be at least <b>%1$s</b>.]]></string>
+    <string name="receive__edit_button">Edit</string>
+    <string name="receive__share_button">Share</string>
+    <string name="receive__swapin_button">Show a Bitcoin address</string>
+    <string name="receive__lnurl_withdraw">Use LNURL link</string>
 
-    <string name="receive_share_subject">Payment requested</string>
-    <string name="receive_share_title">Share this payment request with…</string>
-    <string name="receive_share_button">Share…</string>
+    <string name="receive__share__subject">Payment requested</string>
+    <string name="receive__share__title">Share this payment request with…</string>
+    <string name="receive__share__button">Share…</string>
 
-    <string name="receive_address_label">Address</string>
-    <string name="receive_withdraw_button">Use LNURL link</string>
+    <string name="receive__edit__title">Edit my invoice</string>
+    <string name="receive__edit__subtitle">You can change the requested amount and the description of the invoice.</string>
+    <string name="receive__edit__amount_label">Amount (optional)</string>
+    <string name="receive__edit__desc_label">Payment description (optional):</string>
+    <string name="receive__edit__generate_button">Create invoice</string>
 
-    <string name="receive_swap_in_button">Show a Bitcoin address</string>
-    <string name="receive_swap_in_error_message">There was an error when swapping to Bitcoin address…\n\nPlease try again.</string>
-    <string name="receive_swap_in_progress_message">Requesting a Bitcoin address…</string>
-    <string name="receive_swap_in_disclaimer_title">Receive with a Bitcoin address</string>
-    <string name="receive_swap_in_disclaimer_message"><![CDATA[
-  A standard Bitcoin address will be displayed next.
-  <br /><br />
-  Funds sent to this address will be shown on your wallet after one confirmation.
-  <br /><br />
-  A <b>%1$s%%</b> fee will be applied.
-  ]]></string>
+    <string name="receive__swapin__error_message">Could not retrieve a Bitcoin address from the swap service.\n\nTry again later.</string>
+    <string name="receive__swapin__wait">Requesting a Bitcoin address…</string>
+    <string name="receive__swapin__address_label">Address</string>
+    <string name="receive__swapin__min_amount"><![CDATA[Deposit must be at least <b>%1$s</b>.]]></string>
+    <string name="receive__swapin__disclaimer"><![CDATA[
+    Funds sent to this address will show on Phoenix after one confirmation.
+    <br /><br />
+    A <b>%1$s%%</b> fee will be applied.
+    ]]></string>
 
     <!-- //////////////// receive with open channel //////////////// -->
 
@@ -207,14 +207,14 @@
     <string name="utils_pretty_amount_with_unit"><![CDATA[%1$s%2$s<small>%3$s<small> %4$s]]></string>
     <string name="utils_unknown_amount" translatable="false">!?</string>
 
-    <string name="utils_ok">Ok</string>
     <string name="utils_proceed">Proceed</string>
-    <string name="utils_next">Next</string>
     <string name="utils_cancel">Cancel</string>
     <string name="utils_date_just_now">just now</string>
     <string name="utils_unknown">N/A</string>
     <string name="utils_copied">Copied to clipboard!</string>
     <string name="btn_back">Go back</string>
+    <string name="btn_next">Next</string>
+    <string name="btn_copy">Copy</string>
     <string name="btn_ok">OK</string>
     <string name="btn_confirm">Confirm</string>
     <string name="btn_cancel">Cancel</string>
@@ -330,17 +330,17 @@
     <string name="initwallet_create">Create new wallet</string>
     <string name="initwallet_restore">Restore my wallet</string>
 
-    <!-- //////////////// main //////////////////// -->
+    <!-- //////////////// home //////////////////// -->
 
-    <string name="main_alert_electrum_connecting">Connecting to Electrum server…</string>
-    <string name="main_alert_network_lost">You are offline. Please check your network settings…</string>
-    <string name="main_alert_lightning_connection_lost">Could not reach the Lightning network…</string>
-    <string name="main_alert_settings_button">Settings</string>
-    <string name="main_swapin_incoming">+%1$s incoming</string>
-    <string name="main_faq_button">FAQ</string>
-    <string name="main_connectivity_button">Connecting…</string>
-    <string name="main_tor_connected_button">Tor enabled</string>
-    <string name="main_stores_button">Stores</string>
+    <string name="home__swapin_incoming">+%1$s incoming</string>
+    <string name="home__drawer__copy_nodeid">Copy node id</string>
+    <string name="home__drawer__settings">Settings</string>
+    <string name="home__drawer__notifications">Notifications</string>
+    <string name="home__drawer__faq">Read the FAQ</string>
+    <string name="home__drawer__support">Help center</string>
+    <string name="home__faq_button">FAQ</string>
+    <string name="home__connection__connecting">Connecting…</string>
+    <string name="home__connection__tor_active">Tor enabled</string>
 
     <!-- //////////////// notifications //////////////////// -->
 

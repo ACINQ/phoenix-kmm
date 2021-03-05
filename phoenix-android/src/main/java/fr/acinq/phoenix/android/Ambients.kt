@@ -15,47 +15,78 @@
  */
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.staticAmbientOf
-import androidx.compose.ui.platform.AmbientContext
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.navigate
 import fr.acinq.phoenix.PhoenixBusiness
-import fr.acinq.phoenix.android.KeyState
+import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.PhoenixApplication
 import fr.acinq.phoenix.ctrl.ControllerFactory
+import fr.acinq.phoenix.data.BitcoinUnit
+import fr.acinq.phoenix.data.CurrencyUnit
+import fr.acinq.phoenix.data.FiatCurrency
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
 
 typealias CF = ControllerFactory
 
-val BusinessFactory = staticAmbientOf<PhoenixBusiness?>(null)
-val AmbientControllerFactory = staticAmbientOf<ControllerFactory?>(null)
-val AmbientNavController = staticAmbientOf<NavHostController?>(null)
-val AmbientKeyState = staticAmbientOf<KeyState>(null)
+val LocalBusiness = staticCompositionLocalOf<PhoenixBusiness?> { null }
+val LocalControllerFactory = staticCompositionLocalOf<ControllerFactory?> { null }
+val LocalNavController = staticCompositionLocalOf<NavHostController?> { null }
+val LocalKeyState = compositionLocalOf<KeyState> { KeyState.Unknown }
+val LocalBitcoinUnit = compositionLocalOf { BitcoinUnit.Sat }
+val LocalFiatCurrency = compositionLocalOf { FiatCurrency.USD }
+val LocalFiatRate = compositionLocalOf { -1.0 }
+val LocalShowInFiat = compositionLocalOf { false }
 
-@Composable
-val navController: NavHostController
-    get() = AmbientNavController.current ?: error("no navigation controller defined")
+val navController
+    @Composable
+    get() = LocalNavController.current ?: error("navigation controller is not available")
 
-@Composable
-val keyState: KeyState
-    get() = AmbientKeyState.current
+val keyState
+    @Composable
+    get() = LocalKeyState.current
 
-@Composable
+val prefUnit: CurrencyUnit
+    @Composable
+    get() = if (prefShowInFiat) {
+        prefFiatCurrency
+    } else {
+        prefBitcoinUnit
+    }
+
+val prefBitcoinUnit
+    @Composable
+    get() = LocalBitcoinUnit.current
+
+val prefFiatCurrency
+    @Composable
+    get() = LocalFiatCurrency.current
+
+val fiatRate
+    @Composable
+    get() = LocalFiatRate.current
+
+val prefShowInFiat
+    @Composable
+    get() = LocalShowInFiat.current
+
 val controllerFactory: ControllerFactory
-    get() = AmbientControllerFactory.current ?: error("No controller factory set. Please use appView or mockView.")
+    @Composable
+    get() = LocalControllerFactory.current ?: error("No controller factory set. Please use appView or mockView.")
 
-@Composable
 val business: PhoenixBusiness
-    get() = BusinessFactory.current ?: error("business is not available")
+    @Composable
+    get() = LocalBusiness.current ?: error("business is not available")
 
-@Composable
 val application: PhoenixApplication
-    get() = AmbientContext.current.applicationContext as? PhoenixApplication
-        ?: error("Application is not of type PhoenixApplication. Are you using appView in preview?")
+    @Composable
+    get() = LocalContext.current.applicationContext as? PhoenixApplication ?: error("Application is not of type PhoenixApplication. Are you using appView in preview?")
 
 fun NavHostController.navigate(screen: Screen, arg: String? = null, builder: NavOptionsBuilder.() -> Unit = {}) {
     val route = if (arg.isNullOrBlank()) screen.route else "${screen.route}/$arg"

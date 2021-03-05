@@ -18,20 +18,19 @@ package fr.acinq.phoenix.android
 
 import CF
 import Screen
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.Checkbox
+import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.AmbientContext
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import fr.acinq.eclair.Eclair
+import fr.acinq.phoenix.android.components.BorderButton
+import fr.acinq.phoenix.android.components.FilledButton
+import fr.acinq.phoenix.android.components.InputText
 import fr.acinq.phoenix.android.mvi.MVIView
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.Initialization
@@ -43,28 +42,41 @@ import navigate
 @Composable
 fun InitWallet() {
     val nc = navController
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Button(onClick = { nc.navigate(Screen.CreateWallet) }) {
-            IconWithText(R.drawable.ic_fire, stringResource(R.string.initwallet_create))
-        }
-        Button(onClick = { nc.navigate(Screen.RestoreWallet) }) {
-            IconWithText(R.drawable.ic_restore, stringResource(R.string.initwallet_restore))
-        }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .fillMaxHeight(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        FilledButton(
+            text = R.string.initwallet_create,
+            icon = R.drawable.ic_fire,
+            onClick = { nc.navigate(Screen.CreateWallet) })
+        Spacer(modifier = Modifier.height(16.dp))
+        BorderButton(
+            text = R.string.initwallet_restore,
+            icon = R.drawable.ic_restore,
+            onClick = { nc.navigate(Screen.RestoreWallet) })
     }
 }
 
 @Composable
-fun CreateWalletView(seedViewModel: SeedViewModel) {
+fun CreateWalletView(appVM: AppViewModel) {
     val log = logger()
     val nc = navController
-    log.info {"keystate = ${seedViewModel.keyState}"}
-    if (seedViewModel.keyState.isReady()) {
-        nc.navigate(Screen.Home)
+    if (appVM.keyState.isReady()) {
+        nc.navigate(Screen.Startup)
     } else {
         MVIView(CF::initialization) { model, postIntent ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 val entropy = remember { Eclair.randomBytes(16) }
-                log.info {"keystate = ${seedViewModel.keyState}"}
                 log.info { "generating wallet" }
                 postIntent(Initialization.Intent.GenerateWallet(entropy))
                 when (model) {
@@ -73,14 +85,8 @@ fun CreateWalletView(seedViewModel: SeedViewModel) {
                     }
                     is Initialization.Model.GeneratedWallet -> {
                         log.info { "a new wallet has been generated, writing to disk..." }
-                        seedViewModel.writeSeed(AmbientContext.current.applicationContext, model.mnemonics)
+                        appVM.writeSeed(LocalContext.current.applicationContext, model.mnemonics)
                         log.info { "seed successfully written to disk" }
-//                        try {
-//                            SeedManager.writeSeedToDisk(AmbientContext.current.applicationContext, model.seed)
-//                            nc.navigate(Screen.Home)
-//                        } catch (e: Exception) {
-//                            Text(stringResource(id = R.string.autocreate_error, e.localizedMessage ?: e::class.java.simpleName))
-//                        }
                     }
                 }
             }
@@ -89,33 +95,44 @@ fun CreateWalletView(seedViewModel: SeedViewModel) {
 }
 
 @Composable
-fun RestoreWalletView(seedViewModel: SeedViewModel) {
-    if (seedViewModel.keyState.isReady()) {
+fun RestoreWalletView(appVM: AppViewModel) {
+    if (appVM.keyState.isReady()) {
         val nc = navController
-        nc.navigate(Screen.Home)
+        nc.navigate(Screen.Startup)
     } else {
         MVIView(CF::restoreWallet) { model, postIntent ->
-            Column(modifier = Modifier.background(Color.Green)) {
+            Column(modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth()) {
                 when (model) {
                     is RestoreWallet.Model.Ready -> {
+                        var showDisclaimer by remember { mutableStateOf(true) }
                         var hasCheckedWarning by remember { mutableStateOf(false) }
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        if (showDisclaimer) {
                             Text(stringResource(R.string.restore_disclaimer_message))
-                            Row {
+                            Row(Modifier.padding(vertical = 24.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(hasCheckedWarning, onCheckedChange = { hasCheckedWarning = it })
+                                Spacer(Modifier.width(16.dp))
                                 Text(stringResource(R.string.restore_disclaimer_checkbox))
                             }
-                            Button(onClick = { }, enabled = hasCheckedWarning) {
-                                IconWithText(R.drawable.ic_arrow_next, stringResource(R.string.restore_disclaimer_next))
-                            }
-                        }
-                        var wordsInput by remember { mutableStateOf("") }
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                            BorderButton(
+                                text = R.string.restore_disclaimer_next,
+                                icon = R.drawable.ic_arrow_next,
+                                onClick = { showDisclaimer = false },
+                                enabled = hasCheckedWarning)
+                        } else {
+                            var wordsInput by remember { mutableStateOf("") }
                             Text(stringResource(R.string.restore_instructions))
-                            TextField(value = wordsInput, onValueChange = { wordsInput = it }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text))
-                            Button(onClick = { postIntent(RestoreWallet.Intent.Validate(wordsInput.split(" "))) }, enabled = wordsInput.isNotBlank()) {
-                                IconWithText(R.drawable.ic_check_circle, stringResource(R.string.restore_import_button), iconTint = MaterialTheme.colors.primary)
-                            }
+                            InputText(
+                                text = wordsInput,
+                                onTextChange = { wordsInput = it },
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                            )
+                            BorderButton(
+                                text = R.string.restore_import_button,
+                                icon = R.drawable.ic_check_circle,
+                                onClick = { postIntent(RestoreWallet.Intent.Validate(wordsInput.split(" "))) },
+                                enabled = wordsInput.isNotBlank())
                         }
                     }
                     is RestoreWallet.Model.InvalidMnemonics -> {

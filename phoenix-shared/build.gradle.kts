@@ -2,7 +2,7 @@ plugins {
     val withAndroid = System.getProperty("withAndroid")!!.toBoolean()
     if (withAndroid) id("com.android.library")
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version "1.4.21-2"
+    kotlin("plugin.serialization") version "1.4.30"
     id("com.squareup.sqldelight")
 }
 
@@ -105,6 +105,7 @@ kotlin {
                     api("fr.acinq.secp256k1:secp256k1-kmp-jni-android:$secp256k1Version")
                     api("io.ktor:ktor-network:$ktorVersion")
                     api("io.ktor:ktor-network-tls:$ktorVersion")
+                    implementation("io.ktor:ktor-client-core-jvm:$ktorVersion")
                     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
                     implementation("com.squareup.sqldelight:android-driver:$sqldelightVersion")
                 }

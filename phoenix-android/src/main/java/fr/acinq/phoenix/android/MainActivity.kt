@@ -18,26 +18,26 @@ package fr.acinq.phoenix.android
 
 import AppView
 import android.Manifest
+import android.content.SharedPreferences
 import android.os.Bundle
+import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.setContent
+import androidx.compose.ui.tooling.preview.Devices
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
-import androidx.ui.tooling.preview.Devices
-import androidx.ui.tooling.preview.Preview
 import fr.acinq.phoenix.android.mvi.MockView
+import fr.acinq.phoenix.android.utils.Prefs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.MainScope
-import kotlinx.coroutines.launch
 
 
 @ExperimentalCoroutinesApi
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceChangeListener {
 
-    private val seedViewModel by viewModels<SeedViewModel> { SeedViewModel.Factory(applicationContext) }
+    private val appViewModel by viewModels<AppViewModel> { AppViewModel.Factory(applicationContext) }
 
     @ExperimentalMaterialApi
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,7 +45,25 @@ class MainActivity : AppCompatActivity() {
         ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.CAMERA), 1234)
         setContent {
             PhoenixAndroidTheme {
-                AppView(seedViewModel)
+                AppView(appViewModel)
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+//        (application as? PhoenixApplication)?.business?.decrementDisconnectCount()
+    }
+
+    override fun onStop() {
+        super.onStop()
+//        (application as? PhoenixApplication)?.business?.incrementDisconnectCount()
+    }
+
+    override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
+        when(key) {
+            Prefs.PREFS_SHOW_AMOUNT_IN_FIAT, Prefs.PREFS_FIAT_CURRENCY, Prefs.PREFS_BITCOIN_UNIT -> {
+                appViewModel.refreshPrefs()
             }
         }
     }

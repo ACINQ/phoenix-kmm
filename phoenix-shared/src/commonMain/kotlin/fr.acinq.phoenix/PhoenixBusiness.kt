@@ -120,9 +120,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         appConnectionsDaemon?.decrementDisconnectCount()
     }
 
-    fun nodeID(): String {
-        return peerManager.peerState.value?.nodeParams?.nodeId?.toString() ?: error("Peer must be initialized!")
-    }
+    fun peerState() = peerManager.peerState
 
     // The (node_id, fcm_token) tuple only needs to be registered once.
     // And after that, only if the tuple changes (e.g. different fcm_token).
@@ -131,8 +129,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         peerManager.getPeer().registerFcmToken(token)
     }
 
-    fun incomingPaymentFlow() =
-        paymentsManager.subscribeToLastIncomingPayment()
+    fun incomingPaymentFlow() = paymentsManager.subscribeToLastIncomingPayment()
 
     fun updateTorUsage(isEnabled: Boolean) = appConfigurationManager.updateTorUsage(isEnabled)
 

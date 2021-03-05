@@ -24,11 +24,15 @@ import org.kodein.log.Logger
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
-class MVIControllerViewModel<M : MVI.Model, I : MVI.Intent>(val controller: MVI.Controller<M, I>) : ViewModel() {
-    val logger: Logger = newLogger(LoggerFactory.default)
+open class MVIControllerViewModel<M : MVI.Model, I : MVI.Intent>(val controller: MVI.Controller<M, I>) : ViewModel() {
+    val log: Logger = newLogger(LoggerFactory.default)
+
+    init {
+        log.debug { "initializing view-model for controller=$controller" }
+    }
 
     override fun onCleared() {
-        logger.debug { "clearing controller view model with controller=$controller" }
+        log.debug { "clearing view-model for controller=$controller" }
         controller.stop()
     }
 
@@ -41,5 +45,4 @@ class MVIControllerViewModel<M : MVI.Model, I : MVI.Intent>(val controller: MVI.
             return MVIControllerViewModel(controllerFactory.getController()) as T
         }
     }
-
 }

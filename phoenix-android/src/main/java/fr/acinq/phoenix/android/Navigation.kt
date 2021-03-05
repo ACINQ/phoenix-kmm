@@ -19,7 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.navigation.compose.KEY_ROUTE
 import androidx.navigation.compose.currentBackStackEntryAsState
-import fr.acinq.phoenix.android.KeyState
+import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.utils.logger
 
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android
+package fr.acinq.phoenix.android.security
 
 import android.content.Context
 import androidx.compose.runtime.getValue
@@ -22,13 +22,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import fr.acinq.bitcoin.ByteVector
-import fr.acinq.phoenix.android.security.EncryptedSeed
-import fr.acinq.secp256k1.Hex
 import org.kodein.log.Logger
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import org.kodein.memory.text.toHexString
 import java.io.File
 import java.lang.RuntimeException
 
@@ -37,70 +33,10 @@ sealed class KeyState {
 
     object Unknown : KeyState()
     object Absent : KeyState()
-    object Writing : KeyState()
     data class Present(internal val encryptedSeed: EncryptedSeed.V2) : KeyState()
     sealed class Error : KeyState() {
         object Unreadable : Error()
         object UnhandledSeedType : Error()
-    }
-}
-
-class SeedViewModel(val context: Context) : ViewModel() {
-    val log: Logger = newLogger(LoggerFactory.default)
-    var keyState: KeyState by mutableStateOf(KeyState.Unknown)
-        private set
-
-    init {
-        refreshSeed()
-    }
-
-    private fun refreshSeed() {
-        keyState = try {
-            when (val seed = SeedManager.loadSeedFromDisk(context)) {
-                null -> KeyState.Absent
-                is EncryptedSeed.V2.NoAuth -> KeyState.Present(seed)
-                else -> KeyState.Error.UnhandledSeedType
-            }
-        } catch (e: Exception) {
-            KeyState.Error.Unreadable
-        }
-    }
-
-    fun writeSeed(context: Context, mnemonics: List<String>) {
-        try {
-            val encrypted = EncryptedSeed.V2.NoAuth.encrypt(EncryptedSeed.fromMnemonics(mnemonics))
-            SeedManager.writeSeedToDisk(context, encrypted)
-            refreshSeed()
-            log.info { "seed has been written to disk" }
-        } catch (e: Exception) {
-            log.error(e) { "failed to create new wallet: " }
-        }
-    }
-
-    fun decryptSeed(): ByteArray? {
-        return try {
-            when (val seed = SeedManager.loadSeedFromDisk(context)) {
-                is EncryptedSeed.V2.NoAuth -> seed.decrypt()
-                else -> throw RuntimeException("no seed sorry")
-            }
-        } catch (e: Exception) {
-            log.error(e) { "could not decrypt seed" }
-            null
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        log.info { "SeedViewModel cleared" }
-    }
-
-    class Factory(
-        private val context: Context,
-    ) : ViewModelProvider.Factory {
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST")
-            return SeedViewModel(context) as T
-        }
     }
 }
 

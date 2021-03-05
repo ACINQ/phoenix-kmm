@@ -16,9 +16,9 @@
 
 package fr.acinq.phoenix.android.mvi
 
-import AmbientControllerFactory
+import LocalControllerFactory
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Providers
+import androidx.compose.runtime.CompositionLocalProvider
 import fr.acinq.phoenix.ctrl.*
 import fr.acinq.phoenix.ctrl.config.*
 
@@ -42,7 +42,7 @@ val MockControllers = object : ControllerFactory {
 
 @Composable
 fun MockView(children: @Composable () -> Unit) {
-    Providers(AmbientControllerFactory provides MockControllers) {
+    CompositionLocalProvider(LocalControllerFactory provides MockControllers) {
         children()
     }
 }
