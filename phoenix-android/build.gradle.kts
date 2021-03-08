@@ -45,6 +45,8 @@ android {
     }
 
     compileOptions {
+        // Flag to enable support for the new language APIs
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
@@ -104,7 +106,13 @@ dependencies {
     // -- scanner zxing
     implementation("com.journeyapps:zxing-android-embedded:$zxingVersion")
 
+    // logging
+    implementation("org.slf4j:slf4j-api:1.7.30")
+    implementation("com.github.tony19:logback-android:2.0.0")
+
     testImplementation("junit:junit:4.13.1")
     androidTestImplementation("androidx.test.ext:junit:1.1.2")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
+
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
 }
