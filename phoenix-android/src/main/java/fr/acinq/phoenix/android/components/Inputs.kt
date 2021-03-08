@@ -54,15 +54,16 @@ import fr.acinq.phoenix.data.*
 
 @Composable
 fun InputText(
+    modifier: Modifier = Modifier,
     text: String,
+    maxLines: Int = 1,
     onTextChange: (String) -> Unit,
-    modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
     TextField(
         value = text,
         onValueChange = onTextChange,
-        maxLines = 1,
+        maxLines = maxLines,
         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done, keyboardType = KeyboardType.Text),
         keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         colors = textFieldColors(),

@@ -96,6 +96,7 @@ fun CreateWalletView(appVM: AppViewModel) {
 
 @Composable
 fun RestoreWalletView(appVM: AppViewModel) {
+    val log = logger()
     if (appVM.keyState.isReady()) {
         val nc = navController
         nc.navigate(Screen.Startup)
@@ -104,6 +105,7 @@ fun RestoreWalletView(appVM: AppViewModel) {
             Column(modifier = Modifier
                 .padding(24.dp)
                 .fillMaxWidth()) {
+                var wordsInput by remember { mutableStateOf("") }
                 when (model) {
                     is RestoreWallet.Model.Ready -> {
                         var showDisclaimer by remember { mutableStateOf(true) }
@@ -121,11 +123,11 @@ fun RestoreWalletView(appVM: AppViewModel) {
                                 onClick = { showDisclaimer = false },
                                 enabled = hasCheckedWarning)
                         } else {
-                            var wordsInput by remember { mutableStateOf("") }
                             Text(stringResource(R.string.restore_instructions))
                             InputText(
                                 text = wordsInput,
                                 onTextChange = { wordsInput = it },
+                                maxLines = 1,
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
                             )
                             BorderButton(
@@ -140,6 +142,9 @@ fun RestoreWalletView(appVM: AppViewModel) {
                     }
                     is RestoreWallet.Model.ValidMnemonics -> {
                         Text(stringResource(R.string.restore_in_progress))
+                        log.info { "restored wallet seed is valid" }
+                        appVM.writeSeed(LocalContext.current.applicationContext, wordsInput.split(" "))
+                        log.info { "seed successfully written to disk" }
                     }
                     else -> {
                         Text("Please hold...")
