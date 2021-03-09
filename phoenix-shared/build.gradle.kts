@@ -106,7 +106,7 @@ kotlin {
                     api("fr.acinq.secp256k1:secp256k1-kmp-jni-android:$secp256k1Version")
                     api("io.ktor:ktor-network:$ktorVersion")
                     api("io.ktor:ktor-network-tls:$ktorVersion")
-                    api("io.ktor:ktor-client-core-jvm:$ktorVersion")
+                    api("io.ktor:ktor-client-android:$ktorVersion")
                     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
                     implementation("com.squareup.sqldelight:android-driver:$sqldelightVersion")
                 }
