@@ -166,7 +166,7 @@ struct PaymentView : View {
 //
 // In SwiftUI, it's not that simple. But it's not that bad either.
 //
-// - we used InfoGrid_Column0 to measure the width of each key
+// - we use InfoGrid_Column0 to measure the width of each key
 // - we use InfoGrid_Column0_MeasuredWidth to communicate the width
 //   up the hierarchy to the InfoGrid.
 // - InfoGrid_Column0_MeasuredWidth.reduce is used to find the max width
@@ -244,7 +244,7 @@ struct InfoGrid: View {
 					VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
 						
 						Text(pType.0)
-						+ Text(" (\(pType.1)")
+						+ Text(" (\(pType.1))")
 							.font(.subheadline)
 							.foregroundColor(.secondary)
 						
@@ -402,30 +402,41 @@ extension Eclair_kmpWalletPayment {
 	
 	fileprivate func paymentType() -> (String, String)? {
 		
+		// Will be displayed in the UI as:
+		//
+		// Type : value (explanation)
+		//
+		// where return value is: (value, explanation)
+		
 		if let incomingPayment = self as? Eclair_kmpIncomingPayment {
 			
 			if let _ = incomingPayment.origin.asSwapIn() {
-				let ttl = NSLocalizedString("SwapIn", comment: "Transaction Info: Type - title")
-				let exp = NSLocalizedString("layer 0 -> 1", comment: "Transaction Info: Type - explanation")
-				return (ttl, exp)
+				let val = NSLocalizedString("SwapIn", comment: "Transaction Info: Value")
+				let exp = NSLocalizedString("layer 1 -> 2", comment: "Transaction Info: Explanation")
+				return (val, exp)
 			}
 			if let _ = incomingPayment.origin.asKeySend() {
-				let ttl = NSLocalizedString("KeySend", comment: "Transaction Info: Type - title")
-				let exp = NSLocalizedString("non-invoice payment", comment: "Transaction Info: Type - explanation")
-				return (ttl, exp)
+				let val = NSLocalizedString("KeySend", comment: "Transaction Info: Value")
+				let exp = NSLocalizedString("non-invoice payment", comment: "Transaction Info: Explanation")
+				return (val, exp)
 			}
 			
 		} else if let outgoingPayment = self as? Eclair_kmpOutgoingPayment {
 			
 			if let _ = outgoingPayment.details.asSwapOut() {
-				let ttl = NSLocalizedString("SwapIn", comment: "Transaction Info: Type - title")
-				let exp = NSLocalizedString("layer 1 -> 0", comment: "Transaction Info: Type - explanation")
-				return (ttl, exp)
+				let val = NSLocalizedString("SwapOut", comment: "Transaction Info: Value")
+				let exp = NSLocalizedString("layer 2 -> 1", comment: "Transaction Info: Explanation")
+				return (val, exp)
 			}
 			if let _ = outgoingPayment.details.asKeySend() {
-				let ttl = NSLocalizedString("KeySend", comment: "Transaction Info: Type - title")
-				let exp = NSLocalizedString("non-invoice payment", comment: "Transaction Info: Type - explanation")
-				return (ttl, exp)
+				let val = NSLocalizedString("KeySend", comment: "Transaction Info: Value")
+				let exp = NSLocalizedString("non-invoice payment", comment: "Transaction Info: Explanation")
+				return (val, exp)
+			}
+			if let _ = outgoingPayment.details.asChannelClosing() {
+				let val = NSLocalizedString("Channel Closing", comment: "Transaction Info: Value")
+				let exp = NSLocalizedString("layer 2 -> 1", comment: "Transaction Info: Explanation")
+				return (val, exp)
 			}
 		}
 		

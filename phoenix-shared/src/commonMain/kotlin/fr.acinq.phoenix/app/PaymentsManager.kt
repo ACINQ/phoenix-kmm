@@ -152,6 +152,13 @@ fun OutgoingPayment.Details.asSwapOut(): OutgoingPayment.Details.SwapOut? = when
     else -> null
 }
 
+// Class type OutgoingPayment.Details.ChannelClosing is not exported to iOS unless
+// we explicitly reference it in PhoenixShared.
+fun OutgoingPayment.Details.asChannelClosing(): OutgoingPayment.Details.ChannelClosing? = when (this) {
+    is OutgoingPayment.Details.ChannelClosing -> this
+    else -> null
+}
+
 // Class type OutgoingPayment.Status.Pending is not exported to iOS unless
 // we explicitly reference it in PhoenixShared.
 fun OutgoingPayment.Status.asPending(): OutgoingPayment.Status.Pending? = when (this) {

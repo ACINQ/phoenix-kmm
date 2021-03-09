@@ -1,5 +1,6 @@
 package fr.acinq.phoenix
 
+import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.Eclair
 import fr.acinq.eclair.Eclair.randomBytes32
 import fr.acinq.eclair.MilliSatoshi
@@ -80,6 +81,21 @@ object Mock {
             status = OutgoingPayment.Status.Completed.Failed(
                 reason = FinalFailure.InvalidPaymentAmount
             )
+        )
+    }
+
+    fun pendingChannelClosing(): WalletPayment {
+        return OutgoingPayment(
+            id = UUID.randomUUID(),
+            recipientAmount = 350_000.msat,
+            recipient = Eclair.randomKey().publicKey(),
+            details = OutgoingPayment.Details.ChannelClosing(
+                closingAddress = "tb1q8rf6p595hp465pm2hhxfhyv5zdr6jgujwetraq",
+                fundingKeyPath = null,
+                paymentHash = randomBytes32()
+            ),
+            parts = listOf(),
+            status = OutgoingPayment.Status.Pending
         )
     }
 }
