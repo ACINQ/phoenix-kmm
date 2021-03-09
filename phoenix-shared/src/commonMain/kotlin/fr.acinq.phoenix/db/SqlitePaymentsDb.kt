@@ -472,7 +472,9 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     // if a payment is successful do not take into accounts failed/pending parts.
     private fun filterUselessParts(payment: OutgoingPayment): OutgoingPayment = when (payment.status) {
-        is OutgoingPayment.Status.Completed.Succeeded -> payment.copy(parts = payment.parts.filter { it.status is OutgoingPayment.Part.Status.Succeeded })
+        is OutgoingPayment.Status.Completed.Succeeded.OffChain -> {
+            payment.copy(parts = payment.parts.filter { it.status is OutgoingPayment.Part.Status.Succeeded })
+        }
         else -> payment
     }
 
@@ -651,22 +653,32 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         created_at: Long,
         completed_at: Long?
     ): WalletPayment = when (direction.toLowerCase()) {
-        "outgoing" -> OutgoingPayment(
-            id = UUID.fromString(outgoing_payment_id!!),
-            recipientAmount = parts_amount?.let { MilliSatoshi(it) } ?: MilliSatoshi(amount), //  when possible, prefer using sum of parts' amounts instead of recipient amount
-            recipient = PublicKey(ByteVector(outgoing_recipient!!)),
-            details = mapOutgoingDetails(
+        "outgoing" -> {
+            val details = mapOutgoingDetails(
                 paymentHash = ByteVector32(payment_hash),
                 detailsType = outgoing_details_type,
                 detailsBlob = outgoing_details_blob ?: ByteArray(0)
-            ),
-            parts = listOf(),
-            status = mapOutgoingPaymentStatus(
-                completed_at = completed_at,
-                status_type = outgoing_status_type ?: 0,
-                status = outgoing_status_blob ?: ByteArray(0)
             )
-        )
+            val recipientAmount = if (parts_amount != null && details is OutgoingPayment.Details.Normal) {
+                // For normal payments, prefer using sum of parts' instead of original amount.
+                // This allows us to include the fees in the amount.
+                MilliSatoshi(parts_amount)
+            } else {
+                MilliSatoshi(amount)
+            }
+            OutgoingPayment(
+                id = UUID.fromString(outgoing_payment_id!!),
+                recipientAmount = recipientAmount,
+                recipient = PublicKey(ByteVector(outgoing_recipient!!)),
+                details = details,
+                parts = listOf(),
+                status = mapOutgoingPaymentStatus(
+                    completed_at = completed_at,
+                    status_type = outgoing_status_type ?: 0,
+                    status = outgoing_status_blob ?: ByteArray(0)
+                )
+            )
+        }
         "incoming" -> mapIncomingPayment(
             payment_hash = payment_hash,
             created_at = created_at,
