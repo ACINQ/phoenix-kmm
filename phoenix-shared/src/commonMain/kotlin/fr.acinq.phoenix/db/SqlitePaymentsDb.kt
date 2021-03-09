@@ -163,14 +163,14 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
     @Serializable
     data class MinedJSON(val txids: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>) {
         companion object {
-            fun serialize(src: OutgoingPayment.Status.Completed.Mined): ByteArray {
+            fun serialize(src: OutgoingPayment.Status.Completed.Succeeded.OnChain): ByteArray {
                 val json = MinedJSON(src.txids)
                 return Json.encodeToString(json).toByteArray(Charsets.UTF_8)
             }
-            fun deserialize(blob: ByteArray, completedAt: Long): OutgoingPayment.Status.Completed.Mined {
+            fun deserialize(blob: ByteArray, completedAt: Long): OutgoingPayment.Status.Completed.Succeeded.OnChain {
                 val str = String(bytes = blob, charset = Charsets.UTF_8)
                 val json = Json.decodeFromString<MinedJSON>(str)
-                return OutgoingPayment.Status.Completed.Mined(json.txids, completedAt)
+                return OutgoingPayment.Status.Completed.Succeeded.OnChain(json.txids, completedAt)
             }
         }
     }
@@ -286,7 +286,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     // ---- complete outgoing payment details
 
-    override suspend fun updateOutgoingPayment(id: UUID, completed: OutgoingPayment.Status.Completed) {
+    override suspend fun completeOutgoingPayment(id: UUID, completed: OutgoingPayment.Status.Completed) {
         withContext(Dispatchers.Default) {
             outQueries.transaction {
                 val (statusType, statusBlob) = when (completed) {
@@ -294,11 +294,11 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                         OutgoingStatusType.Failed_v0.type,
                         OutgoingFinalFailureDbEnum.serialize(completed.reason)
                     )}
-                    is OutgoingPayment.Status.Completed.Succeeded -> { Pair(
+                    is OutgoingPayment.Status.Completed.Succeeded.OffChain -> { Pair(
                         OutgoingStatusType.Succeeded_v0.type,
                         completed.preimage.toByteArray()
                     )}
-                    is OutgoingPayment.Status.Completed.Mined -> { Pair(
+                    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> { Pair(
                         OutgoingStatusType.Mined_v0.type,
                         MinedJSON.serialize(completed)
                     )}
@@ -497,7 +497,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         err_code: Long?,
         err_message: String?
     ): OutgoingPayment {
-        val part = if (part_id != null && amount_msat != null && route != null && part_created_at != null) {
+        val parts = if (part_id != null && amount_msat != null && route != null && part_created_at != null) {
             listOf(OutgoingPayment.Part(
                 id = UUID.fromString(part_id),
                 amount = MilliSatoshi(amount_msat),
@@ -516,7 +516,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                 detailsType = details_type,
                 detailsBlob = details_blob
             ),
-            parts = part,
+            parts = parts,
             status = mapOutgoingPaymentStatus(
                 completed_at = completed_at,
                 status_type = status_type ?: 0,
@@ -531,7 +531,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         status: ByteArray
     ): OutgoingPayment.Status = when {
         completed_at != null && status_type == OutgoingStatusType.Succeeded_v0.type -> {
-            OutgoingPayment.Status.Completed.Succeeded(
+            OutgoingPayment.Status.Completed.Succeeded.OffChain(
                 preimage = ByteVector32(status),
                 completedAt = completed_at
             )
@@ -543,7 +543,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
             )
         }
         completed_at != null && status_type == OutgoingStatusType.Mined_v0.type -> {
-            OutgoingPayment.Status.Completed.Mined(
+            OutgoingPayment.Status.Completed.Succeeded.OnChain(
                 txids = listOf<ByteVector32>(),
                 completedAt = completed_at
             )

@@ -90,9 +90,9 @@ fun WalletPayment.id(): String = when (this) {
 fun WalletPayment.state(): WalletPaymentState = when (this) {
     is OutgoingPayment -> when (status) {
         is OutgoingPayment.Status.Pending -> WalletPaymentState.Pending
-        is OutgoingPayment.Status.Completed.Succeeded -> WalletPaymentState.Success
         is OutgoingPayment.Status.Completed.Failed -> WalletPaymentState.Failure
-        is OutgoingPayment.Status.Completed.Mined -> WalletPaymentState.Success
+        is OutgoingPayment.Status.Completed.Succeeded.OnChain -> WalletPaymentState.Success
+        is OutgoingPayment.Status.Completed.Succeeded.OffChain -> WalletPaymentState.Success
     }
     is IncomingPayment -> when (received) {
         null -> WalletPaymentState.Pending
