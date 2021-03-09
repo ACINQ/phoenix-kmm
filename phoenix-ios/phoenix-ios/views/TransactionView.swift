@@ -259,6 +259,32 @@ struct InfoGrid: View {
 				}
 			} // </if let pType>
 			
+			if let channelClosing = payment.channelClosing() {
+				
+				HStack(
+					alignment : VerticalAlignment.top,
+					spacing   : horizontalSpacingBetweenColumns
+				) {
+					HStack(alignment: VerticalAlignment.top, spacing: 0) {
+						Spacer(minLength: 0) // => HorizontalAlignment.trailing
+						InfoGrid_Column0 {
+							Text("Output")
+								.foregroundColor(.secondary)
+						}
+					}
+					.frame(width: widthColumn0)
+
+					Text(channelClosing.closingAddress)
+						.contextMenu {
+							Button(action: {
+								UIPasteboard.general.string = channelClosing.closingAddress
+							}) {
+								Text("Copy")
+							}
+						}
+				}
+			} // </if let channelClosing>
+			
 			if let pFees = payment.paymentFees(currencyPrefs: currencyPrefs) {
 
 				HStack(
@@ -437,6 +463,17 @@ extension Eclair_kmpWalletPayment {
 				let val = NSLocalizedString("Channel Closing", comment: "Transaction Info: Value")
 				let exp = NSLocalizedString("layer 2 -> 1", comment: "Transaction Info: Explanation")
 				return (val, exp)
+			}
+		}
+		
+		return nil
+	}
+	
+	fileprivate func channelClosing() -> Eclair_kmpOutgoingPayment.DetailsChannelClosing? {
+		
+		if let outgoingPayment = self as? Eclair_kmpOutgoingPayment {
+			if let result = outgoingPayment.details.asChannelClosing() {
+				return result
 			}
 		}
 		
