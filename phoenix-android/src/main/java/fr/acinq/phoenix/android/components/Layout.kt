@@ -41,12 +41,13 @@ import fr.acinq.phoenix.android.mutedTextColor
 fun ScreenHeader(
     title: String? = null,
     subtitle: String? = null,
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    backgroundColor: Color = mutedBgColor(),
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(mutedBgColor())
+            .background(backgroundColor)
             .padding(horizontal = 0.dp, vertical = 6.dp),
         verticalAlignment = Alignment.Top,
     ) {
@@ -66,7 +67,7 @@ fun ScreenHeader(
 
 @Composable
 fun ScreenBody(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colors.surface)) {
         HSeparator()
         Column(
             modifier = modifier

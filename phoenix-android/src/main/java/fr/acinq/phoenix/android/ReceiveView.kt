@@ -161,7 +161,7 @@ private fun DefaultView(vm: ReceiveViewModel) {
         verticalArrangement = Arrangement.Top,
     ) {
         val nc = navController
-        ScreenHeader(onBackClick = { nc.popBackStack() })
+        ScreenHeader(onBackClick = { nc.popBackStack() }, backgroundColor = Color.Unspecified)
         MVIView(vm) { model, _ ->
             when (model) {
                 is Receive.Model.Awaiting -> {
@@ -176,11 +176,15 @@ private fun DefaultView(vm: ReceiveViewModel) {
                 is Receive.Model.Generated -> {
                     vm.generateQrCodeBitmap(invoice = model.request)
                     Spacer(modifier = Modifier.height(24.dp))
-                    Surface(Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(BorderStroke(1.dp, MaterialTheme.colors.primary), shape = RoundedCornerShape(16.dp))
-                        .background(Color.White)
-                        .padding(24.dp)) {
+                    Surface(
+                        Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .border(
+                                BorderStroke(1.dp, MaterialTheme.colors.primary),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .background(Color.White)
+                            .padding(24.dp)) {
                         vm.qrBitmap?.let {
                             Image(bitmap = it,
                                 contentDescription = "invoice qr code",
@@ -261,7 +265,7 @@ private fun EditInvoiceView(
                 text = description, // TODO use value from prefs
                 onTextChange = onDescriptionChange,
                 modifier = Modifier.fillMaxWidth())
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
             BorderButton(
                 text = R.string.receive__edit__generate_button,
                 icon = R.drawable.ic_qrcode,

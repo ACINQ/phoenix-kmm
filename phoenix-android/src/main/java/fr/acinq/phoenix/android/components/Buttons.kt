@@ -63,6 +63,7 @@ fun BorderButton(
         space = space,
         onClick = onClick,
         shape = CircleShape,
+        backgroundColor = MaterialTheme.colors.surface,
         border = BorderStroke(ButtonDefaults.OutlinedBorderSize, borderColor()),
         textStyle = textStyle,
         padding = padding,
