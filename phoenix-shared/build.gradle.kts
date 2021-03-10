@@ -84,9 +84,9 @@ kotlin {
                     version { strictly(coroutinesVersion) }
                 }
                 api("org.jetbrains.kotlinx:kotlinx-datetime:0.1.1")
-                api("io.ktor:ktor-client-core:$ktorVersion")
-                api("io.ktor:ktor-client-json:$ktorVersion")
-                api("io.ktor:ktor-client-serialization:$ktorVersion")
+                implementation("io.ktor:ktor-client-core:$ktorVersion")
+                implementation("io.ktor:ktor-client-json:$ktorVersion")
+                implementation("io.ktor:ktor-client-serialization:$ktorVersion")
                 implementation("com.squareup.sqldelight:runtime:$sqldelightVersion")
                 implementation("com.squareup.sqldelight:coroutines-extensions:$sqldelightVersion")
             }
@@ -104,9 +104,9 @@ kotlin {
                 dependencies {
                     api("androidx.core:core-ktx:1.3.2")
                     api("fr.acinq.secp256k1:secp256k1-kmp-jni-android:$secp256k1Version")
-                    api("io.ktor:ktor-network:$ktorVersion")
-                    api("io.ktor:ktor-network-tls:$ktorVersion")
-                    api("io.ktor:ktor-client-android:$ktorVersion")
+                    implementation("io.ktor:ktor-network:$ktorVersion")
+                    implementation("io.ktor:ktor-network-tls:$ktorVersion")
+                    implementation("io.ktor:ktor-client-android:$ktorVersion")
                     api("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
                     implementation("com.squareup.sqldelight:android-driver:$sqldelightVersion")
                 }
