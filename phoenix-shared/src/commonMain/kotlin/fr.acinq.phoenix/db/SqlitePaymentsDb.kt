@@ -77,16 +77,16 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
     // this serializable class, and use JSON for serialization & deserialization.
     //
     @Serializable
-    data class ChannelClosingJSON(val closingAddress: String, val fundingKeyPath: String?) {
+    data class ChannelClosingJSON(val closingAddress: String, val isLocalWallet: Boolean) {
         companion object {
             fun serialize(src: OutgoingPayment.Details.ChannelClosing): ByteArray {
-                val json = ChannelClosingJSON(src.closingAddress, src.fundingKeyPath)
+                val json = ChannelClosingJSON(src.closingAddress, src.isLocalWallet)
                 return Json.encodeToString(json).toByteArray(Charsets.UTF_8)
             }
             fun deserialize(blob: ByteArray, paymentHash: ByteVector32): OutgoingPayment.Details.ChannelClosing {
                 val str = String(bytes = blob, charset = Charsets.UTF_8)
                 val json = Json.decodeFromString<ChannelClosingJSON>(str)
-                return OutgoingPayment.Details.ChannelClosing(json.closingAddress, json.fundingKeyPath, paymentHash)
+                return OutgoingPayment.Details.ChannelClosing(json.closingAddress, json.isLocalWallet, paymentHash)
             }
         }
     }

@@ -65,7 +65,8 @@ struct PaymentView : View {
 				.padding()
 				
 			case .pending:
-				Image("ic_send")
+			//	Image("ic_send") // image is blurry for some reason
+				Image(systemName: "paperplane")
 					.renderingMode(.template)
 					.resizable()
 					.foregroundColor(Color(UIColor.systemGray))
@@ -245,7 +246,7 @@ struct InfoGrid: View {
 						
 						Text(pType.0)
 						+ Text(" (\(pType.1))")
-							.font(.subheadline)
+							.font(.footnote)
 							.foregroundColor(.secondary)
 						
 						if let link = payment.paymentLink() {
@@ -259,7 +260,7 @@ struct InfoGrid: View {
 				}
 			} // </if let pType>
 			
-			if let channelClosing = payment.channelClosing() {
+			if let pClosingInfo = payment.channelClosing() {
 				
 				HStack(
 					alignment : VerticalAlignment.top,
@@ -274,14 +275,25 @@ struct InfoGrid: View {
 					}
 					.frame(width: widthColumn0)
 
-					Text(channelClosing.closingAddress)
-						.contextMenu {
-							Button(action: {
-								UIPasteboard.general.string = channelClosing.closingAddress
-							}) {
-								Text("Copy")
+					VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+						
+						// Bitcoin address (copyable)
+						Text(pClosingInfo.closingAddress)
+							.contextMenu {
+								Button(action: {
+									UIPasteboard.general.string = pClosingInfo.closingAddress
+								}) {
+									Text("Copy")
+								}
 							}
+						
+						if pClosingInfo.isLocalWallet {
+							Text("(This is your address - derived from your seed. You alone possess your seed.)")
+								.font(.footnote)
+								.foregroundColor(.secondary)
+								.padding(.top, 4)
 						}
+					}
 				}
 			} // </if let channelClosing>
 			
@@ -469,17 +481,6 @@ extension Eclair_kmpWalletPayment {
 		return nil
 	}
 	
-	fileprivate func channelClosing() -> Eclair_kmpOutgoingPayment.DetailsChannelClosing? {
-		
-		if let outgoingPayment = self as? Eclair_kmpOutgoingPayment {
-			if let result = outgoingPayment.details.asChannelClosing() {
-				return result
-			}
-		}
-		
-		return nil
-	}
-	
 	fileprivate func paymentLink() -> URL? {
 		
 		var address: String? = nil
@@ -499,6 +500,17 @@ extension Eclair_kmpWalletPayment {
 		if let address = address {
 			let str = "https://mempool.space/testnet/address/\(address)"
 			return URL(string: str)
+		}
+		
+		return nil
+	}
+	
+	fileprivate func channelClosing() -> Eclair_kmpOutgoingPayment.DetailsChannelClosing? {
+		
+		if let outgoingPayment = self as? Eclair_kmpOutgoingPayment {
+			if let result = outgoingPayment.details.asChannelClosing() {
+				return result
+			}
 		}
 		
 		return nil

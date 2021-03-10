@@ -84,14 +84,29 @@ object Mock {
         )
     }
 
-    fun pendingChannelClosing(): WalletPayment {
+    fun pendingChannelClosingLocal(): WalletPayment {
         return OutgoingPayment(
             id = UUID.randomUUID(),
             recipientAmount = 350_000.msat,
             recipient = Eclair.randomKey().publicKey(),
             details = OutgoingPayment.Details.ChannelClosing(
                 closingAddress = "tb1q8rf6p595hp465pm2hhxfhyv5zdr6jgujwetraq",
-                fundingKeyPath = null,
+                isLocalWallet = true,
+                paymentHash = randomBytes32()
+            ),
+            parts = listOf(),
+            status = OutgoingPayment.Status.Pending
+        )
+    }
+
+    fun pendingChannelClosingNonLocal(): WalletPayment {
+        return OutgoingPayment(
+            id = UUID.randomUUID(),
+            recipientAmount = 350_000.msat,
+            recipient = Eclair.randomKey().publicKey(),
+            details = OutgoingPayment.Details.ChannelClosing(
+                closingAddress = "tb1q8rf6p595hp465pm2hhxfhyv5zdr6jgujwetraq",
+                isLocalWallet = false,
                 paymentHash = randomBytes32()
             ),
             parts = listOf(),
