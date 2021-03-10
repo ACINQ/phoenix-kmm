@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -36,16 +37,22 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 fun AppView(appVM: AppViewModel) {
     val log = logger()
     val navController = rememberNavController()
+    val fiatRates = application.business.currencyManager.ratesFlow.collectAsState(listOf())
     CompositionLocalProvider(
         LocalBusiness provides application.business,
         LocalControllerFactory provides application.business.controllers,
         LocalNavController provides navController,
         LocalKeyState provides appVM.keyState,
+        LocalFiatRates provides fiatRates.value,
         LocalBitcoinUnit provides appVM.bitcoinUnit,
         LocalFiatCurrency provides appVM.fiatCurrency,
         LocalShowInFiat provides appVM.showInFiat,
     ) {
-        Column(Modifier.background(appBackground()).fillMaxWidth().fillMaxHeight()) {
+        Column(
+            Modifier
+                .background(appBackground())
+                .fillMaxWidth()
+                .fillMaxHeight()) {
             NavHost(navController = navController, startDestination = Screen.Startup.route) {
                 composable(Screen.Startup.fullRoute) {
                     StartupView()

@@ -42,11 +42,7 @@ import requireWallet
 fun SendView(request: PaymentRequest?) {
     requireWallet(from = Screen.Send) {
         val log = logger()
-        val context = LocalContext.current
-        val prefBitcoinUnit = Prefs.getBitcoinUnit(context)
-        val prefFiatCurrency = Prefs.getFiatCurrency(context)
-        val fiatRate = business.currencyManager.getBitcoinRate(prefFiatCurrency)
-        log.info { "amount=${request?.amount} desc=${request?.description}" }
+        log.info { "init sendview amount=${request?.amount} desc=${request?.description}" }
         MVIView(CF::scan) { model, postIntent ->
             val nc = navController
             Column(
@@ -59,9 +55,6 @@ fun SendView(request: PaymentRequest?) {
                 AmountInput(
                     initialAmount = amount,
                     onAmountChange = { a, fiat, fiatUnit -> amount = a ?: MilliSatoshi(0) },
-                    prefBitcoinUnit = prefBitcoinUnit,
-                    prefFiatUnit = prefFiatCurrency,
-                    fiatRate = fiatRate.price,
                     useBasicInput = true,
                     inputTextSize = 48.sp,
                 )

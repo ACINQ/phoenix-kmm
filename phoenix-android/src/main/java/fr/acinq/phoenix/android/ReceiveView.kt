@@ -127,19 +127,11 @@ private class ReceiveViewModel(controller: ReceiveController) : MVIControllerVie
 fun ReceiveView() {
     requireWallet(from = Screen.Receive) {
         val log = logger()
-        val context = LocalContext.current.applicationContext
-        val prefBitcoinUnit = Prefs.getBitcoinUnit(context)
-        val prefFiatCurrency = Prefs.getFiatCurrency(context)
-        val fiatRate = business.currencyManager.getBitcoinRate(prefFiatCurrency)
         val vm: ReceiveViewModel = viewModel(factory = ReceiveViewModel.Factory(controllerFactory, CF::receive))
-
         when (val state = vm.state) {
             is ReceiveViewState.Default -> DefaultView(vm = vm)
             is ReceiveViewState.EditInvoice -> EditInvoiceView(
                 description = vm.customDesc,
-                prefBitcoinUnit = prefBitcoinUnit,
-                prefFiatCurrency = prefFiatCurrency,
-                fiatRate = fiatRate.price,
                 onDescriptionChange = { vm.customDesc = it },
                 onAmountChange = { vm.customAmount = it },
                 onSubmit = { vm.generateInvoice() },
@@ -232,9 +224,6 @@ private fun DefaultView(vm: ReceiveViewModel) {
 private fun EditInvoiceView(
     description: String,
     onDescriptionChange: (String) -> Unit,
-    prefBitcoinUnit: BitcoinUnit,
-    prefFiatCurrency: FiatCurrency,
-    fiatRate: Double,
     onAmountChange: (MilliSatoshi?) -> Unit,
     onSubmit: () -> Unit,
     onCancel: () -> Unit
@@ -254,10 +243,7 @@ private fun EditInvoiceView(
                     log.info { "invoice amount update amount=$amount msat fiat=$amountFiat $fiatCode" }
                     onAmountChange(amount)
                 },
-                modifier = Modifier.fillMaxWidth(),
-                prefBitcoinUnit = prefBitcoinUnit,
-                prefFiatUnit = prefFiatCurrency,
-                fiatRate = fiatRate)
+                modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(24.dp))
             Text(stringResource(id = R.string.receive__edit__desc_label), modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))

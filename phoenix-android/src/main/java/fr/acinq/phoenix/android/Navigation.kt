@@ -17,10 +17,16 @@
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.KEY_ROUTE
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.navigate
 import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.utils.logger
+import org.kodein.log.LoggerFactory
+import org.kodein.log.newLogger
 
 
 sealed class Screen(val route: String, val arg: String? = null) {
@@ -59,3 +65,12 @@ fun currentRoute(): String? {
     return navBackStackEntry?.arguments?.getString(KEY_ROUTE)
 }
 
+fun NavHostController.navigate(screen: Screen, arg: String? = null, builder: NavOptionsBuilder.() -> Unit = {}) {
+    val route = if (arg.isNullOrBlank()) screen.route else "${screen.route}/$arg"
+    newLogger<NavController>(LoggerFactory.default).debug { "navigating to $route" }
+    try {
+        navigate(route, builder)
+    } catch (e: Exception) {
+        newLogger(LoggerFactory.default).error(e) { "failed to navigate to $route" }
+    }
+}

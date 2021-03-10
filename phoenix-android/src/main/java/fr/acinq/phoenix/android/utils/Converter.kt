@@ -16,6 +16,8 @@
 
 package fr.acinq.phoenix.android.utils
 
+import LocalFiatCurrency
+import LocalFiatRates
 import android.content.Context
 import android.os.Build
 import android.text.Html
@@ -26,10 +28,7 @@ import androidx.compose.ui.res.stringResource
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.utils.Converter.toPrettyString
-import fr.acinq.phoenix.data.BitcoinUnit
-import fr.acinq.phoenix.data.CurrencyUnit
-import fr.acinq.phoenix.data.FiatCurrency
-import fr.acinq.phoenix.data.toUnit
+import fr.acinq.phoenix.data.*
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -45,44 +44,46 @@ object Converter {
     private val log = LoggerFactory.getLogger(Converter::class.java)
 
     private val DECIMAL_SEPARATOR = DecimalFormat().decimalFormatSymbols.decimalSeparator.toString()
-    private var COIN_FORMAT: NumberFormat = NumberFormat.getInstance()
-    private var FIAT_FORMAT: NumberFormat = NumberFormat.getInstance()
-
-    init {
-        FIAT_FORMAT.minimumFractionDigits = 2
-        FIAT_FORMAT.maximumFractionDigits = 2
-        FIAT_FORMAT.roundingMode = RoundingMode.CEILING // prevent converting very small bitcoin amounts to 0 in fiat
-    }
-
-    fun refreshCoinPattern(context: Context) {
-        COIN_FORMAT = getCoinFormat(Prefs.getBitcoinUnit(context))
-        COIN_FORMAT.roundingMode = RoundingMode.DOWN // better to underestimate
+    private var SAT_FORMAT: NumberFormat = DecimalFormat("###,###,###,##0")
+    private var BIT_FORMAT: NumberFormat = DecimalFormat("###,###,###,##0.##")
+    private var MBTC_FORMAT: NumberFormat = DecimalFormat("###,###,###,##0.#####")
+    private var BTC_FORMAT: NumberFormat = DecimalFormat("###,###,###,##0.###########")
+    private var FIAT_FORMAT: NumberFormat = NumberFormat.getInstance().apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+        roundingMode = RoundingMode.CEILING // prevent converting very small bitcoin amounts to 0 in fiat
     }
 
     fun getCoinFormat(unit: BitcoinUnit) = when (unit) {
-        BitcoinUnit.Sat -> DecimalFormat("###,###,###,##0")
-        BitcoinUnit.Bit -> DecimalFormat("###,###,###,##0.##")
-        BitcoinUnit.MBtc -> DecimalFormat("###,###,###,##0.#####")
-        else -> DecimalFormat("###,###,###,##0.###########")
+        BitcoinUnit.Sat -> SAT_FORMAT
+        BitcoinUnit.Bit -> BIT_FORMAT
+        BitcoinUnit.MBtc -> MBTC_FORMAT
+        else -> BTC_FORMAT
     }
 
-    fun Double?.toPrettyString(unit: CurrencyUnit, withUnit: Boolean = true): String = (when (unit) {
-        is BitcoinUnit -> this?.run { COIN_FORMAT.format(this) }
-        is FiatCurrency -> this?.run { FIAT_FORMAT.format(this) }
-        else -> "?!"
-    } ?: "").run {
-        if (withUnit) "$this $unit" else this
+    @Composable
+    fun localBitcoinRate(): BitcoinPriceRate? {
+        val prefFiat = LocalFiatCurrency.current
+        return LocalFiatRates.current.find { it.fiatCurrency == prefFiat }
     }
 
     /** Returns a string representation of this Double. No scientific notation is used. Reuse [BigDecimal.toPlainString]. */
     fun Double?.toPlainString(): String = this?.takeIf { it > 0 }?.run { BigDecimal.valueOf(this).toPlainString() } ?: ""
 
     /** Converts [MilliSatoshi] to a fiat amount. */
-    fun MilliSatoshi.toFiat(rate: Double): Double = this.msat.toDouble() * rate
+    fun MilliSatoshi.toFiat(rate: Double): Double = this.toUnit(BitcoinUnit.Btc) * rate
 
-    fun MilliSatoshi.toPrettyString(unit: CurrencyUnit, fiatRate: Double = -1.0, withUnit: Boolean = false): String = when {
+    fun Double?.toPrettyString(unit: CurrencyUnit, withUnit: Boolean = false): String = (when (unit) {
+        is BitcoinUnit -> this?.run { getCoinFormat(unit).format(this) }
+        is FiatCurrency -> this?.run { FIAT_FORMAT.format(this) }
+        else -> "?!"
+    } ?: "").run {
+        if (withUnit) "$this $unit" else this
+    }
+
+    fun MilliSatoshi.toPrettyString(unit: CurrencyUnit, rate: BitcoinPriceRate? = null, withUnit: Boolean = false): String = when {
         unit is BitcoinUnit -> this.toUnit(unit).toPrettyString(unit, withUnit)
-        unit is FiatCurrency && fiatRate > 0 -> this.toFiat(fiatRate).toPrettyString(unit, withUnit)
+        unit is FiatCurrency && rate != null -> this.toFiat(rate.price).toPrettyString(unit, withUnit)
         else -> "?!"
     }
 

@@ -59,7 +59,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     // TODO to be remove
     private val noSqlDbFactory by lazy { DB.factory.inDir(getApplicationFilesDirectoryPath(ctx)) }
     private val noSqlAppDB by lazy { noSqlDbFactory.open("application", KotlinxSerializer()) }
-    private val appDb by lazy { SqliteAppDb(createAppDbDriver(ctx)) }
+    private val appDb by lazy { SqliteAppDb(loggerFactory, createAppDbDriver(ctx)) }
     private val paymentsDb by lazy { SqlitePaymentsDb(createPaymentsDbDriver(ctx)) }
 
     // TestNet
@@ -77,7 +77,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     private val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peerManager) }
     private val appConfigurationManager by lazy { AppConfigurationManager(noSqlAppDB, appDb, httpClient, electrumClient, chain, loggerFactory) }
 
-    val currencyManager by lazy { CurrencyManager(loggerFactory, noSqlAppDB, httpClient) }
+    val currencyManager by lazy { CurrencyManager(loggerFactory, appDb, httpClient) }
     val connectionsMonitor by lazy { ConnectionsMonitor(peerManager, electrumClient, networkMonitor) }
     val util by lazy { Utilities(loggerFactory, chain) }
 

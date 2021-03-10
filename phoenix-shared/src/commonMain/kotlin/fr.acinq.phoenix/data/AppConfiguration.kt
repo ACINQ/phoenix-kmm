@@ -9,13 +9,15 @@ import kotlin.math.roundToLong
 
 enum class Chain { MAINNET, TESTNET, REGTEST }
 
-interface CurrencyUnit {
-    fun label(): String = toString().toLowerCase()
-}
+interface CurrencyUnit
 
 @Serializable
 enum class BitcoinUnit : CurrencyUnit {
-    Sat, Bit, MBtc, Btc
+    Sat, Bit, MBtc, Btc;
+
+    override fun toString(): String {
+        return super.toString().toLowerCase()
+    }
 }
 
 /** Converts a [Double] amount to [MilliSatoshi], assuming that this amount is in fiat. */
@@ -52,7 +54,6 @@ enum class FiatCurrency : CurrencyUnit {
 
 @Serializable
 data class ElectrumServer(
-    // Unique ID a their is only one configuration per app
     override val id: Int = 0,
     // TODO if not customized, should be dynamic and random
     val host: String,

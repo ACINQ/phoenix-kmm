@@ -74,15 +74,14 @@ class AppConfigurationManager(
 
         // TODO are we using TOR? -> increase timeout
 
-        val walletParams =
-            try {
-                withTimeout(timeout) {
-                    fetchAndStoreWalletParams() ?: fallbackWalletParams
-                }
-            } catch (t: TimeoutCancellationException) {
-                logger.warning { "Unable to fetch WalletParams, using fallback values=$fallbackWalletParams" }
-                fallbackWalletParams
+        val walletParams = try {
+            withTimeout(timeout) {
+                fetchAndStoreWalletParams() ?: fallbackWalletParams
             }
+        } catch (t: TimeoutCancellationException) {
+            logger.warning { "Unable to fetch WalletParams, using fallback values=$fallbackWalletParams" }
+            fallbackWalletParams
+        }
 
         // _walletParams can be updated by [updateWalletParamsLoop] before we reach this block.
         // In that case, we don't update from here
@@ -96,6 +95,7 @@ class AppConfigurationManager(
     public fun startWalletParamsLoop() {
         updateParametersJob = updateWalletParamsLoop()
     }
+
     public fun stopWalletParamsLoop() {
         launch { updateParametersJob?.cancelAndJoin() }
     }
@@ -119,7 +119,7 @@ class AppConfigurationManager(
         }
     }
 
-    private suspend fun fetchAndStoreWalletParams() : WalletParams? {
+    private suspend fun fetchAndStoreWalletParams(): WalletParams? {
         return try {
             val rawData = httpClient.get<String>("https://acinq.co/phoenix/walletcontext.json")
             appDb.setWalletParams(currentWalletParamsVersion, rawData)

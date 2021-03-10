@@ -26,6 +26,7 @@ import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.PhoenixApplication
 import fr.acinq.phoenix.ctrl.ControllerFactory
+import fr.acinq.phoenix.data.BitcoinPriceRate
 import fr.acinq.phoenix.data.BitcoinUnit
 import fr.acinq.phoenix.data.CurrencyUnit
 import fr.acinq.phoenix.data.FiatCurrency
@@ -41,7 +42,7 @@ val LocalNavController = staticCompositionLocalOf<NavHostController?> { null }
 val LocalKeyState = compositionLocalOf<KeyState> { KeyState.Unknown }
 val LocalBitcoinUnit = compositionLocalOf { BitcoinUnit.Sat }
 val LocalFiatCurrency = compositionLocalOf { FiatCurrency.USD }
-val LocalFiatRate = compositionLocalOf { -1.0 }
+val LocalFiatRates = compositionLocalOf<List<BitcoinPriceRate>> { listOf() }
 val LocalShowInFiat = compositionLocalOf { false }
 
 val navController
@@ -51,30 +52,6 @@ val navController
 val keyState
     @Composable
     get() = LocalKeyState.current
-
-val prefUnit: CurrencyUnit
-    @Composable
-    get() = if (prefShowInFiat) {
-        prefFiatCurrency
-    } else {
-        prefBitcoinUnit
-    }
-
-val prefBitcoinUnit
-    @Composable
-    get() = LocalBitcoinUnit.current
-
-val prefFiatCurrency
-    @Composable
-    get() = LocalFiatCurrency.current
-
-val fiatRate
-    @Composable
-    get() = LocalFiatRate.current
-
-val prefShowInFiat
-    @Composable
-    get() = LocalShowInFiat.current
 
 val controllerFactory: ControllerFactory
     @Composable
@@ -87,13 +64,3 @@ val business: PhoenixBusiness
 val application: PhoenixApplication
     @Composable
     get() = LocalContext.current.applicationContext as? PhoenixApplication ?: error("Application is not of type PhoenixApplication. Are you using appView in preview?")
-
-fun NavHostController.navigate(screen: Screen, arg: String? = null, builder: NavOptionsBuilder.() -> Unit = {}) {
-    val route = if (arg.isNullOrBlank()) screen.route else "${screen.route}/$arg"
-    newLogger<NavController>(LoggerFactory.default).debug { "navigating to $route" }
-    try {
-        navigate(route, builder)
-    } catch (e: Exception) {
-        newLogger(LoggerFactory.default).error(e) { "failed to navigate to $route" }
-    }
-}

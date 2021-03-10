@@ -36,11 +36,9 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.layout.FirstBaseline
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,7 +48,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import business
 import controllerFactory
 import copyToClipboard
-import fiatRate
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.db.OutgoingPayment
@@ -59,7 +56,6 @@ import fr.acinq.eclair.utils.Connection
 import fr.acinq.phoenix.android.components.*
 import fr.acinq.phoenix.android.mvi.MVIControllerViewModel
 import fr.acinq.phoenix.android.mvi.MVIView
-import fr.acinq.phoenix.android.utils.Converter.toPrettyString
 import fr.acinq.phoenix.android.utils.Converter.toRelativeDateString
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.app.amountMsat
@@ -74,7 +70,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import navController
 import navigate
-import prefUnit
 import requireWallet
 
 
@@ -202,10 +197,11 @@ fun HomeView(appVM: AppViewModel) {
 
 @Composable
 fun TopBar(showConnectionsDialog: MutableState<Boolean>, connectionsState: State<Connections>) {
-    Row(Modifier
-        .padding(8.dp)
-        .height(40.dp)
-        .clipToBounds()) {
+    Row(
+        Modifier
+            .padding(8.dp)
+            .height(40.dp)
+            .clipToBounds()) {
         if (connectionsState.value.electrum == Connection.CLOSED || connectionsState.value.peer == Connection.CLOSED) {
             val connectionsTransition = rememberInfiniteTransition()
             val connectionsButtonAlpha by connectionsTransition.animateFloat(
@@ -335,33 +331,6 @@ private fun PaymentIcon(payment: WalletPayment) {
                     colorFilter = ColorFilter.tint(MaterialTheme.colors.onPrimary))
             }
         }
-    }
-}
-
-@Composable
-private fun AmountView(
-    amount: MilliSatoshi,
-    modifier: Modifier = Modifier,
-    isOutgoing: Boolean? = null,
-    amountTextStyle: TextStyle = MaterialTheme.typography.body1,
-    unitTextStyle: TextStyle = MaterialTheme.typography.body1,
-) {
-    Row(horizontalArrangement = Arrangement.Center, modifier = modifier) {
-        if (isOutgoing != null && amount > MilliSatoshi(0)) {
-            Text(text = stringResource(id = if (isOutgoing) R.string.paymentline_sent_prefix else R.string.paymentline_received_prefix), style = amountTextStyle)
-        }
-        Text(
-            text = amount.toPrettyString(prefUnit, fiatRate),
-            style = amountTextStyle, //TextStyle(fontSize = amountSize, color = amountColor),
-            modifier = Modifier.alignBy(FirstBaseline)
-        )
-        Text(
-            text = prefUnit.label(),
-            style = unitTextStyle, //TextStyle(fontSize = unitSize, color = unitColor),
-            modifier = Modifier
-                .padding(start = 8.dp)
-                .alignBy(FirstBaseline)
-        )
     }
 }
 

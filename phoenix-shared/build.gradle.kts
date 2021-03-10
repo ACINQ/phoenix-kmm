@@ -29,10 +29,8 @@ if (withAndroid) {
         }
 
         sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
-    }
 
-    // workaround for https://youtrack.jetbrains.com/issue/KT-43944
-    android {
+        // workaround for https://youtrack.jetbrains.com/issue/KT-43944
         configurations {
             create("androidTestApi")
             create("androidTestDebugApi")
@@ -42,6 +40,8 @@ if (withAndroid) {
             create("testReleaseApi")
         }
     }
+
+
 }
 
 kotlin {

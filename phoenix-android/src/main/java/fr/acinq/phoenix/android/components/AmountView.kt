@@ -16,16 +16,59 @@
 
 package fr.acinq.phoenix.android.components
 
+import LocalBitcoinUnit
+import LocalFiatCurrency
+import LocalShowInFiat
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.dp
+import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.phoenix.android.R
+import fr.acinq.phoenix.android.utils.Converter
+import fr.acinq.phoenix.android.utils.Converter.toPrettyString
+import fr.acinq.phoenix.data.CurrencyUnit
 
 @Composable
-fun AmountView(amount: Double, unit: String) {
-//    val context = AmbientContext.current.applicationContext
-//    var showAmountInFiat = remember { Prefs.showAmountInFiat(context) }
-//    var showAmountInFiat = remember { Prefs.showAmountInFiat(context) }
-    Row {
-        Text(text = amount.toBigDecimal().toPlainString())
+fun AmountView(
+    amount: MilliSatoshi,
+    modifier: Modifier = Modifier,
+    forceUnit: CurrencyUnit? = null,
+    isOutgoing: Boolean? = null,
+    amountTextStyle: TextStyle = MaterialTheme.typography.body1,
+    unitTextStyle: TextStyle = MaterialTheme.typography.body1,
+) {
+    val unit = forceUnit ?: if (LocalShowInFiat.current) {
+        LocalFiatCurrency.current
+    } else {
+        LocalBitcoinUnit.current
+    }
+    val fiatRate = Converter.localBitcoinRate()
+    Row(horizontalArrangement = Arrangement.Center, modifier = modifier) {
+        if (isOutgoing != null && amount > MilliSatoshi(0)) {
+            Text(
+                text = stringResource(id = if (isOutgoing) R.string.paymentline_sent_prefix else R.string.paymentline_received_prefix),
+                style = amountTextStyle
+            )
+        }
+        Text(
+            text = amount.toPrettyString(unit, fiatRate),
+            style = amountTextStyle,
+            modifier = Modifier.alignBy(FirstBaseline)
+        )
+        Text(
+            text = unit.toString(),
+            style = unitTextStyle,
+            modifier = Modifier
+                .padding(start = 8.dp)
+                .alignBy(FirstBaseline)
+        )
     }
 }
