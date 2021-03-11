@@ -40,8 +40,6 @@ if (withAndroid) {
             create("testReleaseApi")
         }
     }
-
-
 }
 
 kotlin {
@@ -67,7 +65,6 @@ kotlin {
         val serializationVersion = "1.0.0"
         val secp256k1Version = "0.4.1"
         val ktorVersion = "1.5.2"
-        val kodeinDBVersion = "0.2.0-beta"
         val kodeinMemory = "0.7.0"
         val sqldelightVersion = "1.4.4"
 
@@ -77,8 +74,6 @@ kotlin {
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:$serializationVersion")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
-                api("org.kodein.db:kodein-db:$kodeinDBVersion")
-                api("org.kodein.db:kodein-db-serializer-kotlinx:$kodeinDBVersion")
                 api("org.kodein.memory:kodein-memory-files:$kodeinMemory")
                 api("org.jetbrains.kotlinx:kotlinx-coroutines-core") {
                     version { strictly(coroutinesVersion) }

@@ -1,10 +1,8 @@
 package fr.acinq.phoenix.data
 
 import fr.acinq.eclair.MilliSatoshi
-import fr.acinq.eclair.io.TcpSocket
 import fr.acinq.eclair.utils.ServerAddress
 import kotlinx.serialization.Serializable
-import org.kodein.db.model.orm.Metadata
 import kotlin.math.roundToLong
 
 enum class Chain { MAINNET, TESTNET, REGTEST }
@@ -52,16 +50,8 @@ enum class FiatCurrency : CurrencyUnit {
     }
 }
 
-@Serializable
-data class ElectrumServer(
-    override val id: Int = 0,
-    // TODO if not customized, should be dynamic and random
-    val host: String,
-    val port: Int,
-    val customized: Boolean = false,
-    val blockHeight: Int = 0,
-    val tipTimestamp: Long = 0
-) : Metadata
-
-fun ElectrumServer.address(): String = "$host:$port"
-fun ElectrumServer.asServerAddress(tls: TcpSocket.TLS? = null): ServerAddress = ServerAddress(host, port, tls)
+sealed class ElectrumConfig {
+    abstract val server: ServerAddress
+    data class Random(override val server: ServerAddress) : ElectrumConfig()
+    data class Custom(override val server: ServerAddress) : ElectrumConfig()
+}

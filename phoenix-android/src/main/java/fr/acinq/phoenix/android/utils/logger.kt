@@ -24,6 +24,7 @@ import fr.acinq.phoenix.android.PhoenixApplication
 import org.kodein.log.Logger
 import org.kodein.log.LoggerFactory
 import org.kodein.log.frontend.simplePrintFrontend
+import org.kodein.log.frontend.slf4jFrontend
 import org.kodein.log.newLogger
 
 
@@ -33,7 +34,7 @@ fun logger(): Logger {
     val application = context.applicationContext
 
     if (application !is PhoenixApplication) { // Preview mode
-        return remember { LoggerFactory(simplePrintFrontend).newLogger(context::class) }
+        return remember { LoggerFactory(slf4jFrontend).newLogger(context::class) }
     }
 
     return remember {

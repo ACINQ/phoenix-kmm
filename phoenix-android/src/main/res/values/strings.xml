@@ -525,8 +525,9 @@
     <!-- //////////////// electrum server //////////////// -->
 
     <string name="electrum_title">Electrum server</string>
-    <string name="electrum_subtitle">By default Phoenix connects to random Electrum servers in order to access the Bitcoin blockchain. You can also choose to connect to your own Electrum server.</string>
-    <string name="electrum_change_button">Set server…</string>
+    <string name="electrum_subtitle">Phoenix needs to access the Bitcoin blockchain to monitor and secure your channels.</string>
+    <string name="electrum_server_desc_random">The Electrum server is picked at random.</string>
+    <string name="electrum_server_desc_custom">You will only connect to this server. Make sure the address is correct.</string>
 
     <string name="electrum_block_height_label">Block height</string>
     <string name="electrum_tip_label">Tip timestamp</string>
@@ -535,11 +536,12 @@
     <string name="electrum_xpub_value">%1$s\n\nPath: %2$s</string>
     <string name="electrum_fee_rate">%1$s sat/byte</string>
     <string name="electrum_connection_label">Server</string>
+
     <string name="electrum_not_connected">Not connected</string>
-    <string name="electrum_not_connected_to_custom"><![CDATA[You will connect to <b>%1$s</b>]]></string>
+    <string name="electrum_not_connected_to_custom">You will connect to %1$s</string>
     <string name="electrum_connecting">Establishing connection…</string>
-    <string name="electrum_connecting_to_custom"><![CDATA[Establishing connection with <b>%1$s…</b>]]></string>
-    <string name="electrum_connected"><![CDATA[Connected to: <b>%1$s</b>]]></string>
+    <string name="electrum_connecting_to_custom">Establishing connection with %1$s…</string>
+    <string name="electrum_connected">Connected to: %1$s</string>
 
     <string name="electrum_dialog_checkbox">Use a custom server</string>
     <string name="electrum_dialog_ssl">Server must have a valid certificate</string>

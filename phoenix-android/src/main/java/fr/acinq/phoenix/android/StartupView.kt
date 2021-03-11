@@ -19,10 +19,12 @@ package fr.acinq.phoenix.android
 import Screen
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import business
 import fr.acinq.phoenix.android.security.EncryptedSeed
 import fr.acinq.phoenix.android.security.KeyState
+import fr.acinq.phoenix.android.utils.Prefs
 import navController
 import navigate
 import keyState
@@ -32,6 +34,7 @@ import keyState
 fun StartupView() {
     val nc = navController
     val ks = keyState
+    val context = LocalContext.current
     when (ks) {
         is KeyState.Unknown -> Text(stringResource(id = R.string.startup_wait))
         is KeyState.Absent -> nc.navigate(Screen.InitWallet)
@@ -42,6 +45,7 @@ fun StartupView() {
                     val seed = business.prepWallet(EncryptedSeed.toMnemonics(encryptedSeed.decrypt()))
                     business.loadWallet(seed)
                     business.start()
+                    business.appConfigurationManager.updateElectrumConfig(Prefs.getElectrumServer(context))
                     nc.navigate(Screen.Home)
                 }
                 else -> {

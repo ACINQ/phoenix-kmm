@@ -18,6 +18,7 @@ package fr.acinq.phoenix.android.utils
 
 import android.content.Context
 import androidx.preference.PreferenceManager
+import fr.acinq.eclair.utils.ServerAddress
 import fr.acinq.phoenix.data.BitcoinUnit
 import fr.acinq.phoenix.data.FiatCurrency
 import org.slf4j.LoggerFactory
@@ -35,10 +36,12 @@ object Prefs {
     // -- payment configuration
     const val PREFS_PAYMENT_DEFAULT_DESCRIPTION = "PREFS_PAYMENT_DEFAULT_DESCRIPTION"
 
+    // -- node configuration
+    const val PREFS_ELECTRUM_ADDRESS = "PREFS_ELECTRUM_ADDRESS"
+    const val PREFS_ELECTRUM_FORCE_SSL = "PREFS_ELECTRUM_FORCE_SSL"
+
     private fun prefs(context: Context) = PreferenceManager.getDefaultSharedPreferences(context)
 
-    // -- ==================================
-    // -- migration/versioning
     // -- ==================================
 
     fun getLastVersionUsed(context: Context): Int = prefs(context).getInt(PREFS_LAST_VERSION_USED, 0)
@@ -51,4 +54,13 @@ object Prefs {
     fun saveUseFiat(context: Context, inFiat: Boolean) = prefs(context).edit().putBoolean(PREFS_SHOW_AMOUNT_IN_FIAT, inFiat).apply()
 
     fun getDefaultDescription(context: Context): String = prefs(context).getString(PREFS_PAYMENT_DEFAULT_DESCRIPTION, "") ?: ""
+
+    fun getElectrumServer(context: Context): ServerAddress? = prefs(context).getString(PREFS_ELECTRUM_ADDRESS, null)?.run {
+        if (contains(":")) {
+            val (host, port) =  split(":")
+            ServerAddress(host, port.toInt())
+        } else null
+    }
+    fun saveElectrumServer(context: Context, address: String) = prefs(context).edit().putString(PREFS_ELECTRUM_ADDRESS, address).apply()
+    fun saveElectrumServer(context: Context, address: ServerAddress) = prefs(context).edit().putString(PREFS_ELECTRUM_ADDRESS, "${address.host}:${address.port}").apply()
 }

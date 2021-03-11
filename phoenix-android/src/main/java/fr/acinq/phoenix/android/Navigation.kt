@@ -39,22 +39,23 @@ sealed class Screen(val route: String, val arg: String? = null) {
     object Home : Screen("home")
     object Settings : Screen("settings")
     object DisplaySeed : Screen("settings/seed")
+    object ElectrumServer : Screen("settings/electrum")
     object Receive : Screen("receive")
     object ReadData : Screen("readdata")
     object Send : Screen("send", "request")
 }
 
 @Composable
-fun requireWallet(
-    from: Screen,
+fun requireWalletPresent(
+    inScreen: Screen,
     children: @Composable () -> Unit
 ) {
     if (keyState !is KeyState.Present) {
-        logger().warning { "accessing screen=$from with keyState=$keyState" }
+        logger().warning { "accessing screen=$inScreen with keyState=$keyState" }
         navController.navigate(Screen.Startup)
         Text("redirecting...")
     } else {
-        logger().debug { "access to screen=$from granted" }
+        logger().debug { "access to screen=$inScreen granted" }
         children()
     }
 }

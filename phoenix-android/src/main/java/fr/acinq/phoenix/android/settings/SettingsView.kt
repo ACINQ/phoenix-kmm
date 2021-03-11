@@ -16,6 +16,7 @@
 
 package fr.acinq.phoenix.android
 
+import CF
 import Screen
 import android.widget.TextView
 import androidx.compose.foundation.background
@@ -28,14 +29,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import business
 import fr.acinq.phoenix.android.components.ScreenHeader
 import fr.acinq.phoenix.android.components.SettingButton
+import fr.acinq.phoenix.android.mvi.MVIView
 import fr.acinq.phoenix.android.security.EncryptedSeed
 import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.utils.Converter
@@ -49,17 +53,19 @@ import navigate
 fun SettingsView() {
     val nc = navController
     val scrollState = rememberScrollState()
-    Column(modifier = Modifier
-        .fillMaxWidth()
-        .background(MaterialTheme.colors.surface)
-        .verticalScroll(scrollState)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colors.surface)
+            .verticalScroll(scrollState)
+    ) {
 
         ScreenHeader(title = stringResource(id = R.string.menu_settings), onBackClick = { nc.popBackStack() })
         // -- general
         SettingCategory(R.string.settings_general_title)
         SettingButton(text = R.string.settings_about, icon = R.drawable.ic_help_circle, onClick = { })
         SettingButton(text = R.string.settings_display_prefs, icon = R.drawable.ic_brush, onClick = { })
-        SettingButton(text = R.string.settings_electrum, icon = R.drawable.ic_chain, onClick = { })
+        SettingButton(text = R.string.settings_electrum, icon = R.drawable.ic_chain, onClick = { nc.navigate(Screen.ElectrumServer) })
         SettingButton(text = R.string.settings_tor, icon = R.drawable.ic_tor_shield, onClick = { })
         SettingButton(text = R.string.settings_payment_settings, icon = R.drawable.ic_tool, onClick = { })
 
@@ -84,12 +90,13 @@ fun SettingCategory(textResId: Int) {
         style = MaterialTheme.typography.subtitle1.copy(fontSize = 14.sp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 50.dp, top = 24.dp, end = 0.dp, bottom = 4.dp))
+            .padding(start = 50.dp, top = 24.dp, end = 0.dp, bottom = 4.dp)
+    )
 }
 
 @Composable
 fun SeedView(appVM: AppViewModel) {
-    val logger = logger()
+    val log = logger()
     val ks = keyState
     if (ks !is KeyState.Present) {
         val nc = navController

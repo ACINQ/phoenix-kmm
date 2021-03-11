@@ -44,13 +44,13 @@ import fr.acinq.phoenix.android.utils.logger
 import navController
 import navigate
 import readClipboard
-import requireWallet
+import requireWalletPresent
 
 
 @ExperimentalMaterialApi
 @Composable
 fun ReadDataView() {
-    requireWallet(from = Screen.ReadData) {
+    requireWalletPresent(inScreen = Screen.ReadData) {
         val context = LocalContext.current.applicationContext
         val nc = navController
         val log = logger()

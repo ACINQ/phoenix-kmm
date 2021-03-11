@@ -66,13 +66,21 @@ fun ScreenHeader(
 }
 
 @Composable
-fun ScreenBody(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colors.surface)) {
+fun ScreenBody(
+    modifier: Modifier = Modifier,
+    padding: PaddingValues = PaddingValues(start = 50.dp, top = 16.dp, bottom = 16.dp, end = 24.dp),
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colors.surface)
+    ) {
         HSeparator()
         Column(
             modifier = modifier
                 .fillMaxWidth()
-                .padding(start = 50.dp, top = 16.dp, bottom = 16.dp, end = 24.dp)
+                .padding(padding)
         ) {
             content()
         }
@@ -103,16 +111,17 @@ fun BackButton(onClick: () -> Unit) {
 @Composable
 fun Dialog(
     onDismiss: () -> Unit,
-    onConfirm: (() -> Unit)? = null,
     title: String? = null,
     properties: DialogProperties = DialogProperties(),
-    content: @Composable () -> Unit
+    buttons: (@Composable () -> Unit)? = null,
+    content: @Composable () -> Unit,
 ) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss, properties = properties) {
-        Column(Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.large)
-            .background(MaterialTheme.colors.surface)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colors.surface)
         ) {
             // optional title
             title?.run {
@@ -121,13 +130,13 @@ fun Dialog(
             // content, must set the padding etc...
             content()
             // buttons
-            Row(horizontalArrangement = Arrangement.End, modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)) {
-                if (onConfirm != null) {
-                    Button(onClick = onDismiss, text = stringResource(id = R.string.btn_cancel), padding = PaddingValues(8.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = onConfirm, text = stringResource(id = R.string.btn_ok), padding = PaddingValues(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.End, modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            ) {
+                if (buttons != null) {
+                    buttons()
                 } else {
                     Button(onClick = onDismiss, text = stringResource(id = R.string.btn_ok), padding = PaddingValues(8.dp))
                 }
@@ -140,21 +149,25 @@ fun Dialog(
 fun HSeparator(
     padding: PaddingValues = PaddingValues(0.dp)
 ) {
-    Box(Modifier
-        .fillMaxWidth()
-        .height(1.dp)
-        .padding(padding)
-        .background(color = borderColor()))
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(1.dp)
+            .padding(padding)
+            .background(color = borderColor())
+    )
 }
 
 @Composable
 fun VSeparator(
     padding: PaddingValues = PaddingValues(0.dp)
 ) {
-    Box(Modifier
-        .fillMaxHeight()
-        .width(1.dp)
-        .padding(padding)
-        .background(color = borderColor()))
+    Box(
+        Modifier
+            .fillMaxHeight()
+            .width(1.dp)
+            .padding(padding)
+            .background(color = borderColor())
+    )
 }
 

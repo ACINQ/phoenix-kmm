@@ -28,6 +28,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.phoenix.android.*
+import fr.acinq.phoenix.android.settings.ElectrumView
 import fr.acinq.phoenix.android.utils.logger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -86,6 +87,9 @@ fun AppView(appVM: AppViewModel) {
                 }
                 composable(Screen.DisplaySeed.fullRoute) {
                     SeedView(appVM)
+                }
+                composable(Screen.ElectrumServer.fullRoute) {
+                    ElectrumView()
                 }
             }
         }

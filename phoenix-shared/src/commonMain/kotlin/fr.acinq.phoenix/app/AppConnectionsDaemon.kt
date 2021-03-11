@@ -2,9 +2,7 @@ package fr.acinq.phoenix.app
 
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.utils.Connection
-import fr.acinq.phoenix.data.ElectrumServer
-import fr.acinq.phoenix.data.address
-import fr.acinq.phoenix.data.asServerAddress
+import fr.acinq.phoenix.data.ElectrumConfig
 import fr.acinq.phoenix.utils.NetworkMonitor
 import fr.acinq.phoenix.utils.NetworkState
 import fr.acinq.phoenix.utils.RETRY_DELAY
@@ -16,9 +14,7 @@ import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.*
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
-import kotlin.time.seconds
 
 
 @OptIn(ExperimentalCoroutinesApi::class, ExperimentalTime::class)
@@ -100,8 +96,13 @@ class AppConnectionsDaemon(
                     it.networkIsAvailable && it.disconnectCount <= 0 -> {
                         if (electrumConnectionJob == null) {
                             electrumConnectionJob = connectionLoop("Electrum", electrumClient.connectionState) {
-                                val electrumServer = configurationManager.getElectrumServer()
-                                electrumClient.connect(electrumServer.asServerAddress())
+                                val electrumConfig = configurationManager.electrumConfig().value
+                                if (electrumConfig == null) {
+                                    logger.info { "ignored electrum connection opportunity because no server is configured yet" }
+                                } else {
+                                    logger.info { "connecting to electrum using config=$electrumConfig" }
+                                    electrumClient.connect(electrumConfig.server)
+                                }
                             }
                         }
                     }
@@ -112,24 +113,6 @@ class AppConnectionsDaemon(
                         }
                         electrumConnectionJob = null
                     }
-                }
-            }
-        }
-        launch {
-            configurationManager.run {
-                if (!getElectrumServer().customized) {
-                    setRandomElectrumServer()
-                }
-
-                var previousElectrumServer: ElectrumServer? = null
-                subscribeToElectrumServer().collect {
-                    if (previousElectrumServer?.address() != it.address()) {
-                        logger.info { "Electrum server has changed. We need to refresh the connection." }
-                        electrumControlChanges.send { incrementDisconnectCount() }
-                        electrumControlChanges.send { decrementDisconnectCount() }
-                    }
-
-                    previousElectrumServer = it
                 }
             }
         }
@@ -214,6 +197,20 @@ class AppConnectionsDaemon(
         launch { configurationManager.subscribeToIsTorEnabled().collect {
             logger.info { "Tor is ${if (it) "enabled" else "disabled"}." }
         } }
+        // listen to electrum configuration changes and reconnect when needed.
+        launch {
+            var previousElectrumConfig: ElectrumConfig? = null
+            configurationManager.electrumConfig().collect { config ->
+                if (config == null) {
+                    electrumControlChanges.send { incrementDisconnectCount() }
+                } else if (config.server.host != previousElectrumConfig?.server?.host) {
+                    logger.info { "electrum server config updated to=$config, reconnecting..." }
+                    electrumControlChanges.send { incrementDisconnectCount() }
+                    electrumControlChanges.send { decrementDisconnectCount() }
+                }
+                previousElectrumConfig = config
+            }
+        }
     }
 
     fun incrementDisconnectCount(): Unit {

@@ -42,26 +42,22 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import business
 import controllerFactory
 import copyToClipboard
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.phoenix.android.components.*
 import fr.acinq.phoenix.android.mvi.MVIControllerViewModel
 import fr.acinq.phoenix.android.mvi.MVIView
-import fr.acinq.phoenix.android.utils.Prefs
 import fr.acinq.phoenix.android.utils.QRCode
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.ControllerFactory
 import fr.acinq.phoenix.ctrl.Receive
 import fr.acinq.phoenix.ctrl.ReceiveController
-import fr.acinq.phoenix.data.BitcoinUnit
-import fr.acinq.phoenix.data.FiatCurrency
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import navController
-import requireWallet
+import requireWalletPresent
 
 
 sealed class ReceiveViewState {
@@ -125,7 +121,7 @@ private class ReceiveViewModel(controller: ReceiveController) : MVIControllerVie
 
 @Composable
 fun ReceiveView() {
-    requireWallet(from = Screen.Receive) {
+    requireWalletPresent(inScreen = Screen.Receive) {
         val log = logger()
         val vm: ReceiveViewModel = viewModel(factory = ReceiveViewModel.Factory(controllerFactory, CF::receive))
         when (val state = vm.state) {

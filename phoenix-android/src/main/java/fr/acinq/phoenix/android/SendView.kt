@@ -22,25 +22,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import business
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.phoenix.android.components.AmountInput
 import fr.acinq.phoenix.android.components.FilledButton
 import fr.acinq.phoenix.android.mvi.MVIView
-import fr.acinq.phoenix.android.utils.Prefs
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.Scan
 import navController
 import navigate
-import requireWallet
+import requireWalletPresent
 
 @Composable
 fun SendView(request: PaymentRequest?) {
-    requireWallet(from = Screen.Send) {
+    requireWalletPresent(inScreen = Screen.Send) {
         val log = logger()
         log.info { "init sendview amount=${request?.amount} desc=${request?.description}" }
         MVIView(CF::scan) { model, postIntent ->

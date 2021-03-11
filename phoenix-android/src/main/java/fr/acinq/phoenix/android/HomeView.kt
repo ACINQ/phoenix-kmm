@@ -70,7 +70,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import navController
 import navigate
-import requireWallet
+import requireWalletPresent
 
 
 private class HomeViewModel(val connectionsFlow: StateFlow<Connections>, controller: HomeController) : MVIControllerViewModel<Home.Model, Home.Intent>(controller) {
@@ -89,7 +89,7 @@ private class HomeViewModel(val connectionsFlow: StateFlow<Connections>, control
 @ExperimentalCoroutinesApi
 @Composable
 fun HomeView(appVM: AppViewModel) {
-    requireWallet(from = Screen.Home) {
+    requireWalletPresent(inScreen = Screen.Home) {
         val log = logger()
         val context = LocalContext.current.applicationContext
         val nc = navController
