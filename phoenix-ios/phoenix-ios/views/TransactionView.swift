@@ -1,5 +1,6 @@
 import SwiftUI
 import PhoenixShared
+import DYPopoverView
 import os.log
 
 #if DEBUG && false
@@ -11,13 +12,19 @@ fileprivate var log = Logger(
 fileprivate var log = Logger(OSLog.disabled)
 #endif
 
+fileprivate let explainFeesButtonViewId = "explainFeesButtonViewId"
+
+
 struct PaymentView : View {
 
 	let payment: PhoenixShared.Eclair_kmpWalletPayment
 	let close: () -> Void
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
-
+	
+	@State var explainFeesPopoverVisible = false
+	@State var explainFeesPopoverFrame = CGRect(x: 0, y: 0, width: 200, height:500)
+	
 	var body: some View {
 		
 		ZStack {
@@ -38,6 +45,29 @@ struct PaymentView : View {
 					.padding(32)
 				}
 				Spacer()
+			}
+			
+			if explainFeesPopoverVisible {
+				Color.clear
+					.contentShape(Rectangle()) // required: https://stackoverflow.com/a/60151771/43522
+					.onTapGesture {
+						explainFeesPopoverVisible = false
+					}
+			}
+		}
+		.popoverView(
+			content: { ExplainFeesPopover(explanationText: explainFeesPopoverText()) },
+			background: { Color(.secondarySystemBackground) },
+			isPresented: $explainFeesPopoverVisible,
+			frame: $explainFeesPopoverFrame,
+			anchorFrame: nil,
+			popoverType: .popover,
+			position: .top,
+			viewId: explainFeesButtonViewId
+		)
+		.onPreferenceChange(ExplainFeesPopoverHeight.self) {
+			if let height = $0 {
+				explainFeesPopoverFrame = CGRect(x: 0, y: 0, width: explainFeesPopoverFrame.width, height: height)
 			}
 		}
 	}
@@ -123,12 +153,22 @@ struct PaymentView : View {
 			)
 			.padding(.bottom, 4)
 			
-			InfoGrid(payment: payment)
+			InfoGrid(
+				payment: payment,
+				explainFeesPopoverVisible: $explainFeesPopoverVisible
+			)
 		}
 	}
 	
 	func toggleCurrencyType() -> Void {
 		currencyPrefs.toggleCurrencyType()
+	}
+	
+	func explainFeesPopoverText() -> String {
+		
+		let feesInfo = payment.paymentFees(currencyPrefs: currencyPrefs)
+		return feesInfo?.1 ?? ""
+		
 	}
 }
 
@@ -180,15 +220,17 @@ struct PaymentView : View {
 // - This triggers InfoGrid.onPreferenceChange(InfoGrid_Column0_MeasuredWidth.self)
 // - Which triggers a second layout pass
 //
-struct InfoGrid: View {
+fileprivate struct InfoGrid: View {
 	
 	let payment: PhoenixShared.Eclair_kmpWalletPayment
+	
+	@Binding var explainFeesPopoverVisible: Bool
 	
 	@State private var widthColumn0: CGFloat? = nil
 	
 	private let cappedWidthColumn0: CGFloat = 200
 	
-	private let verticalSpacingBetweenRows: CGFloat = 8
+	private let verticalSpacingBetweenRows: CGFloat = 12
 	private let horizontalSpacingBetweenColumns: CGFloat = 8
 	
 	@Environment(\.openURL) var openURL
@@ -312,8 +354,26 @@ struct InfoGrid: View {
 					}
 					.frame(width: widthColumn0)
 
-					Text(pFees.0.string) // pFees.0 => FormattedAmount
-						.onTapGesture { toggleCurrencyType() }
+					HStack(alignment: VerticalAlignment.center, spacing: 0) {
+						
+						Text(pFees.0.string) // pFees.0 => FormattedAmount
+							.onTapGesture { toggleCurrencyType() }
+						
+						if pFees.1.count > 0 {
+							
+							Button {
+								explainFeesPopoverVisible = true
+							} label: {
+								Image(systemName: "questionmark.circle")
+									.renderingMode(.template)
+									.foregroundColor(.secondary)
+									.font(.body)
+							}
+							.anchorView(viewId: explainFeesButtonViewId)
+							.padding(.leading, 4)
+						}
+					}
+
 				}
 			} // </if let pFees>
 			
@@ -372,7 +432,6 @@ struct InfoGrid: View {
 			} else {
 				self.widthColumn0 = $0
 			}
-			
 		}
 	}
 	
@@ -381,7 +440,7 @@ struct InfoGrid: View {
 	}
 }
 
-struct InfoGrid_Column0<Content>: View where Content: View {
+fileprivate struct InfoGrid_Column0<Content>: View where Content: View {
 	let content: Content
 	
 	init(@ViewBuilder builder: () -> Content) {
@@ -399,7 +458,7 @@ struct InfoGrid_Column0<Content>: View where Content: View {
 	}
 }
 
-struct InfoGrid_Column0_MeasuredWidth: PreferenceKey {
+fileprivate struct InfoGrid_Column0_MeasuredWidth: PreferenceKey {
 	static let defaultValue: CGFloat? = nil
 	
 	static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
@@ -415,6 +474,31 @@ struct InfoGrid_Column0_MeasuredWidth: PreferenceKey {
 		} else {
 			value = nextValue()
 		}
+	}
+}
+
+fileprivate struct ExplainFeesPopover: View {
+	
+	let explanationText: String
+	
+	var body: some View {
+		
+		Text(explanationText)
+			.padding()
+			.background(GeometryReader { proxy in
+				Color.clear.preference(
+					key: ExplainFeesPopoverHeight.self,
+					value: proxy.size.height
+				)
+			})
+	}
+}
+
+fileprivate struct ExplainFeesPopoverHeight: PreferenceKey {
+	static let defaultValue: CGFloat? = nil
+	
+	static func reduce(value: inout CGFloat?, nextValue: () -> CGFloat?) {
+		value = value ?? nextValue()
 	}
 }
 
@@ -536,8 +620,15 @@ extension Eclair_kmpWalletPayment {
 					
 					return (formattedAmt, exp)
 				}
+				else {
+					// I think it's nice to see "Fees: 0 sat" :)
+					
+					let formattedAmt = Utils.format(currencyPrefs, msat: 0)
+					let exp = ""
+					
+					return (formattedAmt, exp)
+				}
 			}
-			
 			
 		} else if let outgoingPayment = self as? Eclair_kmpOutgoingPayment {
 			
