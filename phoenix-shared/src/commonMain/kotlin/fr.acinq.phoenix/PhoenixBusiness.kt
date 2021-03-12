@@ -3,7 +3,9 @@ package fr.acinq.phoenix
 import fr.acinq.bitcoin.MnemonicCode
 import fr.acinq.eclair.blockchain.electrum.ElectrumClient
 import fr.acinq.eclair.blockchain.electrum.ElectrumWatcher
+import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.io.TcpSocket
+import fr.acinq.eclair.utils.UUID
 import fr.acinq.eclair.utils.setEclairLoggerFactory
 import fr.acinq.phoenix.app.*
 import fr.acinq.phoenix.app.ctrl.*
@@ -116,6 +118,10 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     fun getXpub(): Pair<String, String>? = walletManager.wallet.value?.xpub(chain.isMainnet())
 
     fun peerState() = peerManager.peerState
+
+    suspend fun getOutgoingPayment(id: UUID): OutgoingPayment? {
+        return paymentsDb.getOutgoingPayment(id)
+    }
 
     // The (node_id, fcm_token) tuple only needs to be registered once.
     // And after that, only if the tuple changes (e.g. different fcm_token).

@@ -22,6 +22,7 @@ struct PaymentView : View {
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
+	@State var explainFeesText: String = ""
 	@State var explainFeesPopoverVisible = false
 	@State var explainFeesPopoverFrame = CGRect(x: 0, y: 0, width: 200, height:500)
 	
@@ -56,7 +57,7 @@ struct PaymentView : View {
 			}
 		}
 		.popoverView(
-			content: { ExplainFeesPopover(explanationText: explainFeesPopoverText()) },
+			content: { ExplainFeesPopover(explanationText: $explainFeesText) },
 			background: { Color(.secondarySystemBackground) },
 			isPresented: $explainFeesPopoverVisible,
 			frame: $explainFeesPopoverFrame,
@@ -70,6 +71,7 @@ struct PaymentView : View {
 				explainFeesPopoverFrame = CGRect(x: 0, y: 0, width: explainFeesPopoverFrame.width, height: height)
 			}
 		}
+		.onAppear { onAppear() }
 	}
 	
 	@ViewBuilder
@@ -168,7 +170,33 @@ struct PaymentView : View {
 		
 		let feesInfo = payment.paymentFees(currencyPrefs: currencyPrefs)
 		return feesInfo?.1 ?? ""
+	}
+	
+	func onAppear() -> Void {
+		log.trace("onAppear()")
 		
+		// Update text in explainFeesPopover
+		explainFeesText = payment.paymentFees(currencyPrefs: currencyPrefs)?.1 ?? ""
+		
+		if let outgoingPayment = payment as? PhoenixShared.Eclair_kmpOutgoingPayment {
+			
+			// If this is an outgoingPayment, then we don't have the proper parts list.
+			// That is, the outgoingPayment was fetched via listPayments(),
+			// which gives us a fake parts list.
+			//
+			// Let's fetch the full outgoingPayment (with parts list),
+			// so we can improve our fees description.
+			
+			let paymentId = outgoingPayment.component1()
+			AppDelegate.get().business.getOutgoingPayment(id: paymentId) {
+				(fullOutgoingPayment: Eclair_kmpOutgoingPayment?, error: Error?) in
+				
+				if let fullOutgoingPayment = fullOutgoingPayment {
+					let feesInfo = fullOutgoingPayment.paymentFees(currencyPrefs: currencyPrefs)
+					explainFeesText = feesInfo?.1 ?? ""
+				}
+			}
+		}
 	}
 }
 
@@ -479,18 +507,38 @@ fileprivate struct InfoGrid_Column0_MeasuredWidth: PreferenceKey {
 
 fileprivate struct ExplainFeesPopover: View {
 	
-	let explanationText: String
+	@Binding var explanationText: String
 	
 	var body: some View {
 		
-		Text(explanationText)
-			.padding()
-			.background(GeometryReader { proxy in
-				Color.clear.preference(
-					key: ExplainFeesPopoverHeight.self,
-					value: proxy.size.height
-				)
-			})
+		VStack {
+			Text(explanationText)
+				.padding()
+				.background(GeometryReader { proxy in
+					Color.clear.preference(
+						key: ExplainFeesPopoverHeight.self,
+						value: proxy.size.height
+					)
+				})
+		}.frame(minHeight: 500)
+		// ^^^ Why? ^^^
+		//
+		// We're trying to accomplish 2 things:
+		// - allow the explanationText to be dynamically changed
+		// - calculate the appropriate height for the text
+		//
+		// But there's a problem, which occurs like so:
+		// - explainFeesPopoverFrame starts with hard-coded frame of (150, 500)
+		// - SwiftUI performs layout of our body with inherited frame of (150, 500)
+		// - We calculate appropriate height (X) for our text,
+		//   and it gets reported via ExplainFeesPopoverHeight
+		// - explainFeesPopoverFrame is resized to (150, X)
+		// - explanationText is changed, triggering a view update
+		// - SwiftUI performs layout of our body with previous frame of (150, X)
+		// - Text cannot report appropriate height, as it's restricted to X
+		//
+		// So we force the height of our VStack to 500,
+		// giving the Text room to size itself appropriately.
 	}
 }
 
@@ -650,11 +698,23 @@ extension Eclair_kmpWalletPayment {
 			
 			let exp: String
 			if parts == 1 {
-				exp = NSLocalizedString("Paid in 1 part, using \(hops) hops",
-					comment: "Fees explanation")
+				if hops == 1 {
+					exp = NSLocalizedString(
+						"Lightning fees for routing the payment. Payment required 1 hop.",
+						comment: "Fees explanation"
+					)
+				} else {
+					exp = NSLocalizedString(
+						"Lightning fees for routing the payment. Payment required \(hops) hops.",
+						comment: "Fees explanation"
+					)
+				}
+				
 			} else {
-				exp = NSLocalizedString("Paid in \(parts) parts, using \(hops) hops",
-					comment: "Fees explanation")
+				exp = NSLocalizedString(
+					"Lightning fees for routing the payment. Payment was divided into \(parts) parts, using \(hops) hops.",
+					comment: "Fees explanation"
+				)
 			}
 			
 			return (formattedAmt, exp)
