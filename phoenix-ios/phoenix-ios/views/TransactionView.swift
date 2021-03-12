@@ -610,7 +610,7 @@ extension Eclair_kmpWalletPayment {
 				let msat = received.receivedWith.fees.msat
 				if msat > 0 {
 					
-					let formattedAmt = Utils.format(currencyPrefs, msat: msat)
+					let formattedAmt = Utils.format(currencyPrefs, msat: msat, hideMsats: false)
 					
 					let exp = NSLocalizedString(
 						"In order to receive this payment, a new payment channel was opened." +
@@ -623,7 +623,7 @@ extension Eclair_kmpWalletPayment {
 				else {
 					// I think it's nice to see "Fees: 0 sat" :)
 					
-					let formattedAmt = Utils.format(currencyPrefs, msat: 0)
+					let formattedAmt = Utils.format(currencyPrefs, msat: 0, hideMsats: true)
 					let exp = ""
 					
 					return (formattedAmt, exp)
@@ -638,7 +638,7 @@ extension Eclair_kmpWalletPayment {
 			}
 			
 			let msat = outgoingPayment.fees.msat
-			let formattedAmt = Utils.format(currencyPrefs, msat: msat)
+			let formattedAmt = Utils.format(currencyPrefs, msat: msat, hideMsats: false)
 			
 			var parts = 0
 			var hops = 0

@@ -659,19 +659,41 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                 detailsType = outgoing_details_type,
                 detailsBlob = outgoing_details_blob ?: ByteArray(0)
             )
-            val recipientAmount = if (parts_amount != null && details is OutgoingPayment.Details.Normal) {
-                // For normal payments, prefer using sum of parts' instead of original amount.
-                // This allows us to include the fees in the amount.
-                MilliSatoshi(parts_amount)
-            } else {
-                MilliSatoshi(amount)
-            }
+            // An OutgoingPayment is split between 2 tables:
+            // - outgoing_payments
+            // - outgoing_payment_parts
+            //
+            // But for this query, we're only fetching the SUM from outgoing_payment_parts.
+            // This means we will not have a proper OutgoingPayment.parts list.
+            // But we do have the SUM, which we can use to relay information about the fees.
+            //
+            val parts: List<OutgoingPayment.Part> =
+                if (parts_amount != null && details is OutgoingPayment.Details.Normal) {
+                    // For normal payments, we create a FAKE parts list.
+                    // This allows us to properly calculate the fees associated with the payment.
+                    // Note that we need to know ALL of the following:
+                    // - totalAmount
+                    // - feesAmount
+                    //
+                    listOf(OutgoingPayment.Part(
+                        id = UUID.fromString("00000000-0000-0000-0000-000000000000"),
+                        amount = MilliSatoshi(parts_amount),
+                        route = listOf(),
+                        status = OutgoingPayment.Part.Status.Succeeded(
+                            preimage = ByteVector32.Zeroes,
+                            completedAt = 0
+                        ),
+                        createdAt = 0 // <= always zero for fake parts
+                    ))
+                } else {
+                    listOf()
+                }
             OutgoingPayment(
                 id = UUID.fromString(outgoing_payment_id!!),
-                recipientAmount = recipientAmount,
+                recipientAmount = MilliSatoshi(amount),
                 recipient = PublicKey(ByteVector(outgoing_recipient!!)),
                 details = details,
-                parts = listOf(),
+                parts = parts,
                 status = mapOutgoingPaymentStatus(
                     completed_at = completed_at,
                     status_type = outgoing_status_type ?: 0,

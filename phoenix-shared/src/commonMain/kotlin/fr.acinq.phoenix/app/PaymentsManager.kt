@@ -78,7 +78,7 @@ fun WalletPayment.desc(): String? = when (this) {
 enum class WalletPaymentState { Success, Pending, Failure }
 
 fun WalletPayment.amountMsat(): Long = when (this) {
-    is OutgoingPayment -> -recipientAmount.msat
+    is OutgoingPayment -> -recipientAmount.msat - fees.msat
     is IncomingPayment -> received?.amount?.msat ?: 0
 }
 
