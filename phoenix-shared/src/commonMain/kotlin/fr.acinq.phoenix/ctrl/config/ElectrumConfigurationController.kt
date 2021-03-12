@@ -15,7 +15,10 @@ object ElectrumConfiguration {
         val blockHeight: Int = 0,
         val tipTimestamp: Long = 0,
         val walletIsInitialized: Boolean = false,
-    ) : MVI.Model()
+        val error: Error? = null
+    ) : MVI.Model() {
+        fun isCustom() = configuration != null && configuration is ElectrumConfig.Custom
+    }
 
     sealed class Intent : MVI.Intent() {
         data class UpdateElectrumServer(val address: String?) : Intent()

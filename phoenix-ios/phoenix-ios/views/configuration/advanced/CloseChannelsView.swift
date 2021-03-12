@@ -110,7 +110,7 @@ fileprivate struct StandardWalletView : View {
 		
 		VStack(alignment: .leading) {
 			
-			let formattedSats = Utils.formatBitcoin(sat: model.sats, bitcoinUnit: .satoshi)
+			let formattedSats = Utils.formatBitcoin(sat: model.sats, bitcoinUnit: .sat)
 			
 			if model.channelCount == 1 {
 				Text(

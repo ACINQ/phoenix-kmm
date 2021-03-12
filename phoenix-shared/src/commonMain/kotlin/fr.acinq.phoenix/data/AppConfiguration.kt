@@ -16,6 +16,10 @@ enum class BitcoinUnit : CurrencyUnit {
     override fun toString(): String {
         return super.toString().toLowerCase()
     }
+
+    companion object default {
+        val values = BitcoinUnit.values().toList()
+    }
 }
 
 /** Converts a [Double] amount to [MilliSatoshi], assuming that this amount is in fiat. */
@@ -41,7 +45,8 @@ fun MilliSatoshi.toUnit(unit: BitcoinUnit): Double = when (unit) {
 enum class FiatCurrency : CurrencyUnit {
     AUD, BRL, CAD, CHF, CLP, CNY, DKK, EUR, GBP, HKD, INR, ISK, JPY, KRW, MXN, NZD, PLN, RUB, SEK, SGD, THB, TWD, USD;
 
-    companion object {
+    companion object default {
+        val values = FiatCurrency.values().toList()
         fun valueOfOrNull(code: String): FiatCurrency? = try {
             valueOf(code)
         } catch (e: IllegalArgumentException) {

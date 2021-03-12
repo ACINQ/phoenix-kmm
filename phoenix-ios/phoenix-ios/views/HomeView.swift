@@ -61,7 +61,7 @@ struct HomeView : View {
 				// === Total Balance ====
 				HStack(alignment: .bottom) {
 					
-					let amount = Utils.format(currencyPrefs, sat: model.balanceSat)
+                    let amount = Utils.format(currencyPrefs, msat: model.balance.msat)
 					Text(amount.digits)
 						.font(.largeTitle)
 						.onTapGesture { toggleCurrencyType() }
@@ -331,7 +331,7 @@ class HomeView_Previews: PreviewProvider {
 	)
 	
 	static let mockModel = Home.Model(
-		balanceSat: 123500,
+        balance: Eclair_kmpMilliSatoshi(msat: 123500),
 		payments: [
 		],
 		lastPayment: nil

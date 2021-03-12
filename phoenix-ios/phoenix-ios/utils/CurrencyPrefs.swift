@@ -15,6 +15,7 @@ class CurrencyPrefs: ObservableObject {
 	@Published var bitcoinUnit: BitcoinUnit
 	
 	@Published var fiatExchangeRates: [BitcoinPriceRate] = []
+    private var fiatExchangeRatesWatcher: Ktor_ioCloseable? = nil
 	
 	private var cancellables = Set<AnyCancellable>()
 	private var unsubscribe: (() -> Void)? = nil
@@ -40,14 +41,10 @@ class CurrencyPrefs: ObservableObject {
 		}.store(in: &cancellables)
 		
 		let business = AppDelegate.get().business
-		fiatExchangeRates = business.currencyManager.getBitcoinRates()
-		
-		unsubscribe = business.currencyManager.events.subscribe {[weak self] event in
-
-			if let event = event as? FiatExchangeRatesUpdated {
-				self?.fiatExchangeRates = event.rates
-			}
-		}
+        let ratesFlow = SwiftFlow<Array<BitcoinPriceRate>>(origin: business.currencyManager.ratesFlow)
+        fiatExchangeRatesWatcher = ratesFlow.watch { (rates: Array<BitcoinPriceRate>) in
+            self?.fiatExchangeRates = rates
+        }
 		
 		let nc = NotificationCenter.default
 		nc.publisher(for: UIApplication.willResignActiveNotification).sink {[weak self] _ in
@@ -65,13 +62,14 @@ class CurrencyPrefs: ObservableObject {
 		self.fiatCurrency = fiatCurrency
 		self.bitcoinUnit = bitcoinUnit
 		
-		let exchangeRate = BitcoinPriceRate(fiatCurrency: fiatCurrency, price: exchangeRate)
+		let exchangeRate = BitcoinPriceRate(fiatCurrency: fiatCurrency, price: exchangeRate, source: "", timestampMillis: 0)
 		fiatExchangeRates.append(exchangeRate)
 	}
 	
 	deinit {
 		unsubscribe?()
 		currencyTypeTimer?.invalidate()
+        fiatExchangeRatesWatcher?.close()
 	}
 	
 	func toggleCurrencyType() -> Void {
@@ -120,10 +118,10 @@ class CurrencyPrefs: ObservableObject {
 	}
 	
 	static func mockUSD() -> CurrencyPrefs {
-		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .usd, bitcoinUnit: .satoshi, exchangeRate: 20_000.00)
+		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .usd, bitcoinUnit: .sat, exchangeRate: 20_000.00)
 	}
 	
 	static func mockEUR() -> CurrencyPrefs {
-		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .eur, bitcoinUnit: .satoshi, exchangeRate: 17_000.00)
+		return CurrencyPrefs(currencyType: .bitcoin, fiatCurrency: .eur, bitcoinUnit: .sat, exchangeRate: 17_000.00)
 	}
 }
