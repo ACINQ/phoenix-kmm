@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.kodein.log.LoggerFactory
 import org.kodein.memory.file.*
-import org.kodein.memory.io.putBytesBuffered
+import org.kodein.memory.io.*
 import org.kodein.memory.use
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -46,7 +46,8 @@ private suspend fun mergeLogs(directory: Path, numberOfFiles: Int, ctx: Platform
     tmpFile.openWriteableFile().use { output ->
         files.reversed().forEach { file ->
             file.openReadableFile().use { input ->
-                output.putBytesBuffered(input)
+                // FIXME: use the readable length
+                output.putReadableBytesBuffered(input, Int.MAX_VALUE)
             }
         }
     }

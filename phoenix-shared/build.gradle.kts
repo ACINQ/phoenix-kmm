@@ -65,7 +65,7 @@ kotlin {
         val serializationVersion = "1.1.0"
         val secp256k1Version = "0.4.1"
         val ktorVersion = "1.5.2"
-        val kodeinMemory = "0.7.0"
+        val kodeinMemory = "0.8.0"
         val sqldelightVersion = "1.4.4"
 
         val commonMain by getting {
