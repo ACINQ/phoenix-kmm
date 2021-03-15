@@ -680,44 +680,71 @@ extension Eclair_kmpWalletPayment {
 			
 		} else if let outgoingPayment = self as? Eclair_kmpOutgoingPayment {
 			
-			// no fees for failed payments
+			
 			if let _ = outgoingPayment.status.asFailed() {
-				return nil
-			}
-			
-			let msat = outgoingPayment.fees.msat
-			let formattedAmt = Utils.format(currencyPrefs, msat: msat, hideMsats: false)
-			
-			var parts = 0
-			var hops = 0
-			for part in outgoingPayment.parts {
 				
-				parts += 1
-				hops = part.route.count
-			}
-			
-			let exp: String
-			if parts == 1 {
-				if hops == 1 {
+				// no fees for failed payments
+				return nil
+				
+			} else if let onChain = outgoingPayment.status.asOnChain() {
+				
+				// for on-chain payments, the fees are extracted from the mined transaction(s)
+				
+				let claimed = onChain.claimed.sat
+				let formattedAmt = Utils.format(currencyPrefs, sat: claimed)
+				
+				let txCount = onChain.component1().count
+				let exp: String
+				if txCount == 1 {
 					exp = NSLocalizedString(
-						"Lightning fees for routing the payment. Payment required 1 hop.",
+						"Bitcoin networks fees paid for on-chain transaction. Payment required 1 transaction.",
 						comment: "Fees explanation"
 					)
 				} else {
 					exp = NSLocalizedString(
-						"Lightning fees for routing the payment. Payment required \(hops) hops.",
+						"Bitcoin networks fees paid for on-chain transactions. Payment required \(txCount) transactions.",
 						comment: "Fees explanation"
 					)
 				}
 				
-			} else {
-				exp = NSLocalizedString(
-					"Lightning fees for routing the payment. Payment was divided into \(parts) parts, using \(hops) hops.",
-					comment: "Fees explanation"
-				)
+				return (formattedAmt, exp)
+				
+			} else if let _ = outgoingPayment.status.asOffChain() {
+				
+				let msat = outgoingPayment.fees.msat
+				let formattedAmt = Utils.format(currencyPrefs, msat: msat, hideMsats: false)
+				
+				var parts = 0
+				var hops = 0
+				for part in outgoingPayment.parts {
+					
+					parts += 1
+					hops = part.route.count
+				}
+				
+				let exp: String
+				if parts == 1 {
+					if hops == 1 {
+						exp = NSLocalizedString(
+							"Lightning fees for routing the payment. Payment required 1 hop.",
+							comment: "Fees explanation"
+						)
+					} else {
+						exp = NSLocalizedString(
+							"Lightning fees for routing the payment. Payment required \(hops) hops.",
+							comment: "Fees explanation"
+						)
+					}
+					
+				} else {
+					exp = NSLocalizedString(
+						"Lightning fees for routing the payment. Payment was divided into \(parts) parts, using \(hops) hops.",
+						comment: "Fees explanation"
+					)
+				}
+				
+				return (formattedAmt, exp)
 			}
-			
-			return (formattedAmt, exp)
 		}
 		
 		return nil

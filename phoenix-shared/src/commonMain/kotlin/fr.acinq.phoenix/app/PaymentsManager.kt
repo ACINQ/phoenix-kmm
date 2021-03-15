@@ -180,6 +180,20 @@ fun OutgoingPayment.Status.asSucceeded(): OutgoingPayment.Status.Completed.Succe
     else -> null
 }
 
+// Class type OutgoingPayment.Status.Succeeded.OffChain is not exported to iOS unless
+// we explicitly reference it in PhoenixShared.
+fun OutgoingPayment.Status.asOffChain(): OutgoingPayment.Status.Completed.Succeeded.OffChain? = when (this) {
+    is OutgoingPayment.Status.Completed.Succeeded.OffChain -> this
+    else -> null
+}
+
+// Class type OutgoingPayment.Status.Succeeded.OnChain is not exported to iOS unless
+// we explicitly reference it in PhoenixShared.
+fun OutgoingPayment.Status.asOnChain(): OutgoingPayment.Status.Completed.Succeeded.OnChain? = when (this) {
+    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> this
+    else -> null
+}
+
 // In Objective-C, the function name `description()` is already in use (part of NSObject).
 // So we need to alias it.
 fun PaymentRequest.desc(): String? = this.description

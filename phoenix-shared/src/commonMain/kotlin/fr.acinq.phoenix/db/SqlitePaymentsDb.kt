@@ -105,7 +105,8 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         //
         Succeeded_v0(100),
         Failed_v0(200),
-        Mined_v0(300);
+        Mined_v0(300),
+        Mined_v1(301);
 
         fun version(): Long = type % 100L
     }
@@ -161,16 +162,23 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
     // in the `status BLOB`, we use JSON serialization.
     //
     @Serializable
-    data class MinedJSON(val txids: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>) {
+    data class MinedJSON(
+        val txids: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>,
+        val claimed: Long
+    ) {
         companion object {
             fun serialize(src: OutgoingPayment.Status.Completed.Succeeded.OnChain): ByteArray {
-                val json = MinedJSON(src.txids)
+                val json = MinedJSON(src.txids, src.claimed.toLong())
                 return Json.encodeToString(json).toByteArray(Charsets.UTF_8)
             }
             fun deserialize(blob: ByteArray, completedAt: Long): OutgoingPayment.Status.Completed.Succeeded.OnChain {
                 val str = String(bytes = blob, charset = Charsets.UTF_8)
                 val json = Json.decodeFromString<MinedJSON>(str)
-                return OutgoingPayment.Status.Completed.Succeeded.OnChain(json.txids, completedAt)
+                return OutgoingPayment.Status.Completed.Succeeded.OnChain(
+                    txids = json.txids,
+                    claimed = json.claimed.sat,
+                    completedAt = completedAt
+                )
             }
         }
     }
@@ -299,7 +307,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                         completed.preimage.toByteArray()
                     )}
                     is OutgoingPayment.Status.Completed.Succeeded.OnChain -> { Pair(
-                        OutgoingStatusType.Mined_v0.type,
+                        OutgoingStatusType.Mined_v1.type,
                         MinedJSON.serialize(completed)
                     )}
                 }
@@ -523,7 +531,8 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                 completed_at = completed_at,
                 status_type = status_type ?: 0,
                 status = status ?: ByteArray(0)
-            )
+            ),
+            createdAt = created_at
         )
     }
 
@@ -532,25 +541,33 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         status_type: Long,
         status: ByteArray
     ): OutgoingPayment.Status = when {
-        completed_at != null && status_type == OutgoingStatusType.Succeeded_v0.type -> {
+        completed_at == null -> OutgoingPayment.Status.Pending
+        status_type == OutgoingStatusType.Succeeded_v0.type -> {
             OutgoingPayment.Status.Completed.Succeeded.OffChain(
                 preimage = ByteVector32(status),
                 completedAt = completed_at
             )
         }
-        completed_at != null && status_type == OutgoingStatusType.Failed_v0.type -> {
+        status_type == OutgoingStatusType.Failed_v0.type -> {
             OutgoingPayment.Status.Completed.Failed(
                 reason = OutgoingFinalFailureDbEnum.deserialize(status),
                 completedAt = completed_at
             )
         }
-        completed_at != null && status_type == OutgoingStatusType.Mined_v0.type -> {
+        status_type == OutgoingStatusType.Mined_v0.type -> {
             OutgoingPayment.Status.Completed.Succeeded.OnChain(
-                txids = listOf<ByteVector32>(),
+                txids = listOf(),
+                claimed = 0.sat,
                 completedAt = completed_at
             )
         }
-        else -> OutgoingPayment.Status.Pending
+        status_type == OutgoingStatusType.Mined_v1.type -> {
+            MinedJSON.deserialize(
+                blob = status,
+                completedAt = completed_at
+            )
+        }
+        else -> throw UnhandledOutgoingStatus
     }
 
     private fun mapOutgoingPartStatus(
@@ -698,7 +715,8 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                     completed_at = completed_at,
                     status_type = outgoing_status_type ?: 0,
                     status = outgoing_status_blob ?: ByteArray(0)
-                )
+                ),
+                createdAt = created_at
             )
         }
         "incoming" -> mapIncomingPayment(
@@ -737,4 +755,5 @@ class IncomingPaymentNotFound(paymentHash: ByteVector32) : RuntimeException("mis
 class UnhandledIncomingOrigin(origin: IncomingPayment.Origin) : RuntimeException("unhandled origin=$origin")
 class UnhandledIncomingReceivedWith(receivedWith: IncomingPayment.ReceivedWith) : RuntimeException("unhandled receivedWith=$receivedWith")
 object UnhandledOutgoingDetails : RuntimeException("unhandled outgoing details")
+object UnhandledOutgoingStatus: RuntimeException("unhandled outgoing status")
 class UnhandledDirection(direction: String) : RuntimeException("unhandled direction=$direction")
