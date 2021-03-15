@@ -125,3 +125,66 @@ class ObservableLastIncomingPayment: ObservableObject {
 //        watcher?.close()
 //    }
 //}
+
+class KotlinPassthroughSubject<Output: AnyObject>: Publisher {
+	
+	typealias Failure = Never
+	
+	private let wrapped: PassthroughSubject<Output, Failure>
+	private var watcher: Ktor_ioCloseable? = nil
+	
+	init(_ swiftFlow: SwiftFlow<Output>) {
+		
+		wrapped = PassthroughSubject<Output, Failure>()
+		
+		watcher = swiftFlow.watch {[weak self](value: Output?) in
+			self?.wrapped.send(value!)
+		}
+	}
+
+	deinit {
+	//	Swift.print("KotlinPassthroughSubject: deinit")
+		watcher?.close()
+	}
+	
+	func receive<Downstream: Subscriber>(subscriber: Downstream)
+		where Failure == Downstream.Failure, Output == Downstream.Input
+	{
+		wrapped.subscribe(subscriber)
+	}
+}
+
+class KotlinCurrentValueSubject<Output: AnyObject>: Publisher {
+	
+	typealias Failure = Never
+	
+	private let wrapped: CurrentValueSubject<Output, Failure>
+	private var watcher: Ktor_ioCloseable? = nil
+	
+	init(_ swiftStateFlow: SwiftStateFlow<Output>) {
+		
+		let initialValue = swiftStateFlow.value!
+		wrapped = CurrentValueSubject(initialValue)
+		
+		watcher = swiftStateFlow.watch {[weak self](value: Output?) in
+			self?.wrapped.send(value!)
+		}
+	}
+	
+	deinit {
+	//	Swift.print("KotlinCurrentValueSubject: deinit")
+		watcher?.close()
+	}
+	
+	var value: Output {
+		get {
+			return wrapped.value
+		}
+	}
+
+	func receive<Downstream: Subscriber>(subscriber: Downstream)
+		where Failure == Downstream.Failure, Output == Downstream.Input
+	{
+		wrapped.subscribe(subscriber)
+	}
+}
