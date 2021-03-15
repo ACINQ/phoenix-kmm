@@ -95,7 +95,8 @@ class ObservableLastIncomingPayment: ObservableObject {
 		value = incomingPaymentFlow.value as? Eclair_kmpWalletPayment
 		
 		let swiftFlow = SwiftFlow<Eclair_kmpWalletPayment>(origin: incomingPaymentFlow)
-		swiftFlow.watch {[weak self](payment: Eclair_kmpWalletPayment?) in
+		
+		watcher = swiftFlow.watch {[weak self](payment: Eclair_kmpWalletPayment?) in
 			self?.value = payment
 		}
 	}
