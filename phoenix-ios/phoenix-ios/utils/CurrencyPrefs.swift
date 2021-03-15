@@ -41,10 +41,12 @@ class CurrencyPrefs: ObservableObject {
 		}.store(in: &cancellables)
 		
 		let business = AppDelegate.get().business
-        let ratesFlow = SwiftFlow<Array<BitcoinPriceRate>>(origin: business.currencyManager.ratesFlow)
-        fiatExchangeRatesWatcher = ratesFlow.watch { (rates: Array<BitcoinPriceRate>) in
-            self?.fiatExchangeRates = rates
-        }
+		let ratesFlow = SwiftFlow<NSArray>(origin: business.currencyManager.ratesFlow)
+		fiatExchangeRatesWatcher = ratesFlow.watch {[weak self](rates: NSArray?) in
+			if let rates = rates as? Array<BitcoinPriceRate> {
+				self?.fiatExchangeRates = rates
+			}
+		}
 		
 		let nc = NotificationCenter.default
 		nc.publisher(for: UIApplication.willResignActiveNotification).sink {[weak self] _ in
