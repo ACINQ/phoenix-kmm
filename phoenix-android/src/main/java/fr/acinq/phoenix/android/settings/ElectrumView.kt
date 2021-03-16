@@ -91,14 +91,20 @@ fun ElectrumView() {
 }
 
 @Composable
-private fun ElectrumServerDialog(onConfirm: (String) -> Unit, onCancel: () -> Unit) {
+private fun ElectrumServerDialog(
+    onConfirm: (String) -> Unit,
+    onCancel: () -> Unit
+) {
     val prefElectrumServer = Prefs.getElectrumServer(LocalContext.current)
     var useCustomServer by remember { mutableStateOf(prefElectrumServer != null) }
-    var address by remember { mutableStateOf(prefElectrumServer?.run { "$host:$port" }?: "") }
-    Dialog(onDismiss = onCancel, buttons = {
-        Button(onClick = { onCancel() }, text = stringResource(id = R.string.btn_cancel), padding = PaddingValues(8.dp))
-        Button(onClick = { onConfirm(if (useCustomServer) address else "") }, text = stringResource(id = R.string.btn_ok), padding = PaddingValues(8.dp))
-    }) {
+    var address by remember { mutableStateOf(prefElectrumServer?.run { "$host:$port" } ?: "") }
+    Dialog(
+        onDismiss = onCancel,
+        buttons = {
+            Button(onClick = { onCancel() }, text = stringResource(id = R.string.btn_cancel), padding = PaddingValues(8.dp))
+            Button(onClick = { onConfirm(if (useCustomServer) address else "") }, text = stringResource(id = R.string.btn_ok), padding = PaddingValues(8.dp))
+        }
+    ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Spacer(Modifier.height(24.dp))
             Row(Modifier.padding(horizontal = 24.dp)) {
@@ -111,7 +117,8 @@ private fun ElectrumServerDialog(onConfirm: (String) -> Unit, onCancel: () -> Un
                 Modifier
                     .fillMaxWidth()
                     .enableOrFade(useCustomServer)
-                    .padding(horizontal = 24.dp)) {
+                    .padding(horizontal = 24.dp)
+            ) {
                 Text(text = stringResource(id = R.string.electrum_dialog_input), style = MaterialTheme.typography.subtitle1)
                 Spacer(Modifier.height(8.dp))
                 InputText(text = address, onTextChange = { address = it }, enabled = useCustomServer)
