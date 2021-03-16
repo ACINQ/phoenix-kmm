@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package fr.acinq.phoenix.android
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -27,7 +29,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import fr.acinq.eclair.payment.PaymentRequest
-import fr.acinq.phoenix.android.*
 import fr.acinq.phoenix.android.home.HomeView
 import fr.acinq.phoenix.android.home.ReadDataView
 import fr.acinq.phoenix.android.home.StartupView
@@ -37,6 +38,8 @@ import fr.acinq.phoenix.android.init.RestoreWalletView
 import fr.acinq.phoenix.android.receive.ReceiveView
 import fr.acinq.phoenix.android.send.SendView
 import fr.acinq.phoenix.android.settings.ElectrumView
+import fr.acinq.phoenix.android.settings.SeedView
+import fr.acinq.phoenix.android.settings.SettingsView
 import fr.acinq.phoenix.android.utils.logger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -61,7 +64,8 @@ fun AppView(appVM: AppViewModel) {
             Modifier
                 .background(appBackground())
                 .fillMaxWidth()
-                .fillMaxHeight()) {
+                .fillMaxHeight()
+        ) {
             NavHost(navController = navController, startDestination = Screen.Startup.route) {
                 composable(Screen.Startup.fullRoute) {
                     StartupView()

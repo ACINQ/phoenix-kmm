@@ -14,12 +14,9 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android
+package fr.acinq.phoenix.android.settings
 
-import Screen
-import android.widget.TextView
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -32,16 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
+import fr.acinq.phoenix.android.R
+import fr.acinq.phoenix.android.Screen
 import fr.acinq.phoenix.android.components.ScreenHeader
 import fr.acinq.phoenix.android.components.SettingButton
-import fr.acinq.phoenix.android.security.EncryptedSeed
-import fr.acinq.phoenix.android.security.KeyState
-import fr.acinq.phoenix.android.utils.Converter
-import fr.acinq.phoenix.android.utils.logger
-import keyState
-import navController
-import navigate
+import fr.acinq.phoenix.android.navController
+import fr.acinq.phoenix.android.navigate
 
 
 @Composable
@@ -54,7 +47,6 @@ fun SettingsView() {
             .background(MaterialTheme.colors.surface)
             .verticalScroll(scrollState)
     ) {
-
         ScreenHeader(title = stringResource(id = R.string.menu_settings), onBackClick = { nc.popBackStack() })
         // -- general
         SettingCategory(R.string.settings_general_title)
@@ -87,32 +79,4 @@ fun SettingCategory(textResId: Int) {
             .fillMaxWidth()
             .padding(start = 50.dp, top = 24.dp, end = 0.dp, bottom = 4.dp)
     )
-}
-
-@Composable
-fun SeedView(appVM: AppViewModel) {
-    val log = logger()
-    val ks = keyState
-    if (ks !is KeyState.Present) {
-        val nc = navController
-        nc.navigate(Screen.Startup)
-    } else {
-        val seed = appVM.decryptSeed()
-        Column(modifier = Modifier.padding(16.dp)) {
-            AndroidView(factory = {
-                TextView(it).apply {
-                    text = Converter.html(it.getString(R.string.displayseed_instructions))
-                }
-            })
-
-            Box(Modifier.padding(top = 16.dp)) {
-                if (seed != null) {
-                    val words = EncryptedSeed.toMnemonics(seed).joinToString(" ")
-                    Text(words, modifier = Modifier.padding(16.dp))
-                } else {
-                    Text("Could not decrypt the seed :(")
-                }
-            }
-        }
-    }
 }

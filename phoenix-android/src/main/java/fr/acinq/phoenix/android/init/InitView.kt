@@ -16,8 +16,6 @@
 
 package fr.acinq.phoenix.android.init
 
-import CF
-import Screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Checkbox
 import androidx.compose.material.Text
@@ -28,7 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import fr.acinq.eclair.Eclair
-import fr.acinq.phoenix.android.AppViewModel
+import fr.acinq.phoenix.android.*
 import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.BorderButton
 import fr.acinq.phoenix.android.components.FilledButton
@@ -37,8 +35,6 @@ import fr.acinq.phoenix.android.components.mvi.MVIView
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.Initialization
 import fr.acinq.phoenix.ctrl.RestoreWallet
-import navController
-import navigate
 
 
 @Composable
@@ -104,9 +100,11 @@ fun RestoreWalletView(appVM: AppViewModel) {
         nc.navigate(Screen.Startup)
     } else {
         MVIView(CF::restoreWallet) { model, postIntent ->
-            Column(modifier = Modifier
-                .padding(24.dp)
-                .fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .fillMaxWidth()
+            ) {
                 var wordsInput by remember { mutableStateOf("") }
                 when (model) {
                     is RestoreWallet.Model.Ready -> {
@@ -123,20 +121,24 @@ fun RestoreWalletView(appVM: AppViewModel) {
                                 text = R.string.restore_disclaimer_next,
                                 icon = R.drawable.ic_arrow_next,
                                 onClick = { showDisclaimer = false },
-                                enabled = hasCheckedWarning)
+                                enabled = hasCheckedWarning
+                            )
                         } else {
                             Text(stringResource(R.string.restore_instructions))
                             InputText(
                                 text = wordsInput,
                                 onTextChange = { wordsInput = it },
                                 maxLines = 1,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp)
                             )
                             BorderButton(
                                 text = R.string.restore_import_button,
                                 icon = R.drawable.ic_check_circle,
                                 onClick = { postIntent(RestoreWallet.Intent.Validate(wordsInput.split(" "))) },
-                                enabled = wordsInput.isNotBlank())
+                                enabled = wordsInput.isNotBlank()
+                            )
                         }
                     }
                     is RestoreWallet.Model.InvalidMnemonics -> {

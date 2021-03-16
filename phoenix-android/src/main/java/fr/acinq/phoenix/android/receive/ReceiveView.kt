@@ -16,8 +16,6 @@
 
 package fr.acinq.phoenix.android.receive
 
-import CF
-import Screen
 import androidx.annotation.UiThread
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -42,14 +40,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import controllerFactory
-import copyToClipboard
 import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.phoenix.android.*
 import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.*
 import fr.acinq.phoenix.android.components.mvi.MVIControllerViewModel
 import fr.acinq.phoenix.android.components.mvi.MVIView
 import fr.acinq.phoenix.android.utils.QRCode
+import fr.acinq.phoenix.android.utils.copyToClipboard
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.ControllerFactory
 import fr.acinq.phoenix.ctrl.Receive
@@ -57,9 +55,6 @@ import fr.acinq.phoenix.ctrl.ReceiveController
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import navController
-import requireWalletPresent
-
 
 sealed class ReceiveViewState {
     object Default : ReceiveViewState()
@@ -173,9 +168,11 @@ private fun DefaultView(vm: ReceiveViewModel) {
                                 shape = RoundedCornerShape(16.dp)
                             )
                             .background(Color.White)
-                            .padding(24.dp)) {
+                            .padding(24.dp)
+                    ) {
                         vm.qrBitmap?.let {
-                            Image(bitmap = it,
+                            Image(
+                                bitmap = it,
                                 contentDescription = "invoice qr code",
                                 alignment = Alignment.Center,
                                 modifier = Modifier
@@ -230,7 +227,8 @@ private fun EditInvoiceView(
         ScreenHeader(
             title = stringResource(id = R.string.receive__edit__title),
             subtitle = stringResource(id = R.string.receive__edit__subtitle),
-            onBackClick = onCancel)
+            onBackClick = onCancel
+        )
         ScreenBody {
             Text(stringResource(id = R.string.receive__edit__amount_label), modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
@@ -240,19 +238,22 @@ private fun EditInvoiceView(
                     log.info { "invoice amount update amount=$amount msat fiat=$amountFiat $fiatCode" }
                     onAmountChange(amount)
                 },
-                modifier = Modifier.fillMaxWidth())
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(24.dp))
             Text(stringResource(id = R.string.receive__edit__desc_label), modifier = Modifier.fillMaxWidth())
             Spacer(modifier = Modifier.height(8.dp))
             InputText(
                 text = description, // TODO use value from prefs
                 onTextChange = onDescriptionChange,
-                modifier = Modifier.fillMaxWidth())
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(modifier = Modifier.height(32.dp))
             BorderButton(
                 text = R.string.receive__edit__generate_button,
                 icon = R.drawable.ic_qrcode,
-                onClick = onSubmit)
+                onClick = onSubmit
+            )
         }
     }
 }

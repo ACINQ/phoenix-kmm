@@ -16,9 +16,6 @@
 
 package fr.acinq.phoenix.android.components
 
-import LocalBitcoinUnit
-import LocalFiatCurrency
-import LocalShowInFiat
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -31,6 +28,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.phoenix.android.LocalBitcoinUnit
+import fr.acinq.phoenix.android.LocalFiatCurrency
+import fr.acinq.phoenix.android.LocalShowInFiat
 import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.utils.Converter
 import fr.acinq.phoenix.android.utils.Converter.toPrettyString

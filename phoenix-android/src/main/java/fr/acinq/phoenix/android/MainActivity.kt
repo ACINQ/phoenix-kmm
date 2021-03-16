@@ -16,7 +16,6 @@
 
 package fr.acinq.phoenix.android
 
-import AppView
 import android.Manifest
 import android.content.SharedPreferences
 import android.os.Bundle

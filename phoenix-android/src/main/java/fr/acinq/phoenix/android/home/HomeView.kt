@@ -16,8 +16,6 @@
 
 package fr.acinq.phoenix.android.home
 
-import CF
-import Screen
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -45,9 +43,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import business
-import controllerFactory
-import copyToClipboard
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.db.OutgoingPayment
@@ -59,6 +54,7 @@ import fr.acinq.phoenix.android.components.*
 import fr.acinq.phoenix.android.components.mvi.MVIControllerViewModel
 import fr.acinq.phoenix.android.components.mvi.MVIView
 import fr.acinq.phoenix.android.utils.Converter.toRelativeDateString
+import fr.acinq.phoenix.android.utils.copyToClipboard
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.app.amountMsat
 import fr.acinq.phoenix.app.desc
@@ -70,9 +66,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import navController
-import navigate
-import requireWalletPresent
 
 
 private class HomeViewModel(val connectionsFlow: StateFlow<Connections>, controller: HomeController) : MVIControllerViewModel<Home.Model, Home.Intent>(controller) {
@@ -119,13 +112,17 @@ fun HomeView(appVM: AppViewModel) {
                             Image(painter = painterResource(id = R.drawable.illus_phoenix), contentDescription = null, modifier = Modifier.size(64.dp))
                         }
                         Spacer(Modifier.height(8.dp))
-                        Text(text = "Phoenix Wallet",
-                            style = MaterialTheme.typography.subtitle2.copy(fontSize = 20.sp))
+                        Text(
+                            text = "Phoenix Wallet",
+                            style = MaterialTheme.typography.subtitle2.copy(fontSize = 20.sp)
+                        )
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = nodeId,
+                        Text(
+                            text = nodeId,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.body1.copy(fontSize = 14.sp))
+                            style = MaterialTheme.typography.body1.copy(fontSize = 14.sp)
+                        )
                         FilledButton(
                             text = R.string.home__drawer__copy_nodeid,
                             backgroundColor = Color.Unspecified,
@@ -137,32 +134,40 @@ fun HomeView(appVM: AppViewModel) {
                         )
                     }
                     HSeparator()
-                    Button(text = stringResource(id = R.string.home__drawer__settings),
+                    Button(
+                        text = stringResource(id = R.string.home__drawer__settings),
                         icon = R.drawable.ic_settings,
                         onClick = { nc.navigate(Screen.Settings) },
                         padding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
                         horizontalArrangement = Arrangement.Start,
-                        modifier = Modifier.fillMaxWidth())
-                    Button(text = stringResource(id = R.string.home__drawer__notifications),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Button(
+                        text = stringResource(id = R.string.home__drawer__notifications),
                         icon = R.drawable.ic_notification,
                         enabled = false,
                         onClick = { nc.navigate(Screen.Settings) },
                         padding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
                         horizontalArrangement = Arrangement.Start,
-                        modifier = Modifier.fillMaxWidth())
-                    Button(text = stringResource(id = R.string.home__drawer__faq),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Button(
+                        text = stringResource(id = R.string.home__drawer__faq),
                         icon = R.drawable.ic_help_circle,
                         onClick = { },
                         padding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
                         horizontalArrangement = Arrangement.Start,
-                        modifier = Modifier.fillMaxWidth())
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     HSeparator()
-                    Button(text = stringResource(id = R.string.home__drawer__support),
+                    Button(
+                        text = stringResource(id = R.string.home__drawer__support),
                         icon = R.drawable.ic_blank,
                         onClick = { },
                         padding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
                         horizontalArrangement = Arrangement.Start,
-                        modifier = Modifier.fillMaxWidth())
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             },
             content = {
@@ -179,10 +184,12 @@ fun HomeView(appVM: AppViewModel) {
                                 .padding(horizontal = 16.dp)
                         )
                         Spacer(modifier = Modifier.height(16.dp))
-                        Surface(shape = CircleShape, color = MaterialTheme.colors.primary, modifier = Modifier
-                            .width(50.dp)
-                            .height(8.dp)
-                            .align(Alignment.CenterHorizontally)) { }
+                        Surface(
+                            shape = CircleShape, color = MaterialTheme.colors.primary, modifier = Modifier
+                                .width(50.dp)
+                                .height(8.dp)
+                                .align(Alignment.CenterHorizontally)
+                        ) { }
                         Spacer(modifier = Modifier.height(24.dp))
                         LazyColumn(modifier = Modifier.weight(1f)) {
                             items(model.payments) {
@@ -203,7 +210,8 @@ fun TopBar(showConnectionsDialog: MutableState<Boolean>, connectionsState: State
         Modifier
             .padding(8.dp)
             .height(40.dp)
-            .clipToBounds()) {
+            .clipToBounds()
+    ) {
         if (connectionsState.value.electrum == Connection.CLOSED || connectionsState.value.peer == Connection.CLOSED) {
             val connectionsTransition = rememberInfiniteTransition()
             val connectionsButtonAlpha by connectionsTransition.animateFloat(
@@ -247,9 +255,11 @@ private fun ConnectionDialog(connections: Connections, onClose: () -> Unit) {
 @Composable
 private fun ConnectionDialogLine(label: String, connection: Connection) {
     Row(modifier = Modifier.padding(vertical = 12.dp, horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = CircleShape,
+        Surface(
+            shape = CircleShape,
             color = if (connection == Connection.ESTABLISHED) positiveColor() else negativeColor(),
-            modifier = Modifier.size(8.dp)) {}
+            modifier = Modifier.size(8.dp)
+        ) {}
         Spacer(modifier = Modifier.width(16.dp))
         Text(text = label, modifier = Modifier.weight(1.0f))
         Text(text = stringResource(id = if (connection == Connection.ESTABLISHED) R.string.conndialog_ok else R.string.conndialog_not_ok), style = monoTypo())
@@ -299,21 +309,26 @@ private fun PaymentIcon(payment: WalletPayment) {
                 painter = painterResource(R.drawable.ic_payment_failed),
                 contentDescription = stringResource(id = R.string.paymentdetails_status_sent_failed),
                 modifier = Modifier.size(18.dp),
-                colorFilter = ColorFilter.tint(MaterialTheme.colors.primary))
+                colorFilter = ColorFilter.tint(MaterialTheme.colors.primary)
+            )
             is OutgoingPayment.Status.Pending -> Image(
                 painter = painterResource(R.drawable.ic_payment_pending),
                 contentDescription = stringResource(id = R.string.paymentdetails_status_sent_pending),
                 modifier = Modifier.size(18.dp),
-                colorFilter = ColorFilter.tint(MaterialTheme.colors.primary))
-            is OutgoingPayment.Status.Succeeded -> Box(modifier = Modifier
-                .clip(CircleShape)
-                .background(color = MaterialTheme.colors.primary)
-                .padding(4.dp)) {
+                colorFilter = ColorFilter.tint(MaterialTheme.colors.primary)
+            )
+            is OutgoingPayment.Status.Succeeded -> Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(color = MaterialTheme.colors.primary)
+                    .padding(4.dp)
+            ) {
                 Image(
                     painter = painterResource(R.drawable.ic_payment_success),
                     contentDescription = stringResource(id = R.string.paymentdetails_status_sent_successful),
                     modifier = Modifier.size(18.dp),
-                    colorFilter = ColorFilter.tint(MaterialTheme.colors.onPrimary))
+                    colorFilter = ColorFilter.tint(MaterialTheme.colors.onPrimary)
+                )
             }
         }
         is IncomingPayment -> when (payment.received) {
@@ -321,16 +336,20 @@ private fun PaymentIcon(payment: WalletPayment) {
                 painter = painterResource(R.drawable.ic_payment_pending),
                 contentDescription = stringResource(id = R.string.paymentdetails_status_received_pending),
                 modifier = Modifier.size(18.dp),
-                colorFilter = ColorFilter.tint(MaterialTheme.colors.primary))
-            else -> Box(modifier = Modifier
-                .clip(CircleShape)
-                .background(color = MaterialTheme.colors.primary)
-                .padding(4.dp)) {
+                colorFilter = ColorFilter.tint(MaterialTheme.colors.primary)
+            )
+            else -> Box(
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(color = MaterialTheme.colors.primary)
+                    .padding(4.dp)
+            ) {
                 Image(
                     painter = painterResource(R.drawable.ic_payment_success),
                     contentDescription = stringResource(id = R.string.paymentdetails_status_received_successful),
                     modifier = Modifier.size(18.dp),
-                    colorFilter = ColorFilter.tint(MaterialTheme.colors.onPrimary))
+                    colorFilter = ColorFilter.tint(MaterialTheme.colors.onPrimary)
+                )
             }
         }
     }

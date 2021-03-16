@@ -31,10 +31,8 @@ import fr.acinq.phoenix.android.utils.Prefs
 import fr.acinq.phoenix.data.BitcoinPriceRate
 import fr.acinq.phoenix.data.BitcoinUnit
 import fr.acinq.phoenix.data.FiatCurrency
-import fr.acinq.phoenix.utils.Connections
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.kodein.log.Logger
 import org.kodein.log.LoggerFactory
@@ -48,7 +46,6 @@ class AppViewModel(private val applicationContext: Context) : ViewModel() {
     var bitcoinUnit: BitcoinUnit by mutableStateOf(BitcoinUnit.Sat)
     var fiatCurrency: FiatCurrency by mutableStateOf(FiatCurrency.USD)
     var showInFiat: Boolean by mutableStateOf(false)
-    var floatRates: List<BitcoinPriceRate> by mutableStateOf(emptyList())
 
     init {
         refreshSeed()

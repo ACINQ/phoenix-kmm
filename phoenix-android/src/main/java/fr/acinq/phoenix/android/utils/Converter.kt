@@ -16,18 +16,16 @@
 
 package fr.acinq.phoenix.android.utils
 
-import LocalFiatCurrency
-import LocalFiatRates
-import android.content.Context
-import android.os.Build
+
 import android.text.Html
 import android.text.Spanned
 import android.text.format.DateUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.phoenix.android.LocalFiatCurrency
+import fr.acinq.phoenix.android.LocalFiatRates
 import fr.acinq.phoenix.android.R
-import fr.acinq.phoenix.android.utils.Converter.toPrettyString
 import fr.acinq.phoenix.data.*
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -37,7 +35,6 @@ import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.*
 import kotlin.math.abs
-import kotlin.math.roundToLong
 
 object Converter {
 

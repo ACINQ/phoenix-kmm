@@ -18,7 +18,7 @@ package fr.acinq.phoenix.android.components.mvi
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
-import controllerFactory
+import fr.acinq.phoenix.android.controllerFactory
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.ControllerFactory
 import fr.acinq.phoenix.ctrl.MVI

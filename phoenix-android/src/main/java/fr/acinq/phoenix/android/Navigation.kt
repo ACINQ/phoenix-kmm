@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package fr.acinq.phoenix.android
+
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue

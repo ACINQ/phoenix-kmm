@@ -16,9 +16,10 @@
 
 package fr.acinq.phoenix.android.components.mvi
 
-import LocalControllerFactory
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import fr.acinq.phoenix.android.LocalControllerFactory
 import fr.acinq.phoenix.ctrl.*
 import fr.acinq.phoenix.ctrl.config.*
 

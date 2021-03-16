@@ -16,19 +16,14 @@
 
 package fr.acinq.phoenix.android.home
 
-import Screen
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import business
-import fr.acinq.phoenix.android.R
+import fr.acinq.phoenix.android.*
 import fr.acinq.phoenix.android.security.EncryptedSeed
 import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.utils.Prefs
-import navController
-import navigate
-import keyState
 
 
 @Composable

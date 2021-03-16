@@ -16,7 +16,6 @@
 
 package fr.acinq.phoenix.android.home
 
-import Screen
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -38,15 +37,12 @@ import com.google.zxing.ResultPoint
 import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
+import fr.acinq.phoenix.android.*
 import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.IconWithText
 import fr.acinq.phoenix.android.databinding.ScanViewBinding
 import fr.acinq.phoenix.android.utils.logger
-import fr.acinq.phoenix.android.whiteLowOp
-import navController
-import navigate
-import readClipboard
-import requireWalletPresent
+import fr.acinq.phoenix.android.utils.readClipboard
 
 
 @ExperimentalMaterialApi
@@ -78,16 +74,19 @@ fun ReadDataView() {
                 })
                 scanView.resume()
             }
-            Box(Modifier
-                .width(dimensionResource(id = R.dimen.scanner_size))
-                .height(dimensionResource(id = R.dimen.scanner_size))
-                .clip(RoundedCornerShape(24.dp))
-                .background(whiteLowOp())
-                .align(Alignment.Center))
-            Column(Modifier
-                .align(Alignment.BottomCenter)
-                .padding(24.dp)
-                .clip(RoundedCornerShape(24.dp))
+            Box(
+                Modifier
+                    .width(dimensionResource(id = R.dimen.scanner_size))
+                    .height(dimensionResource(id = R.dimen.scanner_size))
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(whiteLowOp())
+                    .align(Alignment.Center)
+            )
+            Column(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(24.dp)
+                    .clip(RoundedCornerShape(24.dp))
             ) {
                 FlatButton({ readClipboard(context)?.let { handleInput(it) } }, Modifier.fillMaxWidth()) {
                     IconWithText(icon = R.drawable.ic_clipboard, text = stringResource(id = R.string.send_init_paste))

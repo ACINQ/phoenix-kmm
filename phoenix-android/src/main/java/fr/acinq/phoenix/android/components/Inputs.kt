@@ -16,8 +16,7 @@
 
 package fr.acinq.phoenix.android.components
 
-import LocalBitcoinUnit
-import LocalFiatCurrency
+
 import android.graphics.Typeface
 import android.text.InputType
 import android.util.TypedValue
@@ -32,7 +31,6 @@ import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -48,9 +46,8 @@ import androidx.constraintlayout.compose.ConstraintSet
 import androidx.constraintlayout.compose.Dimension
 import androidx.core.widget.doOnTextChanged
 import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.phoenix.android.*
 import fr.acinq.phoenix.android.R
-import fr.acinq.phoenix.android.getColor
-import fr.acinq.phoenix.android.textFieldColors
 import fr.acinq.phoenix.android.utils.Converter.localBitcoinRate
 import fr.acinq.phoenix.android.utils.Converter.toFiat
 import fr.acinq.phoenix.android.utils.Converter.toPlainString

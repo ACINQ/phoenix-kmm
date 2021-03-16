@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package fr.acinq.phoenix.android.utils
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context

@@ -14,24 +14,19 @@
  * limitations under the License.
  */
 
+package fr.acinq.phoenix.android
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.NavController
 import androidx.navigation.NavHostController
-import androidx.navigation.NavOptionsBuilder
-import androidx.navigation.compose.navigate
 import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.android.security.KeyState
-import fr.acinq.phoenix.android.PhoenixApplication
 import fr.acinq.phoenix.ctrl.ControllerFactory
 import fr.acinq.phoenix.data.BitcoinPriceRate
 import fr.acinq.phoenix.data.BitcoinUnit
-import fr.acinq.phoenix.data.CurrencyUnit
 import fr.acinq.phoenix.data.FiatCurrency
-import org.kodein.log.LoggerFactory
-import org.kodein.log.newLogger
 
 
 typealias CF = ControllerFactory
@@ -45,7 +40,7 @@ val LocalFiatCurrency = compositionLocalOf { FiatCurrency.USD }
 val LocalFiatRates = compositionLocalOf<List<BitcoinPriceRate>> { listOf() }
 val LocalShowInFiat = compositionLocalOf { false }
 
-val navController
+val navController: NavHostController
     @Composable
     get() = LocalNavController.current ?: error("navigation controller is not available")
 

@@ -16,8 +16,6 @@
 
 package fr.acinq.phoenix.android.send
 
-import CF
-import Screen
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,15 +24,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.payment.PaymentRequest
+import fr.acinq.phoenix.android.*
 import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.AmountInput
 import fr.acinq.phoenix.android.components.FilledButton
 import fr.acinq.phoenix.android.components.mvi.MVIView
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.Scan
-import navController
-import navigate
-import requireWalletPresent
 
 @Composable
 fun SendView(request: PaymentRequest?) {
