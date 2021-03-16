@@ -680,7 +680,6 @@ extension Eclair_kmpWalletPayment {
 			
 		} else if let outgoingPayment = self as? Eclair_kmpOutgoingPayment {
 			
-			
 			if let _ = outgoingPayment.status.asFailed() {
 				
 				// no fees for failed payments
@@ -690,8 +689,10 @@ extension Eclair_kmpWalletPayment {
 				
 				// for on-chain payments, the fees are extracted from the mined transaction(s)
 				
-				let claimed = onChain.claimed.sat
-				let formattedAmt = Utils.format(currencyPrefs, sat: claimed)
+				let channelDrain: Eclair_kmpMilliSatoshi = outgoingPayment.recipientAmount
+				let claimed = Eclair_kmpMilliSatoshi(sat: onChain.claimed)
+				let fees = channelDrain.minus(other: claimed)
+				let formattedAmt = Utils.format(currencyPrefs, msat: fees, hideMsats: false)
 				
 				let txCount = onChain.component1().count
 				let exp: String
