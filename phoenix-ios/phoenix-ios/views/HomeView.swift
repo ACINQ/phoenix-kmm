@@ -343,7 +343,7 @@ class HomeView_Previews: PreviewProvider {
 		.environmentObject(CurrencyPrefs.mockEUR())
 		
 		HomeView().mock(Home.Model(
-			balanceSat: 1000,
+			balance: Eclair_kmpMilliSatoshi(msat: 1000000),
 			payments: [],
 			lastPayment: nil
 		))

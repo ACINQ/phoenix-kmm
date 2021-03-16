@@ -91,10 +91,10 @@ fileprivate struct EmptyWalletView : View {
 }
 
 fileprivate struct StandardWalletView : View {
-	
+
 	let model: CloseChannelsConfiguration.ModelReady
 	let postIntent: (CloseChannelsConfiguration.Intent) -> Void
-	
+
 	@State var bitcoinAddress: String = ""
 	@State var isValidAddress: Bool = false
 	@State var detailedErrorMsg: String? = nil
@@ -104,7 +104,6 @@ fileprivate struct StandardWalletView : View {
 	var body: some View {
 
 		VStack(alignment: .leading) {
-			
 			let totalSats = model.channels.map { $0.balance }.reduce(0, +)
 			let formattedSats = Utils.formatBitcoin(sat: totalSats, bitcoinUnit: .sat)
 			

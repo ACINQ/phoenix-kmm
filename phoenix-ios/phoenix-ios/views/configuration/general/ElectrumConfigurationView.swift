@@ -32,7 +32,7 @@ struct ElectrumConfigurationView: MVIView {
 	
 	func connectionAddress() -> String {
 		
-		if mvi.model.connection == .established || mvi.model.electrumServer.isCustom() {
+		if mvi.model.connection == .established || mvi.model.isCustom() {
 			return mvi.model.configuration?.server.host ?? ""
 		} else {
 			return NSLocalizedString("Random server", comment: "Connection info")
