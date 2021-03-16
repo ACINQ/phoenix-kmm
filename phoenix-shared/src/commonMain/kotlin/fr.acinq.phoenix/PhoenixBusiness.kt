@@ -55,7 +55,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         }
     }
 
-    private val appDb by lazy { SqliteAppDb(loggerFactory, createAppDbDriver(ctx)) }
+    private val appDb by lazy { SqliteAppDb(createAppDbDriver(ctx)) }
     private val paymentsDb by lazy { SqlitePaymentsDb(createPaymentsDbDriver(ctx)) }
 
     private val chain = Chain.TESTNET

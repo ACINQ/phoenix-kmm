@@ -56,6 +56,7 @@ object Prefs {
     fun getDefaultDescription(context: Context): String = prefs(context).getString(PREFS_PAYMENT_DEFAULT_DESCRIPTION, "") ?: ""
 
     fun getElectrumServer(context: Context): ServerAddress? = prefs(context).getString(PREFS_ELECTRUM_ADDRESS, null)?.run {
+        log.info("using pref electrum=$this")
         if (contains(":")) {
             val (host, port) =  split(":")
             ServerAddress(host, port.toInt())

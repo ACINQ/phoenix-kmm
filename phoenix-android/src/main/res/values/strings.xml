@@ -538,9 +538,9 @@
     <string name="electrum_connection_label">Server</string>
 
     <string name="electrum_not_connected">Not connected</string>
-    <string name="electrum_not_connected_to_custom">You will connect to %1$s</string>
+    <string name="electrum_not_connected_to_custom">Connecting to %1$s</string>
     <string name="electrum_connecting">Establishing connection…</string>
-    <string name="electrum_connecting_to_custom">Establishing connection with %1$s…</string>
+    <string name="electrum_connecting_to_custom">Connecting to: %1$s…</string>
     <string name="electrum_connected">Connected to: %1$s</string>
 
     <string name="electrum_dialog_checkbox">Use a custom server</string>

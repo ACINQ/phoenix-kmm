@@ -1,6 +1,7 @@
 package fr.acinq.phoenix.android.settings
 
 import CF
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.Checkbox
@@ -8,6 +9,7 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -15,6 +17,7 @@ import business
 import fr.acinq.eclair.utils.Connection
 import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.*
+import fr.acinq.phoenix.android.mutedBgColor
 import fr.acinq.phoenix.android.mvi.MVIView
 import fr.acinq.phoenix.android.utils.Prefs
 import fr.acinq.phoenix.android.utils.logger
@@ -33,7 +36,6 @@ fun ElectrumView() {
         title = stringResource(id = R.string.electrum_title),
         subtitle = stringResource(id = R.string.electrum_subtitle)
     )
-    Prefs.saveElectrumServer(context, "")
     ScreenBody(padding = PaddingValues(horizontal = 0.dp, vertical = 8.dp)) {
         MVIView(CF::electrumConfiguration) { model, postIntent ->
             val showServerDialog = remember { mutableStateOf(false) }
@@ -76,18 +78,40 @@ fun ElectrumView() {
 
 @Composable
 private fun ElectrumServerDialog(onConfirm: (String) -> Unit, onCancel: () -> Unit) {
-    var useCustomServer by remember { mutableStateOf(true) }
-    var address by remember { mutableStateOf("") }
+    val prefElectrumServer = Prefs.getElectrumServer(LocalContext.current)
+    var useCustomServer by remember { mutableStateOf(prefElectrumServer != null) }
+    var address by remember { mutableStateOf(prefElectrumServer?.run { "$host:$port" }?: "") }
     Dialog(onDismiss = onCancel, buttons = {
         Button(onClick = { onCancel() }, text = stringResource(id = R.string.btn_cancel), padding = PaddingValues(8.dp))
-        Button(onClick = { onConfirm(address) }, text = stringResource(id = R.string.btn_ok), padding = PaddingValues(8.dp))
+        Button(onClick = { onConfirm(if (useCustomServer) address else "") }, text = stringResource(id = R.string.btn_ok), padding = PaddingValues(8.dp))
     }) {
-        Column(Modifier.padding(16.dp)) {
-            Row {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Spacer(Modifier.height(24.dp))
+            Row(Modifier.padding(horizontal = 24.dp)) {
                 Checkbox(checked = useCustomServer, onCheckedChange = { useCustomServer = it })
+                Spacer(modifier = Modifier.width(16.dp))
                 Text(text = stringResource(id = R.string.electrum_dialog_checkbox))
             }
-            InputText(text = address, onTextChange = { address = it })
+            Spacer(Modifier.height(16.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .enableOrFade(useCustomServer)
+                    .padding(horizontal = 24.dp)) {
+                Text(text = stringResource(id = R.string.electrum_dialog_input), style = MaterialTheme.typography.subtitle1)
+                Spacer(Modifier.height(8.dp))
+                InputText(text = address, onTextChange = { address = it }, enabled = useCustomServer)
+            }
+            Spacer(Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(mutedBgColor())
+                    .enableOrFade(useCustomServer)
+                    .padding(horizontal = 24.dp, vertical = 16.dp)
+            ) {
+                Text(stringResource(id = R.string.electrum_dialog_ssl))
+            }
         }
     }
 }
@@ -97,13 +121,15 @@ fun Setting(modifier: Modifier = Modifier, title: String, description: String?, 
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(start = 50.dp, top = 10.dp, bottom = 10.dp, end = 16.dp)
-            .then(modifier)
             .then(
                 if (onClick != null) {
                     Modifier.clickable(onClick = onClick)
-                } else Modifier
+                } else {
+                    Modifier
+                }
             )
+            .then(modifier)
+            .padding(start = 50.dp, top = 10.dp, bottom = 10.dp, end = 16.dp)
     ) {
         Text(title, style = MaterialTheme.typography.subtitle2)
         Text(description ?: "", style = MaterialTheme.typography.caption)

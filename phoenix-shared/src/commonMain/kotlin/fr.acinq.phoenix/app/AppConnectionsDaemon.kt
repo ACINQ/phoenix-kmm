@@ -107,8 +107,9 @@ class AppConnectionsDaemon(
                         }
                     }
                     else -> {
-                        electrumConnectionJob?.let {
-                            it.cancel()
+                        electrumConnectionJob?.let { job ->
+                            logger.debug { "disconnecting from electrum" }
+                            job.cancel()
                             electrumClient.disconnect()
                         }
                         electrumConnectionJob = null
@@ -129,8 +130,9 @@ class AppConnectionsDaemon(
                         }
                     }
                     else -> {
-                        peerConnectionJob?.let {
-                            it.cancel()
+                        peerConnectionJob?.let { job ->
+                            logger.debug { "disconnecting from peer" }
+                            job.cancel()
                             peer.disconnect()
                         }
                         peerConnectionJob = null
@@ -206,6 +208,9 @@ class AppConnectionsDaemon(
                 } else if (config.server.host != previousElectrumConfig?.server?.host) {
                     logger.info { "electrum server config updated to=$config, reconnecting..." }
                     electrumControlChanges.send { incrementDisconnectCount() }
+                    delay(500)
+                    // We need to delay the next connection vote because the collector WILL skip fast updates (see documentation)
+                    // and ignore the change since the TrafficControl object would not have changed.
                     electrumControlChanges.send { decrementDisconnectCount() }
                 }
                 previousElectrumConfig = config
