@@ -14,12 +14,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
 import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
-import org.kodein.log.LoggerFactory
-import org.kodein.log.newLogger
 
-class SqliteAppDb(loggerFactory: LoggerFactory, driver: SqlDriver) {
+class SqliteAppDb(driver: SqlDriver) {
 
-    private val log = loggerFactory.newLogger(this::class)
     private val database = AppDatabase(driver = driver)
     private val paramsQueries = database.walletParamsQueries
     private val priceQueries = database.bitcoinPriceRatesQueries
@@ -28,7 +25,6 @@ class SqliteAppDb(loggerFactory: LoggerFactory, driver: SqlDriver) {
     /** Save a [BitcoinPriceRate] to the database (update or insert if does not exist). */
     suspend fun saveBitcoinRate(rate: BitcoinPriceRate) {
         withContext(Dispatchers.Default) {
-            log.info { "saving rate=$rate" }
             priceQueries.transaction {
                 priceQueries.get(rate.fiatCurrency.name).executeAsOneOrNull()?.run {
                     priceQueries.update(rate.price, rate.source, rate.timestampMillis, rate.fiatCurrency.name)
