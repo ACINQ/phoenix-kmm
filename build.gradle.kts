@@ -1,12 +1,12 @@
 buildscript {
-    val kotlin_version by extra("1.4.30")
+    val kotlin_version by extra("1.4.31")
     repositories {
         google()
         jcenter()
     }
 
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.30")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.31")
 
         val isIntelliJ = System.getProperty("isIntelliJ")!!.toBoolean()
         val androidVersion = if (isIntelliJ) "4.0.1" else "7.0.0-alpha09"

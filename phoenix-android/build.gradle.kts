@@ -11,8 +11,8 @@ val chain: String by project
 val xCoreKtxVersion = "1.3.2"
 val xLifecycleVersion = "2.3.0"
 val xPrefsVersion = "1.1.1"
-val composeVersion = "1.0.0-beta01"
-val navComposeVersion = "1.0.0-alpha08"
+val composeVersion = "1.0.0-beta02"
+val navComposeVersion = "1.0.0-alpha09"
 val zxingVersion = "4.1.0"
 
 android {
@@ -63,7 +63,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerVersion = "1.4.30"
+        kotlinCompilerVersion = "1.4.31"
         kotlinCompilerExtensionVersion = composeVersion
     }
 

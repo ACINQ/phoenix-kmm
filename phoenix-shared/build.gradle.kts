@@ -2,7 +2,7 @@ plugins {
     val withAndroid = System.getProperty("withAndroid")!!.toBoolean()
     if (withAndroid) id("com.android.library")
     kotlin("multiplatform")
-    kotlin("plugin.serialization") version "1.4.30"
+    kotlin("plugin.serialization") version "1.4.31"
     id("com.squareup.sqldelight")
 }
 
