@@ -18,8 +18,7 @@ package fr.acinq.phoenix.android
 
 import android.app.Application
 import fr.acinq.phoenix.PhoenixBusiness
-import fr.acinq.phoenix.android.utils.Converter
-import fr.acinq.phoenix.utils.Logging
+import fr.acinq.phoenix.android.utils.Logging
 import fr.acinq.phoenix.utils.PlatformContext
 
 class PhoenixApplication : Application() {

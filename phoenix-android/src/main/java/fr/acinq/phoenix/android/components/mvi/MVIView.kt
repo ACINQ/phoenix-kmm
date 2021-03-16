@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android.mvi
+package fr.acinq.phoenix.android.components.mvi
 
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel

@@ -28,6 +28,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.phoenix.android.*
+import fr.acinq.phoenix.android.home.HomeView
+import fr.acinq.phoenix.android.home.ReadDataView
+import fr.acinq.phoenix.android.home.StartupView
+import fr.acinq.phoenix.android.init.CreateWalletView
+import fr.acinq.phoenix.android.init.InitWallet
+import fr.acinq.phoenix.android.init.RestoreWalletView
+import fr.acinq.phoenix.android.receive.ReceiveView
+import fr.acinq.phoenix.android.send.SendView
 import fr.acinq.phoenix.android.settings.ElectrumView
 import fr.acinq.phoenix.android.utils.logger
 import kotlinx.coroutines.ExperimentalCoroutinesApi

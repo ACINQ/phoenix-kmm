@@ -29,7 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.app.ActivityCompat
-import fr.acinq.phoenix.android.mvi.MockView
+import fr.acinq.phoenix.android.components.mvi.MockView
 import fr.acinq.phoenix.android.utils.Prefs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
@@ -52,12 +52,12 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
 
     override fun onStart() {
         super.onStart()
-//        (application as? PhoenixApplication)?.business?.decrementDisconnectCount()
+        // (application as? PhoenixApplication)?.business?.decrementDisconnectCount()
     }
 
     override fun onStop() {
         super.onStop()
-//        (application as? PhoenixApplication)?.business?.incrementDisconnectCount()
+        // (application as? PhoenixApplication)?.business?.incrementDisconnectCount()
     }
 
     override fun onSharedPreferenceChanged(sharedPreferences: SharedPreferences?, key: String?) {
@@ -68,8 +68,6 @@ class MainActivity : AppCompatActivity(), SharedPreferences.OnSharedPreferenceCh
         }
     }
 }
-
-//val MockModelInitialization = Initialization.Model.Ready
 
 @Preview(device = Devices.PIXEL_3)
 @Composable

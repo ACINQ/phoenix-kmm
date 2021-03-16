@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.utils
+package fr.acinq.phoenix.android.utils
 
 import android.content.Context
 import ch.qos.logback.classic.Level

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android
+package fr.acinq.phoenix.android.init
 
 import CF
 import Screen
@@ -28,10 +28,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import fr.acinq.eclair.Eclair
+import fr.acinq.phoenix.android.AppViewModel
+import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.BorderButton
 import fr.acinq.phoenix.android.components.FilledButton
 import fr.acinq.phoenix.android.components.InputText
-import fr.acinq.phoenix.android.mvi.MVIView
+import fr.acinq.phoenix.android.components.mvi.MVIView
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.Initialization
 import fr.acinq.phoenix.ctrl.RestoreWallet

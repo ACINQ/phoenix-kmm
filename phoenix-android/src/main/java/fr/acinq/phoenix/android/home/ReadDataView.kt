@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android
+package fr.acinq.phoenix.android.home
 
 import Screen
 import android.content.Intent
@@ -38,9 +38,11 @@ import com.google.zxing.ResultPoint
 import com.google.zxing.client.android.Intents
 import com.journeyapps.barcodescanner.BarcodeCallback
 import com.journeyapps.barcodescanner.BarcodeResult
+import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.IconWithText
 import fr.acinq.phoenix.android.databinding.ScanViewBinding
 import fr.acinq.phoenix.android.utils.logger
+import fr.acinq.phoenix.android.whiteLowOp
 import navController
 import navigate
 import readClipboard

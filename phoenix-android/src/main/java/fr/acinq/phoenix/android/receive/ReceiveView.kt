@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android
+package fr.acinq.phoenix.android.receive
 
 import CF
 import Screen
@@ -45,9 +45,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import controllerFactory
 import copyToClipboard
 import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.*
-import fr.acinq.phoenix.android.mvi.MVIControllerViewModel
-import fr.acinq.phoenix.android.mvi.MVIView
+import fr.acinq.phoenix.android.components.mvi.MVIControllerViewModel
+import fr.acinq.phoenix.android.components.mvi.MVIView
 import fr.acinq.phoenix.android.utils.QRCode
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.ctrl.ControllerFactory

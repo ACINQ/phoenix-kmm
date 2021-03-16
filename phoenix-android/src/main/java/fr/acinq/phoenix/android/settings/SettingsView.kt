@@ -16,7 +16,6 @@
 
 package fr.acinq.phoenix.android
 
-import CF
 import Screen
 import android.widget.TextView
 import androidx.compose.foundation.background
@@ -29,17 +28,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import business
 import fr.acinq.phoenix.android.components.ScreenHeader
 import fr.acinq.phoenix.android.components.SettingButton
-import fr.acinq.phoenix.android.mvi.MVIView
 import fr.acinq.phoenix.android.security.EncryptedSeed
 import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.utils.Converter

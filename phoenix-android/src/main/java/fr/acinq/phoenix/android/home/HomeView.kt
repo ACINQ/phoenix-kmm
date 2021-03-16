@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android
+package fr.acinq.phoenix.android.home
 
 import CF
 import Screen
@@ -53,9 +53,11 @@ import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.db.WalletPayment
 import fr.acinq.eclair.utils.Connection
+import fr.acinq.phoenix.android.*
+import fr.acinq.phoenix.android.R
 import fr.acinq.phoenix.android.components.*
-import fr.acinq.phoenix.android.mvi.MVIControllerViewModel
-import fr.acinq.phoenix.android.mvi.MVIView
+import fr.acinq.phoenix.android.components.mvi.MVIControllerViewModel
+import fr.acinq.phoenix.android.components.mvi.MVIView
 import fr.acinq.phoenix.android.utils.Converter.toRelativeDateString
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.app.amountMsat

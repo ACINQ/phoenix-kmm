@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package fr.acinq.phoenix.android.mvi
+package fr.acinq.phoenix.android.components.mvi
 
 import LocalControllerFactory
 import androidx.compose.runtime.Composable
