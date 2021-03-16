@@ -1,6 +1,7 @@
 import Foundation
 import PhoenixShared
 import Combine
+import CryptoKit
 
 extension Eclair_kmpConnection {
 	
@@ -37,23 +38,37 @@ extension KotlinByteArray {
 	}
 }
 
+extension Bitcoin_kmpByteVector32 {
+	
+	static func random() -> Bitcoin_kmpByteVector32 {
+		
+		let key = SymmetricKey(size: .bits256) // 256 / 8 = 32
+		
+		let data = key.withUnsafeBytes {(bytes: UnsafeRawBufferPointer) -> Data in
+			return Data(bytes: bytes.baseAddress!, count: bytes.count)
+		}
+		
+		return Bitcoin_kmpByteVector32(bytes: KotlinByteArray.fromSwiftData(data))
+	}
+}
+
 extension ConnectionsMonitor {
 	
 	var currentValue: Connections {
 		return connections.value as! Connections
 	}
 	
-//	var publisher: CurrentValueSubject<Connections, Never> {
-//
-//		let publisher = CurrentValueSubject<Connections, Never>(currentValue)
-//
-//		let swiftFlow = SwiftFlow<Connections>(origin: connections)
-//		swiftFlow.watch {[weak publisher](connections: Connections?) in
-//			publisher?.send(connections!)
-//		}
-//
-//		return publisher
-//	}
+	var publisher: CurrentValueSubject<Connections, Never> {
+
+		let publisher = CurrentValueSubject<Connections, Never>(currentValue)
+
+		let swiftFlow = SwiftFlow<Connections>(origin: connections)
+		swiftFlow.watch {[weak publisher](connections: Connections?) in
+			publisher?.send(connections!)
+		}
+
+		return publisher
+	}
 }
 
 class ObservableConnectionsMonitor: ObservableObject {

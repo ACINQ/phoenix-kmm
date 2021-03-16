@@ -11,38 +11,19 @@ fileprivate var log = Logger(
 fileprivate var log = Logger(OSLog.disabled)
 #endif
 
-struct ElectrumConfigurationView: View {
+struct ElectrumConfigurationView: MVIView {
 	
-    var body: some View {
-		
-		MVIView({ $0.electrumConfiguration() }) { model, postIntent in
-			
-		//	OldLayout(model, postIntent)
-			NewLayout(model, postIntent)
-				.navigationBarTitle("Electrum server", displayMode: .inline)
-		}
-	}
-}
-
-struct NewLayout: View {
+	@StateObject var mvi = MVIState({ $0.electrumConfiguration() })
 	
-	let model: ElectrumConfiguration.Model
-	let postIntent: (ElectrumConfiguration.Intent) -> Void
+	@Environment(\.controllerFactory) var factoryEnv
+	var factory: ControllerFactory { return factoryEnv }
 	
 	@State var isModifying = false
-	
-	init(
-		_ model: ElectrumConfiguration.Model,
-		_ postIntent: @escaping (ElectrumConfiguration.Intent) -> Void
-	) {
-		self.model = model
-		self.postIntent = postIntent
-	}
-	
+
 	func connectionStatus() -> String {
-		if model.connection == .established {
+		if mvi.model.connection == .established {
 			return NSLocalizedString("Connected to:", comment: "Connection status")
-		} else if model.connection == .establishing {
+		} else if mvi.model.connection == .establishing {
 			return NSLocalizedString("Connecting to:", comment: "Connection status")
 		} else {
 			return NSLocalizedString("Will connect to:", comment: "Connection status")
@@ -51,14 +32,21 @@ struct NewLayout: View {
 	
 	func connectionAddress() -> String {
 		
-        if model.connection == .established || type(of: model.configuration) == ElectrumConfig.Custom.self {
-            return model.configuration?.server.host ?? ""
+		if mvi.model.connection == .established || mvi.model.electrumServer.isCustom() {
+			return mvi.model.configuration?.server.host ?? ""
 		} else {
 			return NSLocalizedString("Random server", comment: "Connection info")
 		}
 	}
 	
-	var body: some View {
+	@ViewBuilder
+	var view: some View {
+
+		main.navigationBarTitle("Electrum server", displayMode: .inline)
+	}
+
+	@ViewBuilder
+	var main: some View {
 		
 		List {
 				
@@ -87,7 +75,7 @@ struct NewLayout: View {
 					Text(connectionAddress()).bold()
 						.padding(.top, 2)
 					
-					if let errMsg = model.error?.message {
+					if let errMsg = mvi.model.error?.message {
 						Text(errMsg)
 							.foregroundColor(Color.appRed)
 							.padding(.top, 2)
@@ -100,51 +88,50 @@ struct NewLayout: View {
 				
 				ListItem(header: Text("Block height")) {
 
-					let height = model.blockHeight
+					let height = mvi.model.blockHeight
 					Text("\(height > 0 ? height.formatInDecimalStyle() : "-")")
 				}
 				
 				ListItem(header: Text("Tip timestamp")) {
 					
-					let time = model.tipTimestamp
+					let time = mvi.model.tipTimestamp
 					Text("\(time > 0 ? time.formatDateS() : "-")")
 				}
 				
 				ListItem(header: Text("Fee rate")) {
 					
-					if model.feeRate > 0 {
-						Text("\(model.feeRate.formatInDecimalStyle()) sat/byte")
+					if mvi.model.feeRate > 0 {
+						Text("\(mvi.model.feeRate.formatInDecimalStyle()) sat/byte")
 					} else {
 						Text("-")
 					}
 				}
 				
-                // TODO: use getxpub method from PhoenixBusiness
-//				if let xpub = model.xpub {
-//					ListItem(header: Text("Master public key")) {
-//						Text(xpub)
-//							.contextMenu {
-//								Button(action: {
-//									UIPasteboard.general.string = xpub
-//								}) {
-//									Text("Copy")
-//								}
-//							}
-//					}
-//				}
+				/* if let xpub = mvi.model.xpub {
+					ListItem(header: Text("Master public key")) {
+						Text(xpub)
+							.contextMenu {
+								Button(action: {
+									UIPasteboard.general.string = xpub
+								}) {
+									Text("Copy")
+								}
+							}
+					}
+				}
 				
-//				if let path = model.path {
-//					ListItem(header: Text("Path")) {
-//						Text(path)
-//							.contextMenu {
-//								Button(action: {
-//									UIPasteboard.general.string = path
-//								}) {
-//									Text("Copy")
-//								}
-//							}
-//					}
-//				}
+				if let path = mvi.model.path {
+					ListItem(header: Text("Path")) {
+						Text(path)
+							.contextMenu {
+								Button(action: {
+									UIPasteboard.general.string = path
+								}) {
+									Text("Copy")
+								}
+							}
+					}
+				} */
 				
 			} // </Section: Status>
 			
@@ -153,8 +140,8 @@ struct NewLayout: View {
 		.sheet(isPresented: $isModifying) {
 		
 			ElectrumAddressPopup(
-				model: model,
-				postIntent: postIntent,
+				model: mvi.model,
+				postIntent: mvi.intent,
 				showing: $isModifying
 			).padding()
 		}
@@ -516,32 +503,26 @@ class ElectrumConfigurationView_Previews: PreviewProvider {
 	@State static var isShowing: Bool = true
 
 	static var previews: some View {
-//		mockView(ElectrumConfigurationView())
-//			.preferredColorScheme(.light)
-//			.previewDevice("iPhone 8")
-//
-//		mockView(ElectrumConfigurationView())
-//			.preferredColorScheme(.dark)
-//			.previewDevice("iPhone 8")
 		
-		ElectrumAddressPopup(
-			model: mockModel,
-			postIntent: { _ in },
-			showing: $isShowing
-		)
-		.padding()
+		NavigationView {
+			ElectrumConfigurationView()//.mock(model1)
+		}
 		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")
-//
-//		ElectrumAddressPopup(model: mockModel)
-//			.padding()
-//			.preferredColorScheme(.dark)
-//			.previewDevice("iPhone 8")
-	}
 
-#if DEBUG
-	@objc class func injected() {
-		UIApplication.shared.windows.first?.rootViewController = UIHostingController(rootView: previews)
+//		NavigationView {
+//			ElectrumConfigurationView().mock(model2)
+//		}
+//		.preferredColorScheme(.dark)
+//		.previewDevice("iPhone 8")
+
+//		ElectrumAddressPopup(
+//			model: mockModel,
+//			postIntent: { _ in },
+//			showing: $isShowing
+//		)
+//		.padding()
+//		.preferredColorScheme(.light)
+//		.previewDevice("iPhone 8")
 	}
-#endif
 }
