@@ -127,7 +127,8 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         NoRouteToRecipient(FinalFailure.NoRouteToRecipient),
         RetryExhausted(FinalFailure.RetryExhausted),
         UnknownError(FinalFailure.UnknownError),
-        WalletRestarted(FinalFailure.WalletRestarted);
+        WalletRestarted(FinalFailure.WalletRestarted),
+        RecipientUnreachable(FinalFailure.RecipientUnreachable);
 
         companion object {
             // This function could be implemented via looping over OutgoingFinalFailure.values(),
@@ -141,6 +142,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                 FinalFailure.RetryExhausted -> RetryExhausted
                 FinalFailure.UnknownError -> UnknownError
                 FinalFailure.WalletRestarted -> WalletRestarted
+                FinalFailure.RecipientUnreachable -> RecipientUnreachable
             }
             fun serialize(src: FinalFailure): ByteArray {
                 val dbEnum = OutgoingFinalFailureDbEnum.from(src)
