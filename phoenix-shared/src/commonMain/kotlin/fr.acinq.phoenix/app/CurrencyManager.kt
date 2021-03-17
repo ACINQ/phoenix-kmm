@@ -44,18 +44,22 @@ class CurrencyManager(
     private suspend fun refreshFromBlockchainInfo() = try {
         log.info { "fetching bitcoin prices from blockchain.info" }
         httpClient.get<Map<String, BlockchainInfoPriceObject>>("https://blockchain.info/ticker")
-            .filter { FiatCurrency.valueOfOrNull(it.key) != null }
-            .map {
-                BitcoinPriceRate(
-                    fiatCurrency = FiatCurrency.valueOf(it.key),
-                    price = it.value.last,
-                    source = "blockchain.info",
-                    timestampMillis = Clock.System.now().toEpochMilliseconds(),
-                )
+            .mapNotNull {
+                FiatCurrency.valueOfOrNull(it.key)?.let { fiatCurrency ->
+                    BitcoinPriceRate(
+                        fiatCurrency = fiatCurrency,
+                        price = it.value.last,
+                        source = "blockchain.info",
+                        timestampMillis = Clock.System.now().toEpochMilliseconds(),
+                    )
+                } ?: run {
+                    log.info { "Blockchain.info has new currency: ${it.key}" }
+                    null
+                }
             }
             .forEach { appDb.saveBitcoinRate(it) }
     } catch (e: Exception) {
-        log.error(e) { "failed to refresh bitcoin price rates from blockchain.info ticker" }
+        log.error(e) { "failed to refresh bitcoin price rates from blockchain.info ticker: $e" }
     }
 
     private suspend fun refreshFromBitso() = try {

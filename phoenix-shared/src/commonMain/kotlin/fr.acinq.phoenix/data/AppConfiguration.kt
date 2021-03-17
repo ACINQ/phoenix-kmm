@@ -49,7 +49,7 @@ enum class FiatCurrency : CurrencyUnit {
         val values = FiatCurrency.values().toList()
         fun valueOfOrNull(code: String): FiatCurrency? = try {
             valueOf(code)
-        } catch (e: IllegalArgumentException) {
+        } catch (e: Exception) {
             null
         }
     }
