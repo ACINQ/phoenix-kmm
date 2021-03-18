@@ -29,6 +29,7 @@ import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.ShortChannelId
 import fr.acinq.eclair.channel.ChannelException
 import fr.acinq.eclair.db.*
+import fr.acinq.eclair.db.OutgoingPayment.Status.Completed.Succeeded.OnChain.ChannelClosingType
 import fr.acinq.eclair.payment.FinalFailure
 import fr.acinq.eclair.payment.OutgoingPaymentFailure
 import fr.acinq.eclair.payment.PaymentRequest
@@ -64,7 +65,8 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         Normal_v0(100),
         KeySend_v0(200),
         SwapOut_v0(300),
-        ChannelClosing_v0(400);
+        ChannelClosing_v0(400),
+        ChannelClosing_v1(401);
 
         fun version(): Long = type % 100L
     }
@@ -76,17 +78,52 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
     // When storing `OutgoingPayment.details.ChannelClosing`, we map the data to
     // this serializable class, and use JSON for serialization & deserialization.
     //
-    @Serializable
-    data class ChannelClosingJSON(val closingAddress: String, val isLocalWallet: Boolean) {
-        companion object {
-            fun serialize(src: OutgoingPayment.Details.ChannelClosing): ByteArray {
-                val json = ChannelClosingJSON(src.closingAddress, src.isLocalWallet)
-                return Json.encodeToString(json).toByteArray(Charsets.UTF_8)
+    sealed class ChannelClosingJSON {
+        @Serializable
+        data class V0(
+            val closingAddress: String,
+            val isLocalWallet: Boolean
+        ) {
+            companion object {
+            //  fun serialize(src: OutgoingPayment.Details.ChannelClosing): Pair<OutgoingDetailsType, ByteArray> {
+            //      val json = ChannelClosingJSON.V0(src.closingAddress, src.isLocalWallet)
+            //      val blob = Json.encodeToString(json).toByteArray(Charsets.UTF_8)
+            //      return Pair(OutgoingDetailsType.ChannelClosing_v0, blob)
+            //  }
+                fun deserialize(blob: ByteArray, paymentHash: ByteVector32): OutgoingPayment.Details.ChannelClosing {
+                    val str = String(bytes = blob, charset = Charsets.UTF_8)
+                    val json = Json.decodeFromString<ChannelClosingJSON.V0>(str)
+                    return OutgoingPayment.Details.ChannelClosing(
+                        channelId = ByteVector32.Zeroes,
+                        closingAddress = json.closingAddress,
+                        isLocalWallet = json.isLocalWallet,
+                        paymentHash = paymentHash
+                    )
+                }
             }
-            fun deserialize(blob: ByteArray, paymentHash: ByteVector32): OutgoingPayment.Details.ChannelClosing {
-                val str = String(bytes = blob, charset = Charsets.UTF_8)
-                val json = Json.decodeFromString<ChannelClosingJSON>(str)
-                return OutgoingPayment.Details.ChannelClosing(json.closingAddress, json.isLocalWallet, paymentHash)
+        }
+        @Serializable
+        data class V1(
+            @Serializable(with = ByteVector32KSerializer::class) val channelId: ByteVector32,
+            val closingAddress: String,
+            val isLocalWallet: Boolean
+        ) {
+            companion object {
+                fun serialize(src: OutgoingPayment.Details.ChannelClosing): Pair<OutgoingDetailsType, ByteArray> {
+                    val json = ChannelClosingJSON.V1(src.channelId, src.closingAddress, src.isLocalWallet)
+                    val blob = Json.encodeToString(json).toByteArray(Charsets.UTF_8)
+                    return Pair(OutgoingDetailsType.ChannelClosing_v1, blob)
+                }
+                fun deserialize(blob: ByteArray, paymentHash: ByteVector32): OutgoingPayment.Details.ChannelClosing {
+                    val str = String(bytes = blob, charset = Charsets.UTF_8)
+                    val json = Json.decodeFromString<ChannelClosingJSON.V1>(str)
+                    return OutgoingPayment.Details.ChannelClosing(
+                        channelId = json.channelId,
+                        closingAddress = json.closingAddress,
+                        isLocalWallet = json.isLocalWallet,
+                        paymentHash = paymentHash
+                    )
+                }
             }
         }
     }
@@ -106,7 +143,8 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         Succeeded_v0(100),
         Failed_v0(200),
         Mined_v0(300),
-        Mined_v1(301);
+        Mined_v1(301),
+        Mined_v2(302);
 
         fun version(): Long = type % 100L
     }
@@ -163,24 +201,82 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
     // If we need to store a `OutgoingPayment.Status.Completed.Mined`
     // in the `status BLOB`, we use JSON serialization.
     //
-    @Serializable
-    data class MinedJSON(
-        val txids: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>,
-        val claimed: Long
-    ) {
-        companion object {
-            fun serialize(src: OutgoingPayment.Status.Completed.Succeeded.OnChain): ByteArray {
-                val json = MinedJSON(src.txids, src.claimed.toLong())
-                return Json.encodeToString(json).toByteArray(Charsets.UTF_8)
-            }
-            fun deserialize(blob: ByteArray, completedAt: Long): OutgoingPayment.Status.Completed.Succeeded.OnChain {
-                val str = String(bytes = blob, charset = Charsets.UTF_8)
-                val json = Json.decodeFromString<MinedJSON>(str)
+    sealed class MinedJSON {
+        object V0 {
+            fun deserialize(
+                @Suppress("UNUSED_PARAMETER")
+                blob: ByteArray,
+                completedAt: Long
+            ): OutgoingPayment.Status.Completed.Succeeded.OnChain {
                 return OutgoingPayment.Status.Completed.Succeeded.OnChain(
-                    txids = json.txids,
-                    claimed = json.claimed.sat,
+                    txids = listOf(),
+                    claimed = 0.sat,
+                    type = ChannelClosingType.Other,
                     completedAt = completedAt
                 )
+            }
+        }
+        @Serializable
+        data class V1(
+            val txids: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>,
+            val claimed: Long
+        ) {
+            companion object {
+            //  fun serialize(
+            //      src: OutgoingPayment.Status.Completed.Succeeded.OnChain
+            //  ): Pair<OutgoingStatusType, ByteArray> {
+            //      val json = MinedJSON.V1(src.txids, src.claimed.toLong())
+            //      val blob = Json.encodeToString(json).toByteArray(Charsets.UTF_8)
+            //      return Pair(OutgoingStatusType.Mined_v1, blob)
+            //  }
+                fun deserialize(
+                    blob: ByteArray,
+                    completedAt: Long
+                ): OutgoingPayment.Status.Completed.Succeeded.OnChain {
+                    val str = String(bytes = blob, charset = Charsets.UTF_8)
+                    val json = Json.decodeFromString<MinedJSON.V1>(str)
+                    return OutgoingPayment.Status.Completed.Succeeded.OnChain(
+                        txids = json.txids,
+                        claimed = json.claimed.sat,
+                        type = ChannelClosingType.Other,
+                        completedAt = completedAt
+                    )
+                }
+            }
+        }
+        @Serializable
+        data class V2(
+            val txids: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>,
+            val claimed: Long,
+            val type: String
+        ) {
+            companion object {
+                fun serialize(
+                    src: OutgoingPayment.Status.Completed.Succeeded.OnChain
+                ): Pair<OutgoingStatusType, ByteArray> {
+                    val json = MinedJSON.V2(src.txids, src.claimed.toLong(), src.type.name)
+                    val blob = Json.encodeToString(json).toByteArray(Charsets.UTF_8)
+                    return Pair(OutgoingStatusType.Mined_v2, blob)
+                }
+                fun deserialize(
+                    blob: ByteArray,
+                    completedAt: Long
+                ): OutgoingPayment.Status.Completed.Succeeded.OnChain {
+                    val str = String(bytes = blob, charset = Charsets.UTF_8)
+                    val json = Json.decodeFromString<MinedJSON.V2>(str)
+                    return OutgoingPayment.Status.Completed.Succeeded.OnChain(
+                        txids = json.txids,
+                        claimed = json.claimed.sat,
+                        type = deserializeType(json.type),
+                        completedAt = completedAt
+                    )
+                }
+                private fun deserializeType(str: String): ChannelClosingType = when (str) {
+                    ChannelClosingType.Mutual.name -> ChannelClosingType.Mutual
+                    ChannelClosingType.Local.name -> ChannelClosingType.Local
+                    ChannelClosingType.Remote.name -> ChannelClosingType.Remote
+                    else -> ChannelClosingType.Other
+                }
             }
         }
     }
@@ -268,8 +364,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                         Pair(OutgoingDetailsType.SwapOut_v0, blob)
                     }
                     is OutgoingPayment.Details.ChannelClosing -> {
-                        val blob = ChannelClosingJSON.serialize(details)
-                        Pair(OutgoingDetailsType.ChannelClosing_v0, blob)
+                        ChannelClosingJSON.V1.serialize(details)
                     }
                 }
                 outQueries.addOutgoingPayment(
@@ -301,22 +396,21 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
             outQueries.transaction {
                 val (statusType, statusBlob) = when (completed) {
                     is OutgoingPayment.Status.Completed.Failed -> { Pair(
-                        OutgoingStatusType.Failed_v0.type,
+                        OutgoingStatusType.Failed_v0,
                         OutgoingFinalFailureDbEnum.serialize(completed.reason)
                     )}
                     is OutgoingPayment.Status.Completed.Succeeded.OffChain -> { Pair(
-                        OutgoingStatusType.Succeeded_v0.type,
+                        OutgoingStatusType.Succeeded_v0,
                         completed.preimage.toByteArray()
                     )}
-                    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> { Pair(
-                        OutgoingStatusType.Mined_v1.type,
-                        MinedJSON.serialize(completed)
-                    )}
+                    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> {
+                        MinedJSON.V2.serialize(completed)
+                    }
                 }
                 outQueries.updateOutgoingPayment(
                     id = id.toString(),
                     completed_at = completed.completedAt,
-                    status_type = statusType,
+                    status_type = statusType.type,
                     status = statusBlob
                 )
                 if (outQueries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(id)
@@ -542,34 +636,43 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         completed_at: Long?,
         status_type: Long,
         status: ByteArray
-    ): OutgoingPayment.Status = when {
-        completed_at == null -> OutgoingPayment.Status.Pending
-        status_type == OutgoingStatusType.Succeeded_v0.type -> {
-            OutgoingPayment.Status.Completed.Succeeded.OffChain(
-                preimage = ByteVector32(status),
-                completedAt = completed_at
-            )
+    ): OutgoingPayment.Status {
+        if (completed_at == null) {
+            return OutgoingPayment.Status.Pending
         }
-        status_type == OutgoingStatusType.Failed_v0.type -> {
-            OutgoingPayment.Status.Completed.Failed(
-                reason = OutgoingFinalFailureDbEnum.deserialize(status),
-                completedAt = completed_at
-            )
+        return when (status_type) {
+            OutgoingStatusType.Succeeded_v0.type -> {
+                OutgoingPayment.Status.Completed.Succeeded.OffChain(
+                    preimage = ByteVector32(status),
+                    completedAt = completed_at
+                )
+            }
+            OutgoingStatusType.Failed_v0.type -> {
+                OutgoingPayment.Status.Completed.Failed(
+                    reason = OutgoingFinalFailureDbEnum.deserialize(status),
+                    completedAt = completed_at
+                )
+            }
+            OutgoingStatusType.Mined_v0.type -> {
+                MinedJSON.V0.deserialize(
+                    blob = status,
+                    completedAt = completed_at
+                )
+            }
+            OutgoingStatusType.Mined_v1.type -> {
+                MinedJSON.V1.deserialize(
+                    blob = status,
+                    completedAt = completed_at
+                )
+            }
+            OutgoingStatusType.Mined_v2.type -> {
+                MinedJSON.V2.deserialize(
+                    blob = status,
+                    completedAt = completed_at
+                )
+            }
+            else -> throw UnhandledOutgoingStatus
         }
-        status_type == OutgoingStatusType.Mined_v0.type -> {
-            OutgoingPayment.Status.Completed.Succeeded.OnChain(
-                txids = listOf(),
-                claimed = 0.sat,
-                completedAt = completed_at
-            )
-        }
-        status_type == OutgoingStatusType.Mined_v1.type -> {
-            MinedJSON.deserialize(
-                blob = status,
-                completedAt = completed_at
-            )
-        }
-        else -> throw UnhandledOutgoingStatus
     }
 
     private fun mapOutgoingPartStatus(
@@ -605,7 +708,13 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
             )
         }
         OutgoingDetailsType.ChannelClosing_v0.type -> {
-            ChannelClosingJSON.deserialize(
+            ChannelClosingJSON.V0.deserialize(
+                blob = detailsBlob,
+                paymentHash = ByteVector32(paymentHash)
+            )
+        }
+        OutgoingDetailsType.ChannelClosing_v1.type -> {
+            ChannelClosingJSON.V1.deserialize(
                 blob = detailsBlob,
                 paymentHash = ByteVector32(paymentHash)
             )

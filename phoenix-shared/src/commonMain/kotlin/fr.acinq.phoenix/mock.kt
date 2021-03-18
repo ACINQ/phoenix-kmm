@@ -90,6 +90,7 @@ object Mock {
             recipientAmount = 350_000.msat,
             recipient = Eclair.randomKey().publicKey(),
             details = OutgoingPayment.Details.ChannelClosing(
+                channelId = ByteVector32.Zeroes,
                 closingAddress = "tb1q8rf6p595hp465pm2hhxfhyv5zdr6jgujwetraq",
                 isLocalWallet = true,
                 paymentHash = randomBytes32()
@@ -105,6 +106,7 @@ object Mock {
             recipientAmount = 350_000.msat,
             recipient = Eclair.randomKey().publicKey(),
             details = OutgoingPayment.Details.ChannelClosing(
+                channelId = ByteVector32.Zeroes,
                 closingAddress = "tb1q8rf6p595hp465pm2hhxfhyv5zdr6jgujwetraq",
                 isLocalWallet = false,
                 paymentHash = randomBytes32()
