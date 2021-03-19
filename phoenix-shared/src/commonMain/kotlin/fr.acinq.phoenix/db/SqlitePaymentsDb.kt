@@ -449,7 +449,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
             amount != null && receivedAt != null && receivedWithEnum == IncomingReceivedWithDbEnum.LightningPayment ->
                 IncomingPayment.Received(MilliSatoshi(amount), IncomingPayment.ReceivedWith.LightningPayment, receivedAt)
             amount != null && receivedAt != null && receivedWithEnum == IncomingReceivedWithDbEnum.NewChannel ->
-                IncomingPayment.Received(MilliSatoshi(amount), IncomingPayment.ReceivedWith.NewChannel(receivedWithFees?.run { MilliSatoshi(this) }, receivedWithChannelId?.run { ByteVector32(this) }), receivedAt)
+                IncomingPayment.Received(MilliSatoshi(amount), IncomingPayment.ReceivedWith.NewChannel(MilliSatoshi(receivedWithFees ?: 0), receivedWithChannelId?.toByteVector32()), receivedAt)
             else -> throw UnreadableIncomingPaymentStatusInDatabase(amount, receivedAt, receivedWithEnum, receivedWithFees, receivedWithChannelId)
         }
     }
