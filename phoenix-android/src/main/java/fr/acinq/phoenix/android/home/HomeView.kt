@@ -278,9 +278,9 @@ private fun ConnectionDialogLine(label: String, connection: Connection) {
 }
 
 @Composable
-private fun IncomingAmountNotif(amount: Satoshi) {
+private fun IncomingAmountNotif(amount: MilliSatoshi) {
     Text(
-        text = stringResource(id = R.string.home__swapin_incoming, amount.toMilliSatoshi().toPrettyString(localUnit, localRate, withUnit = true)),
+        text = stringResource(id = R.string.home__swapin_incoming, amount.toPrettyString(localUnit, localRate, withUnit = true)),
         style = MaterialTheme.typography.caption
     )
 }

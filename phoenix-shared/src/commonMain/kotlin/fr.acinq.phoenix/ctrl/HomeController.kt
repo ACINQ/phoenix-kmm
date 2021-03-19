@@ -11,7 +11,7 @@ object Home {
 
     data class Model(
         val balance: MilliSatoshi,
-        val incomingBalance: Satoshi?,
+        val incomingBalance: MilliSatoshi?,
         val payments: List<WalletPayment>,
         val lastPayment: WalletPayment?
     ) : MVI.Model()

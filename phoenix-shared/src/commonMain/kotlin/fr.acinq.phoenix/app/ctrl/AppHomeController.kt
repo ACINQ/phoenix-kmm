@@ -68,7 +68,7 @@ class AppHomeController(
 
         launch {
             incomingSwapsFlow.collect {
-                model { copy(incomingBalance = it.values.sum().truncateToSatoshi().takeIf { it.sat > 0 }) }
+                model { copy(incomingBalance = it.values.sum().takeIf { it.msat > 0 }) }
             }
         }
 
