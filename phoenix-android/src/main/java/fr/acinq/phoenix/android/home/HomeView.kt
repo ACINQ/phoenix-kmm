@@ -295,11 +295,7 @@ private fun PaymentLine(payment: WalletPayment) {
         Spacer(modifier = Modifier.width(16.dp))
         Column {
             Row {
-                Text(
-                    text = payment.desc() ?: stringResource(id = R.string.paymentline_no_desc),
-                    style = if (payment.desc() != null) MaterialTheme.typography.body1 else MaterialTheme.typography.body1.copy(color = mutedTextColor()),
-                    modifier = Modifier.weight(1.0f)
-                )
+                PaymentDescription(payment = payment, modifier = Modifier.weight(1.0f))
                 Spacer(modifier = Modifier.width(8.dp))
                 if (!isPaymentFailed(payment)) {
                     val isOutgoing = payment is OutgoingPayment
@@ -318,22 +314,25 @@ private fun PaymentLine(payment: WalletPayment) {
 }
 
 @Composable
-private fun PaymentDescription(payment: WalletPayment) {
+private fun PaymentDescription(payment: WalletPayment, modifier: Modifier = Modifier) {
+    val desc = when (payment) {
+        is OutgoingPayment -> when (val d = payment.details) {
+            is OutgoingPayment.Details.Normal -> d.paymentRequest.description
+            is OutgoingPayment.Details.KeySend -> stringResource(id = R.string.paymentline_keysend_outgoing)
+            is OutgoingPayment.Details.SwapOut -> d.address
+        }
+        is IncomingPayment -> when (val o = payment.origin) {
+            is IncomingPayment.Origin.Invoice -> o.paymentRequest.description
+            is IncomingPayment.Origin.KeySend -> stringResource(id = R.string.paymentline_keysend_incoming)
+            is IncomingPayment.Origin.SwapIn -> o.address ?: stringResource(id = R.string.paymentline_swap_in_desc)
+        }
+    }.takeIf { !it.isNullOrBlank() }
     Text(
-        text = when (payment) {
-            is OutgoingPayment -> when (val d = payment.details) {
-                is OutgoingPayment.Details.Normal -> d.paymentRequest.description
-                is OutgoingPayment.Details.KeySend -> stringResource(id = R.string.paymentline_keysend_outgoing)
-                is OutgoingPayment.Details.SwapOut -> d.address
-            }
-            is IncomingPayment -> when (val o = payment.origin) {
-                is IncomingPayment.Origin.Invoice -> o.paymentRequest.description
-                is IncomingPayment.Origin.KeySend -> stringResource(id = R.string.paymentline_keysend_incoming)
-                is IncomingPayment.Origin.SwapIn -> o.address ?: stringResource(id = R.string.paymentline_swap_in_desc)
-            }
-        }.takeIf { !it.isNullOrBlank() } ?: stringResource(id = R.string.paymentdetails_no_description),
+        text = desc ?: stringResource(id = R.string.paymentdetails_no_description),
         maxLines = 1,
-        overflow = TextOverflow.Ellipsis
+        overflow = TextOverflow.Ellipsis,
+        style = if (desc != null) MaterialTheme.typography.body1 else MaterialTheme.typography.body1.copy(color = mutedTextColor()),
+        modifier = modifier
     )
 }
 
