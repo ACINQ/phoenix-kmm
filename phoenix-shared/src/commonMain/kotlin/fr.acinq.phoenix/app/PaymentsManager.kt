@@ -10,10 +10,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
@@ -28,7 +25,7 @@ class PaymentsManager(
     private val logger = newLogger(loggerFactory)
 
     /** A flow containing a list of payments, directly taken from the database and automatically refreshed when the database changes. */
-    internal var paymentsFlow: Flow<List<WalletPayment>> = flowOf(emptyList())
+    internal val payments = MutableStateFlow<List<WalletPayment>>(emptyList())
 
     /**
      * Broadcasts the most recent incoming payment since the app was launched.
@@ -47,7 +44,9 @@ class PaymentsManager(
 
     init {
         launch {
-            paymentsFlow = paymentsDb.listPaymentsFlow(150, 0, emptySet())
+            paymentsDb.listPaymentsFlow(150, 0, emptySet()).collect {
+                payments.value = it
+            }
         }
 
         launch {

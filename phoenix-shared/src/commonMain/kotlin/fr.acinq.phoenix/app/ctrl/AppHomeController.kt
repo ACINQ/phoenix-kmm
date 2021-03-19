@@ -73,7 +73,7 @@ class AppHomeController(
         }
 
         launch {
-            paymentsManager.paymentsFlow.collect {
+            paymentsManager.payments.collect {
                 model {
                     copy(payments = it, lastPayment = it.firstOrNull()?.takeIf { WalletPayment.completedAt(it) > 0 })
                 }
