@@ -1,11 +1,20 @@
 package fr.acinq.phoenix.data
 
+import fr.acinq.bitcoin.Block
+import fr.acinq.bitcoin.ByteVector
+import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.utils.ServerAddress
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToLong
 
-enum class Chain { MAINNET, TESTNET, REGTEST }
+
+sealed class Chain(val chainHash: ByteVector32) {
+    object Regtest: Chain(Block.LivenetGenesisBlock.hash)
+    object Testnet: Chain(Block.LivenetGenesisBlock.hash)
+    object Mainnet: Chain(Block.LivenetGenesisBlock.hash)
+    fun isMainnet(): Boolean = this is Mainnet
+}
 
 interface CurrencyUnit
 
