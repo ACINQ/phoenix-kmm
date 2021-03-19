@@ -132,7 +132,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun content(): ContentController = AppContentController(loggerFactory, walletManager)
         override fun initialization(): InitializationController = AppInitController(loggerFactory, walletManager)
         override fun home(): HomeController = AppHomeController(loggerFactory, peerManager, paymentsManager)
-        override fun receive(): ReceiveController = AppReceiveController(loggerFactory, peerManager)
+        override fun receive(): ReceiveController = AppReceiveController(loggerFactory, chain, peerManager)
         override fun scan(): ScanController = AppScanController(loggerFactory, peerManager)
         override fun restoreWallet(): RestoreWalletController = AppRestoreWalletController(loggerFactory)
         override fun configuration(): ConfigurationController = AppConfigurationController(loggerFactory, walletManager)
