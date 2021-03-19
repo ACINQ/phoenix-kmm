@@ -335,6 +335,7 @@ class HomeView_Previews: PreviewProvider {
 
 		HomeView().mock(Home.Model(
 			balance: Eclair_kmpMilliSatoshi(msat: 123500),
+			incomingBalance: Eclair_kmpMilliSatoshi(msat: 0),
 			payments: [],
 			lastPayment: nil
 		))
@@ -344,6 +345,7 @@ class HomeView_Previews: PreviewProvider {
 		
 		HomeView().mock(Home.Model(
 			balance: Eclair_kmpMilliSatoshi(msat: 1000000),
+			incomingBalance: Eclair_kmpMilliSatoshi(msat: 12000000),
 			payments: [],
 			lastPayment: nil
 		))
