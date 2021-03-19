@@ -1,7 +1,6 @@
 package fr.acinq.phoenix.data
 
 import fr.acinq.bitcoin.Block
-import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.utils.ServerAddress
