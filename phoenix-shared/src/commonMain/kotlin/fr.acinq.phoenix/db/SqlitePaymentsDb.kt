@@ -96,7 +96,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                     return OutgoingPayment.Details.ChannelClosing(
                         channelId = ByteVector32.Zeroes,
                         closingAddress = json.closingAddress,
-                        isLocalWallet = json.isLocalWallet,
+                        isSentToMyWallet = json.isLocalWallet,
                         paymentHash = paymentHash
                     )
                 }
@@ -110,7 +110,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         ) {
             companion object {
                 fun serialize(src: OutgoingPayment.Details.ChannelClosing): Pair<OutgoingDetailsType, ByteArray> {
-                    val json = ChannelClosingJSON.V1(src.channelId, src.closingAddress, src.isLocalWallet)
+                    val json = ChannelClosingJSON.V1(src.channelId, src.closingAddress, src.isSentToMyWallet)
                     val blob = Json.encodeToString(json).toByteArray(Charsets.UTF_8)
                     return Pair(OutgoingDetailsType.ChannelClosing_v1, blob)
                 }
@@ -120,7 +120,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                     return OutgoingPayment.Details.ChannelClosing(
                         channelId = json.channelId,
                         closingAddress = json.closingAddress,
-                        isLocalWallet = json.isLocalWallet,
+                        isSentToMyWallet = json.isLocalWallet,
                         paymentHash = paymentHash
                     )
                 }
@@ -512,7 +512,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                     value = amount.msat,
                     received_at = receivedAt,
                     received_with = IncomingReceivedWithDbEnum.toDb(receivedWith),
-                    received_with_fees = receivedWith.fees?.msat,
+                    received_with_fees = receivedWith.fees.msat,
                     received_with_channel_id = if (receivedWith is IncomingPayment.ReceivedWith.NewChannel) receivedWith.channelId?.toByteArray() else null,
                     payment_hash = paymentHash.toByteArray())
                 if (inQueries.changes().executeAsOne() != 1L) throw IncomingPaymentNotFound(paymentHash)
@@ -531,7 +531,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                 received_amount_msat = amount.msat,
                 received_at = receivedAt,
                 received_with = IncomingReceivedWithDbEnum.toDb(receivedWith),
-                received_with_fees = receivedWith.fees?.msat,
+                received_with_fees = receivedWith.fees.msat,
                 received_with_channel_id = if (receivedWith is IncomingPayment.ReceivedWith.NewChannel) receivedWith.channelId?.toByteArray() else null,
                 created_at = createdAt
             )
@@ -723,7 +723,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
     }
 
     private fun mapIncomingPayment(
-        payment_hash: ByteArray,
+        @Suppress("UNUSED_PARAMETER") payment_hash: ByteArray,
         created_at: Long,
         preimage: ByteArray,
         payment_type: IncomingOriginDbEnum,

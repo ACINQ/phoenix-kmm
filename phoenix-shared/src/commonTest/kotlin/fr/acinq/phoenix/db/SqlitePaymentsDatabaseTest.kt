@@ -217,16 +217,16 @@ class SqlitePaymentsDatabaseTest {
         assertTrue(db.getOutgoingPayment(p.id)!!.status is OutgoingPayment.Status.Pending)
 
         val paymentSucceeded = partsSettled.copy(
-            status = OutgoingPayment.Status.Succeeded(preimage, 130),
+            status = OutgoingPayment.Status.Completed.Succeeded.OffChain(preimage, 130),
             parts = partsSettled.parts.drop(1)
         )
-        db.updateOutgoingPayment(p.id, preimage, 130)
+        db.completeOutgoingPayment(p.id, preimage, 130)
 
         // Failed and pending parts are now ignored because payment has succeeded
         assertEquals(paymentSucceeded, db.getOutgoingPayment(p.id))
 
         // Cannot succeed a payment that does not exist
-        assertFails { db.updateOutgoingPayment(UUID.randomUUID(), preimage, 130) }
+        assertFails { db.completeOutgoingPayment(UUID.randomUUID(), preimage, 130) }
         // Using failed part id does not return a settled payment
         assertNull(db.getOutgoingPart(partsSettled.parts[0].id))
         partsSettled.parts.drop(1).forEach {
@@ -263,9 +263,9 @@ class SqlitePaymentsDatabaseTest {
         assertEquals(partsFailed, db.getOutgoingPayment(p.id))
         p.parts.forEach { assertEquals(partsFailed, db.getOutgoingPart(it.id)) }
 
-        val paymentFailed = partsFailed.copy(status = OutgoingPayment.Status.Failed(FinalFailure.NoRouteToRecipient, 120))
-        db.updateOutgoingPayment(p.id, FinalFailure.NoRouteToRecipient, 120)
-        assertFails { db.updateOutgoingPayment(UUID.randomUUID(), FinalFailure.NoRouteToRecipient, 120) }
+        val paymentFailed = partsFailed.copy(status = OutgoingPayment.Status.Completed.Failed(FinalFailure.NoRouteToRecipient, 120))
+        db.completeOutgoingPayment(p.id, FinalFailure.NoRouteToRecipient, 120)
+        assertFails { db.completeOutgoingPayment(UUID.randomUUID(), FinalFailure.NoRouteToRecipient, 120) }
         assertEquals(paymentFailed, db.getOutgoingPayment(p.id))
         p.parts.forEach { assertEquals(paymentFailed, db.getOutgoingPart(it.id)) }
     }
@@ -324,7 +324,7 @@ class SqlitePaymentsDatabaseTest {
 
         // send outgoing 1 with 1 successful part
         db.updateOutgoingPart(outgoing1Parts[0].id, Eclair.randomBytes32(), completedAt = 102)
-        db.updateOutgoingPayment(outgoing1.id, Eclair.randomBytes32(), completedAt = 103)
+        db.completeOutgoingPayment(outgoing1.id, Eclair.randomBytes32(), completedAt = 103)
         val expectedOutgoing1 = db.getOutgoingPayment(outgoing1.id)
         assertNotNull(expectedOutgoing1)
 
@@ -334,7 +334,7 @@ class SqlitePaymentsDatabaseTest {
 
         // fail outgoing2
         db.updateOutgoingPart(outgoing2Parts[0].id, Either.Left(ChannelUnavailable(Eclair.randomBytes32())), completedAt = 106)
-        db.updateOutgoingPayment(outgoing2.id, FinalFailure.UnknownError, completedAt = 106)
+        db.completeOutgoingPayment(outgoing2.id, FinalFailure.UnknownError, completedAt = 106)
         val expectedOutgoing2 = db.getOutgoingPayment(outgoing2.id)
         assertNotNull(expectedOutgoing2)
 
@@ -342,7 +342,7 @@ class SqlitePaymentsDatabaseTest {
         db.updateOutgoingPart(outgoing3Parts[0].id, Either.Left(ChannelUnavailable(Eclair.randomBytes32())), completedAt = 107)
         db.updateOutgoingPart(outgoing3Parts[1].id, Eclair.randomBytes32(), completedAt = 107)
         db.updateOutgoingPart(outgoing3Parts[2].id, Eclair.randomBytes32(), completedAt = 107)
-        db.updateOutgoingPayment(outgoing3.id, Eclair.randomBytes32(), completedAt = 107)
+        db.completeOutgoingPayment(outgoing3.id, Eclair.randomBytes32(), completedAt = 107)
         val expectedOutgoing3 = db.getOutgoingPayment(outgoing3.id)
         assertNotNull(expectedOutgoing3)
 
@@ -352,7 +352,7 @@ class SqlitePaymentsDatabaseTest {
 
         // receive outgoing5, overpaying
         db.updateOutgoingPart(outgoing5Parts[0].id, Eclair.randomBytes32(), completedAt = 111)
-        db.updateOutgoingPayment(outgoing5.id, Eclair.randomBytes32(), completedAt = 112)
+        db.completeOutgoingPayment(outgoing5.id, Eclair.randomBytes32(), completedAt = 112)
         val expectedOutgoing5 = db.getOutgoingPayment(outgoing5.id)
 
         // outgoing4 and incoming3 are still pending.
