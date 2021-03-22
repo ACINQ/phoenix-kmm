@@ -113,7 +113,7 @@ struct ReadyView: View {
 		
 		ZStack {
 		
-			if AppDelegate.get().business.chain == Chain.testnet {
+			if AppDelegate.get().business.chain.isTestnet() {
 				Image("testnet_bg")
 					.resizable(resizingMode: .tile)
 			}
@@ -294,7 +294,7 @@ struct ValidateView: View {
 			Color.primaryBackground
 				.ignoresSafeArea(.all, edges: .all)
 			
-			if AppDelegate.get().business.chain == Chain.testnet {
+			if AppDelegate.get().business.chain.isTestnet() {
 				Image("testnet_bg")
 					.resizable(resizingMode: .tile)
 					.ignoresSafeArea(.all, edges: .all)
@@ -553,7 +553,7 @@ struct SendingView: View {
 		
 		ZStack {
 		
-			if AppDelegate.get().business.chain == Chain.testnet {
+			if AppDelegate.get().business.chain.isTestnet() {
 				Image("testnet_bg")
 					.resizable(resizingMode: .tile)
 			}
