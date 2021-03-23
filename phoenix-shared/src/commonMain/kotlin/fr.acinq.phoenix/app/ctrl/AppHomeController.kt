@@ -27,17 +27,17 @@ class AppHomeController(
     init {
         launch {
             peerManager.getPeer().channelsFlow.collect { channels ->
-                model {
-                    copy(balance = channels.values.map {
-                        when (it) {
-                            is Closing -> MilliSatoshi(0)
-                            is Closed -> MilliSatoshi(0)
-                            is Aborted -> MilliSatoshi(0)
-                            is ErrorInformationLeak -> MilliSatoshi(0)
-                            else -> it.localCommitmentSpec?.toLocal ?: MilliSatoshi(0)
-                        }
-                    }.sum())
-                }
+                val newBalance = channels.values.map {
+                    when (it) {
+                        is Closing -> MilliSatoshi(0)
+                        is Closed -> MilliSatoshi(0)
+                        is Aborted -> MilliSatoshi(0)
+                        is ErrorInformationLeak -> MilliSatoshi(0)
+                        else -> it.localCommitmentSpec?.toLocal ?: MilliSatoshi(0)
+                    }
+                }.sum()
+
+                model { copy(balance = newBalance) }
             }
         }
 
