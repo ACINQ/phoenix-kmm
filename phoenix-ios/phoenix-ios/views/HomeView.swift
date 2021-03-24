@@ -228,10 +228,11 @@ struct ConnectionStatusButton : View {
 	func showConnectionsPopover() -> Void {
 		log.trace("(ConnectionStatusButton) showConnectionsPopover()")
 		
-		popoverState.dismissable.send(true)
-		popoverState.displayContent.send(
-			ConnectionsPopover().anyView
-		)
+		popoverState.display.send(PopoverItem(
+		
+			ConnectionsPopover().anyView,
+			dismissable: true
+		))
 	}
 }
 

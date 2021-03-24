@@ -503,19 +503,21 @@ struct ReceiveView: MVIView {
 	func showBgAppRefreshDisabledWarning() -> Void {
 		log.trace("showBgAppRefreshDisabledWarning()")
 		
-		popoverState.dismissable.send(false)
-		popoverState.displayContent.send(
-			BgAppRefreshDisabledWarning().anyView
-		)
+		popoverState.display.send(PopoverItem(
+			
+			BgAppRefreshDisabledWarning().anyView,
+			dismissable: false
+		))
 	}
 	
 	func showNotificationsDisabledWarning() -> Void {
 		log.trace("showNotificationsDisabledWarning()")
 		
-		popoverState.dismissable.send(false)
-		popoverState.displayContent.send(
-			NotificationsDisabledWarning().anyView
-		)
+		popoverState.display.send(PopoverItem(
+			
+			NotificationsDisabledWarning().anyView,
+			dismissable: false
+		))
 	}
 	
 	func showRequestPushPermissionPopup() -> Void {
@@ -540,10 +542,11 @@ struct ReceiveView: MVIView {
 			}
 		}
 		
-		popoverState.dismissable.send(true)
-		popoverState.displayContent.send(
-			RequestPushPermissionPopup(callback: callback).anyView
-		)
+		popoverState.display.send(PopoverItem(
+		
+			RequestPushPermissionPopup(callback: callback).anyView,
+			dismissable: true
+		))
 	}
 	
 	func didTapCopyButton(_ model: Receive.Model) -> Void {
@@ -602,10 +605,11 @@ struct ReceiveView: MVIView {
 			log.debug("SwapInFeePopup: didAcceptFeesCallback")
 		}
 		
-		popoverState.dismissable.send(false)
-		popoverState.displayContent.send(
-			SwapInFeePopup(didAcceptFeesCallback: didAcceptFeesCallback).anyView
-		)
+		popoverState.display.send(PopoverItem(
+		
+			SwapInFeePopup(didAcceptFeesCallback: didAcceptFeesCallback).anyView,
+			dismissable: false
+		))
 	}
 }
 
