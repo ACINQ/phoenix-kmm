@@ -92,8 +92,7 @@ object Mock {
             details = OutgoingPayment.Details.ChannelClosing(
                 channelId = ByteVector32.Zeroes,
                 closingAddress = "tb1q8rf6p595hp465pm2hhxfhyv5zdr6jgujwetraq",
-                isSentToMyWallet = true,
-                paymentHash = randomBytes32()
+                isSentToDefaultAddress = true,
             ),
             parts = listOf(),
             status = OutgoingPayment.Status.Pending
@@ -108,8 +107,7 @@ object Mock {
             details = OutgoingPayment.Details.ChannelClosing(
                 channelId = ByteVector32.Zeroes,
                 closingAddress = "tb1q8rf6p595hp465pm2hhxfhyv5zdr6jgujwetraq",
-                isSentToMyWallet = false,
-                paymentHash = randomBytes32()
+                isSentToDefaultAddress = false,
             ),
             parts = listOf(),
             status = OutgoingPayment.Status.Pending

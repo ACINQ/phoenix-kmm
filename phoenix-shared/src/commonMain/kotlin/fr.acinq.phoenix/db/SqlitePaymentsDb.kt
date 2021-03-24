@@ -82,11 +82,11 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         @Serializable
         data class V0(
             val closingAddress: String,
-            val isLocalWallet: Boolean
+            val isSentToDefaultAddress: Boolean
         ) {
             companion object {
             //  fun serialize(src: OutgoingPayment.Details.ChannelClosing): Pair<OutgoingDetailsType, ByteArray> {
-            //      val json = ChannelClosingJSON.V0(src.closingAddress, src.isLocalWallet)
+            //      val json = ChannelClosingJSON.V0(src.closingAddress, src.isSentToDefaultAddress)
             //      val blob = Json.encodeToString(json).toByteArray(Charsets.UTF_8)
             //      return Pair(OutgoingDetailsType.ChannelClosing_v0, blob)
             //  }
@@ -96,8 +96,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                     return OutgoingPayment.Details.ChannelClosing(
                         channelId = ByteVector32.Zeroes,
                         closingAddress = json.closingAddress,
-                        isSentToMyWallet = json.isLocalWallet,
-                        paymentHash = paymentHash
+                        isSentToDefaultAddress = json.isSentToDefaultAddress,
                     )
                 }
             }
@@ -106,11 +105,11 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         data class V1(
             @Serializable(with = ByteVector32KSerializer::class) val channelId: ByteVector32,
             val closingAddress: String,
-            val isLocalWallet: Boolean
+            val isSentToDefaultAddress: Boolean
         ) {
             companion object {
                 fun serialize(src: OutgoingPayment.Details.ChannelClosing): Pair<OutgoingDetailsType, ByteArray> {
-                    val json = ChannelClosingJSON.V1(src.channelId, src.closingAddress, src.isSentToMyWallet)
+                    val json = ChannelClosingJSON.V1(src.channelId, src.closingAddress, src.isSentToDefaultAddress)
                     val blob = Json.encodeToString(json).toByteArray(Charsets.UTF_8)
                     return Pair(OutgoingDetailsType.ChannelClosing_v1, blob)
                 }
@@ -120,8 +119,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
                     return OutgoingPayment.Details.ChannelClosing(
                         channelId = json.channelId,
                         closingAddress = json.closingAddress,
-                        isSentToMyWallet = json.isLocalWallet,
-                        paymentHash = paymentHash
+                        isSentToDefaultAddress = json.isSentToDefaultAddress,
                     )
                 }
             }
