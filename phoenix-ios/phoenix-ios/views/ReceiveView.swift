@@ -166,6 +166,18 @@ struct ReceiveView: MVIView {
 			
 			warningButton()
 			
+			Button {
+				didTapSwapInButton()
+			} label: {
+				HStack {
+					Image(systemName: "repeat") // alt: "arrowshape.bounce.forward.fill"
+						.imageScale(.small)
+
+					Text("Show a Bitcoin address")
+				}
+			}
+			.padding(.top)
+			
 			Spacer()
 			
 		} // </VStack>
@@ -581,6 +593,20 @@ struct ReceiveView: MVIView {
 			}
 		}
 	}
+	
+	func didTapSwapInButton() -> Void {
+		log.trace("didTapSwapInButton()")
+		
+		let didAcceptFeesCallback = {() -> Void in
+			
+			log.debug("SwapInFeePopup: didAcceptFeesCallback")
+		}
+		
+		popoverState.dismissable.send(false)
+		popoverState.displayContent.send(
+			SwapInFeePopup(didAcceptFeesCallback: didAcceptFeesCallback).anyView
+		)
+	}
 }
 
 struct ModifyInvoiceSheet: View {
@@ -941,7 +967,6 @@ struct RequestPushPermissionPopup: View {
 	let callback: (PushPermissionPopupResponse) -> Void
 	
 	@State private var userIsIgnoringPopover: Bool = true
-	
 	@Environment(\.popoverState) private var popoverState: PopoverState
 	
 	var body: some View {
@@ -999,40 +1024,41 @@ struct RequestPushPermissionPopup: View {
 	}
 }
 
-struct FeePromptPopup : View {
+struct SwapInFeePopup : View {
 	
-	@Binding var show: Bool
-	let postIntent: (Receive.Intent) -> Void
+	let didAcceptFeesCallback: () -> Void
+	
+	@Environment(\.popoverState) private var popoverState: PopoverState
 	
 	var body: some View {
 		VStack(alignment: .leading) {
 			
 			Text("Receive with a Bitcoin address")
-				.font(.system(.title3, design: .serif))
+				.font(.system(.title3))
 				.lineLimit(nil)
 				.padding(.bottom, 20)
 			
-			VStack(alignment: .leading, spacing: 14) {
+			VStack(alignment: .leading, spacing: 20) {
 			
-				Text("A standard Bitcoin address will be displayed next.")
-					
-				Text("Funds sent to this address will be shown on your wallet after one confirmation.")
+				Text("A standard Bitcoin address will be displayed next.") +
+				Text(" Funds sent to this address will arrive in your wallet after one confirmation.")
 				
 				Text("There is a small fee: ") +
-				Text("0.10%").bold() +
-				Text("\nFor example, to receive $100, the fee is 10 cents.")
+				Text("0.10%").bold()
+				
+				Text("For example, if you send $100, the fee is 10 cents.")
 			}
 			
 			HStack {
 				Spacer()
 				Button("Cancel") {
-					withAnimation { show = false }
+					didCancel()
 				}
 				.font(.title3)
 				.padding(.trailing, 8)
 				
 				Button("Proceed") {
-					withAnimation { show = false }
+					didAccept()
 				}
 				.font(.title3)
 			}
@@ -1040,6 +1066,18 @@ struct FeePromptPopup : View {
 			
 		} // </VStack>
 		.padding()
+	}
+	
+	func didCancel() -> Void {
+		log.trace("[SwapInFeePopup] didCancel()")
+		
+		popoverState.close.send()
+	}
+	
+	func didAccept() -> Void {
+		log.trace("[SwapInFeePopup] didAccept()")
+		
+		popoverState.close.send()
 	}
 	
 } // </FeePromptPopup>
