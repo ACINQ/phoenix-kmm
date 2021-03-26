@@ -248,7 +248,7 @@ struct ReceiveLightningView: View, ViewName {
 				editButton()
 			}
 			
-			warningButton(paddingTop: 2)
+			warningButton(paddingTop: 8)
 			
 			Button {
 				didTapSwapInButton()
@@ -308,7 +308,7 @@ struct ReceiveLightningView: View, ViewName {
 					.font(.caption2)
 					.foregroundColor(.secondary)
 				
-				warningButton(paddingTop: 2)
+				warningButton(paddingTop: 8)
 				
 				Spacer()
 			}
@@ -393,23 +393,14 @@ struct ReceiveLightningView: View, ViewName {
 	@ViewBuilder
 	func warningButton(paddingTop: CGFloat) -> some View {
 		
-		// There are warnings we may want to display:
-		//
-		// 1. The user has disabled Background App Refresh.
-		//    In this case, we won't be able to receive payments
-		//    while the app is in the background.
-		//
-		// 2. When we first prompted them to enable push notifications,
-		//    the user said "no". Thus we have never tried to enable push notifications.
-		//
-		// 3. The user has totally disabled notifications for our app.
-		//    So if a payment is received while the app is in the background,
-		//    we won't be able to notify them (in any way, shape or form).
-		//
-		// 4. Similarly to above, the user didn't totally disable notifications,
-		//    but they effectively did. Because they disabled all alerts & badges.
+		// There are several warnings we may want to display.
 		
 		if bgAppRefreshDisabled {
+			
+			// The user has disabled Background App Refresh.
+			// In this case, we won't be able to receive payments
+		 	// while the app is in the background.
+			
 			Button {
 				showBgAppRefreshDisabledWarning()
 			} label: {
@@ -423,6 +414,11 @@ struct ReceiveLightningView: View, ViewName {
 			.padding(.top, paddingTop)
 		}
 		else if !pushPermissionRequestedFromOS {
+			
+			// When we first prompted them to enable push notifications,
+			// the user said "no". Or they otherwise dismissed the popover window.
+			// Thus we have never tried to enable push notifications.
+			
 			Button {
 				showRequestPushPermissionPopup()
 			} label: {
@@ -435,6 +431,14 @@ struct ReceiveLightningView: View, ViewName {
 			.padding(.top, paddingTop)
 		}
 		else if notificationsDisabled || (alertsDisabled && badgesDisabled) {
+			
+			// The user has totally disabled notifications for our app.
+			// So if a payment is received while the app is in the background,
+		 	// we won't be able to notify them (in any way, shape or form).
+		 	//
+		 	// Or the user didn't totally disable notifications,
+		 	// but they effectively did. Because they disabled all alerts & badges.
+			
 			Button {
 				showNotificationsDisabledWarning()
 			} label: {
@@ -973,7 +977,7 @@ struct BgAppRefreshDisabledWarning: View {
 					.padding(.bottom, 4)
 				
 				Text(
-					"This means you will not be able to receive payments when Phoenix is in the background.  To receive payments, Phoenix must be open and in the foreground."
+					"This means you will not be able to receive payments when Phoenix is in the background. To receive payments, Phoenix must be open and in the foreground."
 				)
 				.lineLimit(nil)
 				.minimumScaleFactor(0.5) // problems with "foreground" being truncated
@@ -1138,34 +1142,39 @@ struct SwapInFeePopup : View {
 		VStack(alignment: .leading) {
 			
 			Text("Receive with a Bitcoin address")
-				.font(.system(.title3))
+				.font(.headline)
 				.lineLimit(nil)
 				.padding(.bottom, 20)
 			
-			VStack(alignment: .leading, spacing: 20) {
+			VStack(alignment: HorizontalAlignment.leading, spacing: 20) {
 			
 				Text("A standard Bitcoin address will be displayed next.") +
 				Text(" Funds sent to this address will arrive in your wallet after one confirmation.")
 				
-				Text("There is a small fee: ") +
-				Text("0.10%").bold()
+				let min = Utils.formatBitcoin(sat: 10_000, bitcoinUnit: .sat)
+				Group {
+					Text("There is a small fee of ") +
+					Text("0.10%").bold() +
+					Text(" with a minimum fee of ") +
+					Text(min.string).bold() + Text(".")
+				}
 				
-				Text("For example, if you send $100, the fee is 10 cents.")
+				Text("For example, if you send $750, the fee is $0.75.")
 			}
+			.font(.callout)
 			
 			HStack {
 				Spacer()
 				Button("Cancel") {
 					didCancel()
 				}
-				.font(.title3)
 				.padding(.trailing, 8)
 				
 				Button("Proceed") {
 					didAccept()
 				}
-				.font(.title3)
 			}
+			.font(.headline)
 			.padding(.top, 20)
 			
 		} // </VStack>
@@ -1244,6 +1253,14 @@ struct SwapInView: View, ViewName {
 			}
 			.padding([.leading, .trailing], 40)
 			.padding(.bottom)
+			
+			let min = Utils.formatBitcoin(sat: 10_000, bitcoinUnit: .sat)
+			Group {
+				Text("Deposit must be at least ") + Text(min.string).bold()
+			}
+			.font(.subheadline)
+			.padding(.bottom)
+			
 			
 			HStack(alignment: VerticalAlignment.center, spacing: 30) {
 				
