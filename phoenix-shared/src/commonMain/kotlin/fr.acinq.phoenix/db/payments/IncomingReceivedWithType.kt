@@ -1,0 +1,44 @@
+package fr.acinq.phoenix.db.payments
+
+import fr.acinq.bitcoin.ByteVector32
+import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.eclair.db.IncomingPayment
+import fr.acinq.eclair.serialization.ByteVector32KSerializer
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.decodeFromString
+
+
+enum class IncomingReceivedWithTypeVersion {
+    NEW_CHANNEL_V0,
+    LIGHTNING_PAYMENT_V0,
+}
+
+@Serializable
+sealed class IncomingReceivedWithData {
+
+    sealed class NewChannel : IncomingReceivedWithData() {
+        @Serializable
+        data class V0(val fees: MilliSatoshi, @Serializable(with = ByteVector32KSerializer::class) val channelId: ByteVector32?) : NewChannel()
+    }
+
+    sealed class LightningPayment : IncomingReceivedWithData() {
+        @Serializable
+        @SerialName("LIGHTNING_PAYMENT_V0")
+        object V0 : LightningPayment()
+    }
+
+    companion object {
+        fun deserialize(typeVersion: IncomingReceivedWithTypeVersion, blob: ByteArray): IncomingPayment.ReceivedWith = DbTypesHelper.decodeBlob(blob) { json, format ->
+            when (typeVersion) {
+                IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0 -> IncomingPayment.ReceivedWith.LightningPayment
+                IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0 -> format.decodeFromString<NewChannel.V0>(json).let { IncomingPayment.ReceivedWith.NewChannel(it.fees, it.channelId) }
+            }
+        }
+    }
+}
+
+fun IncomingPayment.ReceivedWith.mapToDb(): Pair<IncomingReceivedWithTypeVersion, IncomingReceivedWithData> = when (this) {
+    is IncomingPayment.ReceivedWith.LightningPayment -> IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0 to IncomingReceivedWithData.LightningPayment.V0
+    is IncomingPayment.ReceivedWith.NewChannel -> IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0 to IncomingReceivedWithData.NewChannel.V0(fees, channelId)
+}
