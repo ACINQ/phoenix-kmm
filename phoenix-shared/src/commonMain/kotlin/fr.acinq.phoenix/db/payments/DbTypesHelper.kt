@@ -24,23 +24,15 @@ import kotlinx.serialization.json.Json
 object DbTypesHelper {
 
     /**
-     * Unknown keys are ignored, because Json object is used to deserialize sealed class that contain a type.
-     * However, for convenience, we want to deserialize like this:
-     *
-     * ```
-     * Json.decodeFromString<SucceededOnChain.V0>(json).let { it ->
-     *     // where `it` is a `SucceededOnChain` class, that is a serializable data class which deserializer ignores
-     *     // the sealed class type, so deserialization would fail by rejecting the type as unknown.
-     *     it.xxx
-     * }
-     * ```
+     * Unknown keys are ignored, because serialized sealed class contain a type field.
+     * However, the data blob deserializer only knows the data class fields, and doesn't care for the type,
+     * so it should ignore unknown keys.
      */
-    private val typeFormat = Json { ignoreUnknownKeys = true }
+    val typeFormat = Json { ignoreUnknownKeys = true }
 
     /** Transform a serializable object into a ByteArray for database storage. */
     inline fun <reified T> any2blob(value: T): ByteArray {
-        val json = Json { ignoreUnknownKeys = true }.encodeToString(value)
-        return json.toByteArray(Charsets.UTF_8)
+        return typeFormat.encodeToString(value).toByteArray(Charsets.UTF_8)
     }
 
     /** Decode a byte array and apply a deserialization handler. */
