@@ -19,6 +19,7 @@ package fr.acinq.phoenix.db
 import fr.acinq.bitcoin.Satoshi
 import fr.acinq.eclair.Eclair.randomBytes32
 import fr.acinq.eclair.channel.InvalidFinalScript
+import fr.acinq.eclair.db.ChannelClosingType
 import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.payment.FinalFailure
@@ -83,7 +84,7 @@ class OutgoingPaymentDbTypeVersionTest {
 
     @Test
     fun outgoing_status_success_onchain() {
-        val closingType = OutgoingPayment.Status.Completed.Succeeded.OnChain.ChannelClosingType.Local
+        val closingType = ChannelClosingType.Local
         val status = OutgoingPayment.Status.Completed.Succeeded.OnChain(txs1, Satoshi(42), closingType, completedAt = 123)
         val dbType = status.mapToDb()
         assertEquals(OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 to OutgoingStatusData.SucceededOnChain.V0(txs1, Satoshi(42), closingType), dbType)

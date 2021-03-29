@@ -18,6 +18,7 @@ package fr.acinq.phoenix.db.payments
 
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.bitcoin.Satoshi
+import fr.acinq.eclair.db.ChannelClosingType
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.payment.FinalFailure
 import fr.acinq.eclair.serialization.ByteVector32KSerializer
@@ -45,7 +46,7 @@ sealed class OutgoingStatusData {
         data class V0(
             val txIds: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>,
             @Serializable(with = SatoshiKSerializer::class) val claimed: Satoshi,
-            val closingType: OutgoingPayment.Status.Completed.Succeeded.OnChain.ChannelClosingType
+            val closingType: ChannelClosingType
         ) : SucceededOnChain()
     }
 
@@ -73,6 +74,6 @@ sealed class OutgoingStatusData {
 
 fun OutgoingPayment.Status.Completed.mapToDb(): Pair<OutgoingStatusTypeVersion, OutgoingStatusData> = when (this) {
     is OutgoingPayment.Status.Completed.Succeeded.OffChain -> OutgoingStatusTypeVersion.SUCCEEDED_OFFCHAIN_V0 to OutgoingStatusData.SucceededOffChain.V0(preimage)
-    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 to OutgoingStatusData.SucceededOnChain.V0(txids, claimed, type)
+    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 to OutgoingStatusData.SucceededOnChain.V0(txids, claimed, closingType)
     is OutgoingPayment.Status.Completed.Failed -> OutgoingStatusTypeVersion.FAILED_V0 to OutgoingStatusData.Failed.V0(reason)
 }
