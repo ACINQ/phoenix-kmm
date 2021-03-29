@@ -14,8 +14,8 @@ fileprivate var log = Logger(OSLog.disabled)
 #endif
 
 struct ScanView: MVIView {
-
-	@StateObject var mvi = MVIState({ $0.scan() })
+	
+	@StateObject var mvi: MVIState<Scan.Model, Scan.Intent>
 	
 	@Environment(\.controllerFactory) var factoryEnv
 	var factory: ControllerFactory { return factoryEnv }
@@ -27,6 +27,18 @@ struct ScanView: MVIView {
 	
 	@StateObject var toast = Toast()
 
+	init(isShowing: Binding<Bool>) {
+		self.init(isShowing: isShowing, firstModel: nil)
+	}
+	
+	init(isShowing: Binding<Bool>, firstModel: Scan.Model?) {
+		
+		self._isShowing = isShowing
+		self._mvi = StateObject.init(wrappedValue: MVIState.init {
+			$0.scan(firstModel: firstModel)
+		})
+	}
+	
 	@ViewBuilder
 	var view: some View {
 		
@@ -50,6 +62,9 @@ struct ScanView: MVIView {
 			else if newModel is Scan.ModelSending {
 				isShowing = false
 			}
+		})
+		.onReceive(AppDelegate.get().externalLightningUrlPublisher, perform: { (url: URL) in
+			didReceiveExternalLightningUrl(url)
 		})
 	}
 
@@ -76,6 +91,12 @@ struct ScanView: MVIView {
 		default:
 			fatalError("Unknown model \(mvi.model)")
 		}
+	}
+	
+	func didReceiveExternalLightningUrl(_ url: URL) -> Void {
+		log.trace("didReceiveExternalLightningUrl()")
+		
+		mvi.intent(Scan.IntentParse(request: url.absoluteString))
 	}
 }
 
@@ -242,7 +263,7 @@ struct PopupAlert : View {
 	}
 }
 
-struct ValidateView: View {
+struct ValidateView: View, ViewName {
 	
 	let model: Scan.ModelValidate
 	let postIntent: (Scan.Intent) -> Void
@@ -391,7 +412,7 @@ struct ValidateView: View {
 			} // </VStack>
 			
 		}// </ZStack>
-		.navigationBarTitle("Validate payment", displayMode: .inline)
+		.navigationBarTitle("Confirm Payment", displayMode: .inline)
 		.zIndex(1) // [SendingView, ValidateView, ReadyView]
 		.transition(.asymmetric(insertion: .identity, removal: .opacity))
 		.onAppear() {
@@ -406,7 +427,7 @@ struct ValidateView: View {
 	}
 	
 	func onAppear() -> Void {
-		log.trace("(ValidateView) onAppear()")
+		log.trace("[\(viewName)] onAppear()")
 		
 		let bitcoinUnit = currencyPrefs.bitcoinUnit
 		unit = CurrencyUnit(bitcoinUnit: bitcoinUnit)
@@ -423,7 +444,7 @@ struct ValidateView: View {
 	}
 	
 	func dismissKeyboardIfVisible() -> Void {
-		log.trace("(ValidateView) dismissKeyboardIfVisible()")
+		log.trace("[\(viewName)] dismissKeyboardIfVisible()")
 		
 		let keyWindow = UIApplication.shared.connectedScenes
 			.filter({ $0.activationState == .foregroundActive })
@@ -435,13 +456,13 @@ struct ValidateView: View {
 	}
 	
 	func amountDidChange() -> Void {
-		log.trace("(ValidateView) amountDidChange()")
+		log.trace("[\(viewName)] amountDidChange()")
 		
 		refreshAltAmount()
 	}
 	
 	func unitDidChange() -> Void {
-		log.trace("(ValidateView) unitDidChange()")
+		log.trace("[\(viewName)] unitDidChange()")
 		
 		// We might want to apply a different formatter
 		let result = TextFieldCurrencyStyler.format(input: amount, unit: unit, hideMsats: false)
@@ -452,7 +473,7 @@ struct ValidateView: View {
 	}
 	
 	func refreshAltAmount() -> Void {
-		log.trace("(ValidateView) refreshAltAmount()")
+		log.trace("[\(viewName)] refreshAltAmount()")
 		
 		switch parsedAmount {
 		case .failure(let error):
@@ -514,7 +535,7 @@ struct ValidateView: View {
 	}
 	
 	func sendPayment() -> Void {
-		log.trace("(ValidateView) sendPayment()")
+		log.trace("[\(viewName)] sendPayment()")
 		
 		guard
 			let amt = try? parsedAmount.get(),
@@ -537,7 +558,7 @@ struct ValidateView: View {
 	}
 	
 	func showConnectionsPopover() -> Void {
-		log.trace("(ValidateView) showConnectionsPopover()")
+		log.trace("[\(viewName)] showConnectionsPopover()")
 		
 		popoverState.display.send(PopoverItem(
 			

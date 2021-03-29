@@ -24,6 +24,8 @@ struct HomeView : MVIView {
 
 	@State var selectedPayment: PhoenixShared.Eclair_kmpWalletPayment? = nil
 	
+	@StateObject var toast = Toast()
+	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
 	let lastCompletedPaymentPublisher = KotlinPassthroughSubject<Eclair_kmpWalletPayment>(
@@ -132,12 +134,14 @@ struct HomeView : MVIView {
 					}
 				}
 
-				BottomBar(model: mvi.model)
+				BottomBar(toast: toast)
 			
 			} // </VStack>
 			.padding(.top, keyWindow?.safeAreaInsets.top ?? 0) // bottom handled in BottomBar
 			.padding(.top)
 		
+			toast.view()
+			
 		} // </ZStack>
 		.frame(maxHeight: .infinity)
 		.background(Color.primaryBackground)
@@ -309,14 +313,17 @@ struct FaqButton: View {
 	}
 }
 
-struct BottomBar: View {
+struct BottomBar: View, ViewName {
 
-	let model: Home.Model
-
-	@Environment(\.colorScheme) var colorScheme
+	@ObservedObject var toast: Toast
 	
 	@State var isShowingScan: Bool = false
+	@State var externalLightningRequest: Scan.ModelValidate? = nil
 
+	@State var temp: [AppScanController] = []
+	
+	@Environment(\.colorScheme) var colorScheme
+	
 	var body: some View {
 		
 		HStack {
@@ -351,7 +358,7 @@ struct BottomBar: View {
 			Spacer()
 
 			NavigationLink(
-				destination: ScanView(isShowing: $isShowingScan),
+				destination: ScanView(isShowing: $isShowingScan, firstModel: externalLightningRequest),
 				isActive: $isShowingScan
 			) {
 				HStack {
@@ -369,6 +376,54 @@ struct BottomBar: View {
 		.padding(.bottom, keyWindow?.safeAreaInsets.bottom)
 		.background(colorScheme == .dark ? Color(UIColor.secondarySystemBackground) : Color.white)
 		.cornerRadius(15, corners: [.topLeft, .topRight])
+		.onReceive(AppDelegate.get().externalLightningUrlPublisher, perform: { (url: URL) in
+			didReceiveExternalLightningUrl(url)
+		})
+		.onChange(of: isShowingScan, perform: { value in
+			if value == false {
+				self.externalLightningRequest = nil
+			}
+		})
+	}
+	
+	func didReceiveExternalLightningUrl(_ url: URL) -> Void {
+		log.trace("[\(viewName)] didReceiveExternalLightningUrl()")
+		
+		if isShowingScan {
+			log.debug("[\(viewName)] Ignoring: handled by ScanView")
+			return
+		}
+		
+		guard let scanController = AppDelegate.get().business.controllers.scan() as? AppScanController else {
+			return
+		}
+		temp.append(scanController)
+		
+		var unsubscribe: (() -> Void)? = nil
+		var isFirstFire = true
+		unsubscribe = scanController.subscribe { (model: Scan.Model) in
+			
+			if isFirstFire { // ignore first subscription fire (Scan.ModelReady)
+				isFirstFire = false
+				return
+			}
+			
+			if let model = model as? Scan.ModelValidate {
+				self.externalLightningRequest = model
+				self.isShowingScan = true
+				
+			} else if let _ = model as? Scan.ModelBadRequest {
+				toast.toast(text: "Invalid Lightning Request", duration: 4.0, location: .middle)
+			}
+			
+			// Cleanup
+			if let idx = self.temp.firstIndex(where: { $0 === scanController }) {
+				self.temp.remove(at: idx)
+			}
+			unsubscribe?()
+		}
+		
+		scanController.intent(intent: Scan.IntentParse(request: url.absoluteString))
 	}
 }
 

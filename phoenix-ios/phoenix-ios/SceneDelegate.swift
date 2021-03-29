@@ -1,21 +1,37 @@
 import UIKit
 import SwiftUI
 import Combine
+import os.log
+
+#if DEBUG && true
+fileprivate var log = Logger(
+	subsystem: Bundle.main.bundleIdentifier!,
+	category: "SceneDelegate"
+)
+#else
+fileprivate var log = Logger(OSLog.disabled)
+#endif
+
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
-    var window: UIWindow?
+	var window: UIWindow?
 	var cancellables = Set<AnyCancellable>()
 
-    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+	func scene(
+		_ scene: UIScene,
+		willConnectTo session: UISceneSession,
+		options connectionOptions: UIScene.ConnectionOptions
+	) {
 
-        let contentView = ContentView()
-
-        if let windowScene = scene as? UIWindowScene {
-            let window = UIWindow(windowScene: windowScene)
-            window.rootViewController = UIHostingController(rootView: contentView)
-            self.window = window
-            window.makeKeyAndVisible()
+		let contentView = ContentView()
+		
+		if let windowScene = scene as? UIWindowScene {
+			
+			let window = UIWindow(windowScene: windowScene)
+		   window.rootViewController = UIHostingController(rootView: contentView)
+			self.window = window
+			window.makeKeyAndVisible()
 			window.overrideUserInterfaceStyle = Prefs.shared.theme.toInterfaceStyle() // see note below
 			
 			Prefs.shared.themePublisher.sink {[weak self](theme: Theme) in
@@ -33,32 +49,33 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 			// If you use only the preferredColorScheme, then passing it a non-nil value once will
 			// prevent your UI from supporting the system color prior to app re-launch.
 			// There may be other variations I didn't try, but this solution is currently the most stable.
-        }
-    }
+		}
+	}
 
-    func sceneDidDisconnect(_ scene: UIScene) {
-        // Called as the scene is being released by the system.
-        // This occurs shortly after the scene enters the background, or when its session is discarded.
-        // Release any resources associated with this scene that can be re-created the next time the scene connects.
-        // The scene may re-connect later, as its session was not neccessarily discarded (see `application:didDiscardSceneSessions` instead).
-    }
+	func sceneDidDisconnect(_ scene: UIScene) {
+		// Called as the scene is being released by the system.
+		// This occurs shortly after the scene enters the background, or when its session is discarded.
+		// Release any resources associated with this scene that can be re-created the next time the scene connects.
+		// The scene may re-connect later, as its session was not neccessarily discarded
+		// (see `application:didDiscardSceneSessions` instead).
+	}
 
-    func sceneDidBecomeActive(_ scene: UIScene) {
-        // Called when the scene has moved from an inactive state to an active state.
-        // Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
-    }
+	func sceneDidBecomeActive(_ scene: UIScene) {
+		// Called when the scene has moved from an inactive state to an active state.
+		// Use this method to restart any tasks that were paused (or not yet started) when the scene was inactive.
+	}
 
-    func sceneWillResignActive(_ scene: UIScene) {
-        // Called when the scene will move from an active state to an inactive state.
-        // This may occur due to temporary interruptions (ex. an incoming phone call).
-    }
+	func sceneWillResignActive(_ scene: UIScene) {
+		// Called when the scene will move from an active state to an inactive state.
+		// This may occur due to temporary interruptions (ex. an incoming phone call).
+	}
 
-    func sceneWillEnterForeground(_ scene: UIScene) {
-        // Called as the scene transitions from the background to the foreground.
-        // Use this method to undo the changes made on entering the background.
-    }
+	func sceneWillEnterForeground(_ scene: UIScene) {
+		// Called as the scene transitions from the background to the foreground.
+		// Use this method to undo the changes made on entering the background.
+	}
 
-    func sceneDidEnterBackground(_ scene: UIScene) {
+	func sceneDidEnterBackground(_ scene: UIScene) {
         
 		// Shortly after this method returns:
 		//
@@ -74,6 +91,13 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		if let viewController = window?.rootViewController {
 			viewController.view.setNeedsLayout()
 		}
-    }
+	}
+	
+	func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) -> Void {
+		
+		if let context = URLContexts.first {
+			AppDelegate.get().externalLightningUrlPublisher.send(context.url)
+		}
+	}
 }
 

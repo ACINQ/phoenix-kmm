@@ -17,7 +17,14 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 
-class AppScanController(loggerFactory: LoggerFactory, private val peerManager: PeerManager) : AppController<Scan.Model, Scan.Intent>(loggerFactory, Scan.Model.Ready) {
+class AppScanController(
+    loggerFactory: LoggerFactory,
+    firstModel: Scan.Model?,
+    private val peerManager: PeerManager
+) : AppController<Scan.Model, Scan.Intent>(
+    loggerFactory,
+    firstModel = firstModel ?: Scan.Model.Ready
+) {
 
     init {
         launch {
