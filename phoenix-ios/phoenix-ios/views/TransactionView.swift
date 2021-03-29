@@ -357,7 +357,7 @@ fileprivate struct InfoGrid: View {
 								}
 							}
 						
-						if pClosingInfo.isSentToMyWallet {
+						if pClosingInfo.isSentToDefaultAddress {
 							Text("(This is your address - derived from your seed. You alone possess your seed.)")
 								.font(.footnote)
 								.foregroundColor(.secondary)
