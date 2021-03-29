@@ -19,8 +19,12 @@ package fr.acinq.phoenix.db.payments
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.serialization.ByteVector32KSerializer
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.core.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 enum class OutgoingPartStatusTypeVersion {
     SUCCEEDED_V0,
@@ -54,5 +58,7 @@ sealed class OutgoingPartStatusData {
     }
 }
 
-fun OutgoingPayment.Part.Status.Succeeded.mapToDb() = OutgoingPartStatusTypeVersion.SUCCEEDED_V0 to OutgoingPartStatusData.Succeeded.V0(preimage)
-fun OutgoingPayment.Part.Status.Failed.mapToDb() = OutgoingPartStatusTypeVersion.FAILED_V0 to OutgoingPartStatusData.Failed.V0(remoteFailureCode, details)
+fun OutgoingPayment.Part.Status.Succeeded.mapToDb() = OutgoingPartStatusTypeVersion.SUCCEEDED_V0 to
+        Json.encodeToString(OutgoingPartStatusData.Succeeded.V0(preimage)).toByteArray(Charsets.UTF_8)
+fun OutgoingPayment.Part.Status.Failed.mapToDb() = OutgoingPartStatusTypeVersion.FAILED_V0 to
+        Json.encodeToString(OutgoingPartStatusData.Failed.V0(remoteFailureCode, details)).toByteArray(Charsets.UTF_8)

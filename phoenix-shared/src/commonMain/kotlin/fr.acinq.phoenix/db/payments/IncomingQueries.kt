@@ -22,7 +22,6 @@ import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.utils.toByteVector32
 import fr.acinq.phoenix.db.IncomingPaymentNotFound
-import fr.acinq.phoenix.db.payments.DbTypesHelper.any2blob
 import fracinqphoenixdb.IncomingPaymentsQueries
 
 class IncomingQueries(private val queries: IncomingPaymentsQueries) {
@@ -33,7 +32,7 @@ class IncomingQueries(private val queries: IncomingPaymentsQueries) {
             payment_hash = Crypto.sha256(preimage).toByteVector32().toByteArray(),
             preimage = preimage.toByteArray(),
             origin_type = originType,
-            origin_blob = any2blob(originData),
+            origin_blob = originData,
             created_at = createdAt
         )
     }
@@ -45,7 +44,7 @@ class IncomingQueries(private val queries: IncomingPaymentsQueries) {
                 value = amount.msat,
                 received_at = receivedAt,
                 received_with_type = receivedWithType,
-                received_with_blob = any2blob(receivedWithBlob),
+                received_with_blob = receivedWithBlob,
                 payment_hash = paymentHash.toByteArray()
             )
             if (queries.changes().executeAsOne() != 1L) throw IncomingPaymentNotFound(paymentHash)
@@ -59,11 +58,11 @@ class IncomingQueries(private val queries: IncomingPaymentsQueries) {
             payment_hash = Crypto.sha256(preimage).toByteVector32().toByteArray(),
             preimage = preimage.toByteArray(),
             origin_type = originType,
-            origin_blob = any2blob(originData),
+            origin_blob = originData,
             received_amount_msat = amount.msat,
             received_at = receivedAt,
             received_with_type = receivedWithType,
-            received_with_blob = any2blob(receivedWithBlob),
+            received_with_blob = receivedWithBlob,
             created_at = createdAt
         )
     }

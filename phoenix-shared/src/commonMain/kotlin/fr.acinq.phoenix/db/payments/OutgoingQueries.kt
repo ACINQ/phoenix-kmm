@@ -28,13 +28,9 @@ import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.payment.OutgoingPaymentFailure
 import fr.acinq.eclair.utils.Either
 import fr.acinq.eclair.utils.UUID
-import fr.acinq.eclair.utils.currentTimestampMillis
 import fr.acinq.eclair.wire.FailureMessage
 import fr.acinq.phoenix.db.OutgoingPaymentPartNotFound
-import fr.acinq.phoenix.db.payments.DbTypesHelper.any2blob
 import fracinqphoenixdb.OutgoingPaymentsQueries
-import io.ktor.utils.io.charsets.*
-import io.ktor.utils.io.core.*
 
 class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
 
@@ -62,7 +58,7 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
                 payment_hash = outgoingPayment.details.paymentHash.toByteArray(),
                 created_at = outgoingPayment.createdAt,
                 details_type = detailsTypeVersion,
-                details_blob = any2blob(detailsData)
+                details_blob = detailsData
             )
             outgoingPayment.parts.map {
                 queries.addOutgoingPart(
@@ -83,7 +79,7 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
                 id = id.toString(),
                 completed_at = completed.completedAt,
                 status_type = statusType,
-                status_blob = any2blob(statusBlob)
+                status_blob = statusBlob
             )
             if (queries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(id)
         }
@@ -95,7 +91,7 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
             queries.updateOutgoingPart(
                 part_id = partId.toString(),
                 part_status_type = statusTypeVersion,
-                part_status_blob = any2blob(statusData),
+                part_status_blob = statusData,
                 part_completed_at = completedAt)
             if (queries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(partId)
         }
@@ -107,7 +103,7 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
             queries.updateOutgoingPart(
                 part_id = partId.toString(),
                 part_status_type = statusTypeVersion,
-                part_status_blob = any2blob(statusData),
+                part_status_blob = statusData,
                 part_completed_at = completedAt
             )
             if (queries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(partId)

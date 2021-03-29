@@ -20,8 +20,12 @@ import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.eclair.serialization.ByteVector32KSerializer
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.core.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 
 enum class OutgoingDetailsTypeVersion {
@@ -70,9 +74,13 @@ sealed class OutgoingDetailsData {
     }
 }
 
-fun OutgoingPayment.Details.mapToDb(): Pair<OutgoingDetailsTypeVersion, OutgoingDetailsData> = when (this) {
-    is OutgoingPayment.Details.Normal -> OutgoingDetailsTypeVersion.NORMAL_V0 to OutgoingDetailsData.Normal.V0(paymentRequest.write())
-    is OutgoingPayment.Details.KeySend -> OutgoingDetailsTypeVersion.KEYSEND_V0 to OutgoingDetailsData.KeySend.V0(preimage)
-    is OutgoingPayment.Details.SwapOut -> OutgoingDetailsTypeVersion.SWAPOUT_V0 to OutgoingDetailsData.SwapOut.V0(address, paymentHash)
-    is OutgoingPayment.Details.ChannelClosing -> OutgoingDetailsTypeVersion.CLOSING_V0 to OutgoingDetailsData.Closing.V0(channelId, closingAddress, isSentToDefaultAddress)
+fun OutgoingPayment.Details.mapToDb(): Pair<OutgoingDetailsTypeVersion, ByteArray> = when (this) {
+    is OutgoingPayment.Details.Normal -> OutgoingDetailsTypeVersion.NORMAL_V0 to
+            Json.encodeToString(OutgoingDetailsData.Normal.V0(paymentRequest.write())).toByteArray(Charsets.UTF_8)
+    is OutgoingPayment.Details.KeySend -> OutgoingDetailsTypeVersion.KEYSEND_V0 to
+            Json.encodeToString(OutgoingDetailsData.KeySend.V0(preimage)).toByteArray(Charsets.UTF_8)
+    is OutgoingPayment.Details.SwapOut -> OutgoingDetailsTypeVersion.SWAPOUT_V0 to
+            Json.encodeToString(OutgoingDetailsData.SwapOut.V0(address, paymentHash)).toByteArray(Charsets.UTF_8)
+    is OutgoingPayment.Details.ChannelClosing -> OutgoingDetailsTypeVersion.CLOSING_V0 to
+            Json.encodeToString(OutgoingDetailsData.Closing.V0(channelId, closingAddress, isSentToDefaultAddress)).toByteArray(Charsets.UTF_8)
 }

@@ -18,23 +18,11 @@ package fr.acinq.phoenix.db.payments
 
 import io.ktor.utils.io.charsets.*
 import io.ktor.utils.io.core.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 object DbTypesHelper {
-
-    /**
-     * Unknown keys are ignored, because serialized sealed class contain a type field.
-     * However, the data blob deserializer only knows the data class fields, and doesn't care for the type,
-     * so it should ignore unknown keys.
-     */
-    val typeFormat = Json { ignoreUnknownKeys = true }
-
-    /** Transform a serializable object into a ByteArray for database storage. */
-    inline fun <reified T> any2blob(value: T): ByteArray {
-        return typeFormat.encodeToString(value).toByteArray(Charsets.UTF_8)
-    }
-
     /** Decode a byte array and apply a deserialization handler. */
-    fun <T> decodeBlob(blob: ByteArray, handler: (String, Json) -> T) = handler(String(bytes = blob, charset = Charsets.UTF_8), typeFormat)
+    fun <T> decodeBlob(blob: ByteArray, handler: (String, Json) -> T) = handler(String(bytes = blob, charset = Charsets.UTF_8), Json)
 }

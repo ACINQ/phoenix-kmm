@@ -19,9 +19,13 @@ package fr.acinq.phoenix.db.payments
 import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.phoenix.db.payments.DbTypesHelper.decodeBlob
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.core.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 
 enum class IncomingOriginTypeVersion {
@@ -60,8 +64,11 @@ sealed class IncomingOriginData {
     }
 }
 
-fun IncomingPayment.Origin.mapToDb() = when (this) {
-    is IncomingPayment.Origin.KeySend -> IncomingOriginTypeVersion.KEYSEND_V0 to IncomingOriginData.KeySend.V0
-    is IncomingPayment.Origin.Invoice -> IncomingOriginTypeVersion.INVOICE_V0 to IncomingOriginData.Invoice.V0(paymentRequest.write())
-    is IncomingPayment.Origin.SwapIn -> IncomingOriginTypeVersion.SWAPIN_V0 to IncomingOriginData.SwapIn.V0(address)
+fun IncomingPayment.Origin.mapToDb(): Pair<IncomingOriginTypeVersion, ByteArray> = when (this) {
+    is IncomingPayment.Origin.KeySend -> IncomingOriginTypeVersion.KEYSEND_V0 to
+            Json.encodeToString(IncomingOriginData.KeySend.V0).toByteArray(Charsets.UTF_8)
+    is IncomingPayment.Origin.Invoice -> IncomingOriginTypeVersion.INVOICE_V0 to
+            Json.encodeToString(IncomingOriginData.Invoice.V0(paymentRequest.write())).toByteArray(Charsets.UTF_8)
+    is IncomingPayment.Origin.SwapIn -> IncomingOriginTypeVersion.SWAPIN_V0 to
+            Json.encodeToString(IncomingOriginData.SwapIn.V0(address)).toByteArray(Charsets.UTF_8)
 }

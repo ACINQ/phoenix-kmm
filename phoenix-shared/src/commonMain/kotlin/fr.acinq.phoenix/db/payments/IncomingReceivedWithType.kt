@@ -20,9 +20,13 @@ import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.serialization.ByteVector32KSerializer
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.core.*
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 
 enum class IncomingReceivedWithTypeVersion {
@@ -54,7 +58,9 @@ sealed class IncomingReceivedWithData {
     }
 }
 
-fun IncomingPayment.ReceivedWith.mapToDb(): Pair<IncomingReceivedWithTypeVersion, IncomingReceivedWithData> = when (this) {
-    is IncomingPayment.ReceivedWith.LightningPayment -> IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0 to IncomingReceivedWithData.LightningPayment.V0
-    is IncomingPayment.ReceivedWith.NewChannel -> IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0 to IncomingReceivedWithData.NewChannel.V0(fees, channelId)
+fun IncomingPayment.ReceivedWith.mapToDb(): Pair<IncomingReceivedWithTypeVersion, ByteArray> = when (this) {
+    is IncomingPayment.ReceivedWith.LightningPayment -> IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0 to
+            Json.encodeToString(IncomingReceivedWithData.LightningPayment.V0).toByteArray(Charsets.UTF_8)
+    is IncomingPayment.ReceivedWith.NewChannel -> IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0 to
+            Json.encodeToString(IncomingReceivedWithData.NewChannel.V0(fees, channelId)).toByteArray(Charsets.UTF_8)
 }

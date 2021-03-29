@@ -24,8 +24,12 @@ import fr.acinq.eclair.payment.FinalFailure
 import fr.acinq.eclair.serialization.ByteVector32KSerializer
 import fr.acinq.eclair.serialization.SatoshiKSerializer
 import fr.acinq.phoenix.db.payments.DbTypesHelper.decodeBlob
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.core.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 enum class OutgoingStatusTypeVersion {
     SUCCEEDED_OFFCHAIN_V0,
@@ -72,8 +76,11 @@ sealed class OutgoingStatusData {
     }
 }
 
-fun OutgoingPayment.Status.Completed.mapToDb(): Pair<OutgoingStatusTypeVersion, OutgoingStatusData> = when (this) {
-    is OutgoingPayment.Status.Completed.Succeeded.OffChain -> OutgoingStatusTypeVersion.SUCCEEDED_OFFCHAIN_V0 to OutgoingStatusData.SucceededOffChain.V0(preimage)
-    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 to OutgoingStatusData.SucceededOnChain.V0(txids, claimed, closingType)
-    is OutgoingPayment.Status.Completed.Failed -> OutgoingStatusTypeVersion.FAILED_V0 to OutgoingStatusData.Failed.V0(reason)
+fun OutgoingPayment.Status.Completed.mapToDb(): Pair<OutgoingStatusTypeVersion, ByteArray> = when (this) {
+    is OutgoingPayment.Status.Completed.Succeeded.OffChain -> OutgoingStatusTypeVersion.SUCCEEDED_OFFCHAIN_V0 to
+            Json.encodeToString(OutgoingStatusData.SucceededOffChain.V0(preimage)).toByteArray(Charsets.UTF_8)
+    is OutgoingPayment.Status.Completed.Succeeded.OnChain -> OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 to
+            Json.encodeToString(OutgoingStatusData.SucceededOnChain.V0(txids, claimed, closingType)).toByteArray(Charsets.UTF_8)
+    is OutgoingPayment.Status.Completed.Failed -> OutgoingStatusTypeVersion.FAILED_V0 to
+            Json.encodeToString(OutgoingStatusData.Failed.V0(reason)).toByteArray(Charsets.UTF_8)
 }

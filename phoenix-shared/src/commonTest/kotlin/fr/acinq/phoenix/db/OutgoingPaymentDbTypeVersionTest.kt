@@ -41,44 +41,28 @@ class OutgoingPaymentDbTypeVersionTest {
     @Test
     fun outgoing_details_normal() {
         val details = OutgoingPayment.Details.Normal(paymentRequest1)
-        val dbType = details.mapToDb()
-        assertEquals(OutgoingDetailsTypeVersion.NORMAL_V0 to OutgoingDetailsData.Normal.V0(paymentRequest1.write()), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.NORMAL_V0, blob)
+        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.NORMAL_V0, details.mapToDb().second)
         assertEquals(details, deserialized)
     }
 
     @Test
     fun outgoing_keysend_normal() {
         val details = OutgoingPayment.Details.KeySend(preimage1)
-        val dbType = details.mapToDb()
-        assertEquals(OutgoingDetailsTypeVersion.KEYSEND_V0 to OutgoingDetailsData.KeySend.V0(preimage1), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.KEYSEND_V0, blob)
+        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.KEYSEND_V0, details.mapToDb().second)
         assertEquals(details, deserialized)
     }
 
     @Test
     fun outgoing_details_swapout() {
         val details = OutgoingPayment.Details.SwapOut(address1, paymentHash1)
-        val dbType = details.mapToDb()
-        assertEquals(OutgoingDetailsTypeVersion.SWAPOUT_V0 to OutgoingDetailsData.SwapOut.V0(address1, paymentHash1), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.SWAPOUT_V0, blob)
+        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.SWAPOUT_V0, details.mapToDb().second)
         assertEquals(details, deserialized)
     }
 
     @Test
     fun outgoing_details_closing() {
         val details = OutgoingPayment.Details.ChannelClosing(channelId1, address1, false)
-        val dbType = details.mapToDb()
-        assertEquals(OutgoingDetailsTypeVersion.CLOSING_V0 to OutgoingDetailsData.Closing.V0(channelId1, address1, false), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.CLOSING_V0, blob)
+        val deserialized = OutgoingDetailsData.deserialize(OutgoingDetailsTypeVersion.CLOSING_V0, details.mapToDb().second)
         assertEquals(details, deserialized)
     }
 
@@ -86,66 +70,42 @@ class OutgoingPaymentDbTypeVersionTest {
     fun outgoing_status_success_onchain() {
         val closingType = ChannelClosingType.Local
         val status = OutgoingPayment.Status.Completed.Succeeded.OnChain(txs1, Satoshi(42), closingType, completedAt = 123)
-        val dbType = status.mapToDb()
-        assertEquals(OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 to OutgoingStatusData.SucceededOnChain.V0(txs1, Satoshi(42), closingType), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingStatusData.deserialize(OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0, blob, completedAt = 123)
+        val deserialized = OutgoingStatusData.deserialize(OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0, status.mapToDb().second, completedAt = 123)
         assertEquals(status, deserialized)
     }
 
     @Test
     fun outgoing_status_success_offchain() {
         val status = OutgoingPayment.Status.Completed.Succeeded.OffChain(preimage1, 456)
-        val dbType = status.mapToDb()
-        assertEquals(OutgoingStatusTypeVersion.SUCCEEDED_OFFCHAIN_V0 to OutgoingStatusData.SucceededOffChain.V0(preimage1), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingStatusData.deserialize(OutgoingStatusTypeVersion.SUCCEEDED_OFFCHAIN_V0, blob, completedAt = 456)
+        val deserialized = OutgoingStatusData.deserialize(OutgoingStatusTypeVersion.SUCCEEDED_OFFCHAIN_V0, status.mapToDb().second, completedAt = 456)
         assertEquals(status, deserialized)
     }
 
     @Test
     fun outgoing_status_failed() {
         val status = OutgoingPayment.Status.Completed.Failed(FinalFailure.UnknownError, 789)
-        val dbType = status.mapToDb()
-        assertEquals(OutgoingStatusTypeVersion.FAILED_V0 to OutgoingStatusData.Failed.V0(FinalFailure.UnknownError), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingStatusData.deserialize(OutgoingStatusTypeVersion.FAILED_V0, blob, completedAt = 789)
+        val deserialized = OutgoingStatusData.deserialize(OutgoingStatusTypeVersion.FAILED_V0, status.mapToDb().second, completedAt = 789)
         assertEquals(status, deserialized)
     }
 
     @Test
     fun outgoing_part_status_failed_channelexception() {
         val status = OutgoingPayment.Part.Status.Failed(null, InvalidFinalScript(channelId1).details(), completedAt = 123)
-        val dbType = status.mapToDb()
-        assertEquals(OutgoingPartStatusTypeVersion.FAILED_V0 to OutgoingPartStatusData.Failed.V0(null, InvalidFinalScript(channelId1).details()), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingPartStatusData.deserialize(OutgoingPartStatusTypeVersion.FAILED_V0, blob, completedAt = 123)
+        val deserialized = OutgoingPartStatusData.deserialize(OutgoingPartStatusTypeVersion.FAILED_V0, status.mapToDb().second, completedAt = 123)
         assertEquals(status, deserialized)
     }
 
     @Test
     fun outgoing_part_status_failed_remotefailure() {
         val status = OutgoingPayment.Part.Status.Failed(PermanentNodeFailure.code, PermanentNodeFailure.message, completedAt = 345)
-        val dbType = status.mapToDb()
-        assertEquals(OutgoingPartStatusTypeVersion.FAILED_V0 to OutgoingPartStatusData.Failed.V0(PermanentNodeFailure.code, PermanentNodeFailure.message), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingPartStatusData.deserialize(OutgoingPartStatusTypeVersion.FAILED_V0, blob, completedAt = 345)
+        val deserialized = OutgoingPartStatusData.deserialize(OutgoingPartStatusTypeVersion.FAILED_V0, status.mapToDb().second, completedAt = 345)
         assertEquals(status, deserialized)
     }
 
     @Test
     fun outgoing_part_status_succeeded() {
         val status = OutgoingPayment.Part.Status.Succeeded(preimage1, completedAt = 3456)
-        val dbType = status.mapToDb()
-        assertEquals(OutgoingPartStatusTypeVersion.SUCCEEDED_V0 to OutgoingPartStatusData.Succeeded.V0(preimage1), dbType)
-
-        val blob = DbTypesHelper.any2blob(dbType.second)
-        val deserialized = OutgoingPartStatusData.deserialize(OutgoingPartStatusTypeVersion.SUCCEEDED_V0, blob, completedAt = 3456)
+        val deserialized = OutgoingPartStatusData.deserialize(OutgoingPartStatusTypeVersion.SUCCEEDED_V0, status.mapToDb().second, completedAt = 3456)
         assertEquals(status, deserialized)
     }
 
