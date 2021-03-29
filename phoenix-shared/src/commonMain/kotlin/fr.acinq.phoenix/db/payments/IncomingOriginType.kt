@@ -34,7 +34,6 @@ enum class IncomingOriginTypeVersion {
     SWAPIN_V0
 }
 
-@Serializable
 sealed class IncomingOriginData {
 
     sealed class KeySend : IncomingOriginData() {

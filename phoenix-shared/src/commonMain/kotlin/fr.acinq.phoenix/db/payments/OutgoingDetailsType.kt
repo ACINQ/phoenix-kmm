@@ -35,7 +35,6 @@ enum class OutgoingDetailsTypeVersion {
     CLOSING_V0,
 }
 
-@Serializable
 sealed class OutgoingDetailsData {
 
     sealed class Normal : OutgoingDetailsData() {

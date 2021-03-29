@@ -37,7 +37,6 @@ enum class OutgoingStatusTypeVersion {
     FAILED_V0,
 }
 
-@Serializable
 sealed class OutgoingStatusData {
 
     sealed class SucceededOffChain : OutgoingStatusData() {

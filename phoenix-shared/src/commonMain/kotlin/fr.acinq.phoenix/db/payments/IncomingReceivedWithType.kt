@@ -34,7 +34,6 @@ enum class IncomingReceivedWithTypeVersion {
     LIGHTNING_PAYMENT_V0,
 }
 
-@Serializable
 sealed class IncomingReceivedWithData {
 
     sealed class NewChannel : IncomingReceivedWithData() {

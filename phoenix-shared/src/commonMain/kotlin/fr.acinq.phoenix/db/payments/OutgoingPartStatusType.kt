@@ -31,7 +31,6 @@ enum class OutgoingPartStatusTypeVersion {
     FAILED_V0,
 }
 
-@Serializable
 sealed class OutgoingPartStatusData {
 
     sealed class Succeeded : OutgoingPartStatusData() {
