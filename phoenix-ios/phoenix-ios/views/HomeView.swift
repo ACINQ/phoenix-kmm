@@ -19,15 +19,15 @@ struct HomeView : MVIView {
 	@Environment(\.controllerFactory) var factoryEnv
 	var factory: ControllerFactory { return factoryEnv }
 
-	@State var lastPayment: PhoenixShared.Eclair_kmpWalletPayment? = nil
+	@State var lastCompletedPayment: PhoenixShared.Eclair_kmpWalletPayment? = nil
 	@State var showConnections = false
 
 	@State var selectedPayment: PhoenixShared.Eclair_kmpWalletPayment? = nil
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
-	let lastIncomingPaymentPublisher = KotlinPassthroughSubject<Eclair_kmpWalletPayment>(
-		AppDelegate.get().business.paymentsManager.lastIncomingPayment
+	let lastCompletedPaymentPublisher = KotlinPassthroughSubject<Eclair_kmpWalletPayment>(
+		AppDelegate.get().business.paymentsManager.lastCompletedPayment
 	)
 
 	@ViewBuilder
@@ -36,10 +36,10 @@ struct HomeView : MVIView {
 		main
 			.navigationBarTitle("", displayMode: .inline)
 			.navigationBarHidden(true)
-			.onReceive(lastIncomingPaymentPublisher) { (payment: Eclair_kmpWalletPayment) in
+			.onReceive(lastCompletedPaymentPublisher) { (payment: Eclair_kmpWalletPayment) in
 				
-				if lastPayment != payment {
-					lastPayment = payment
+				if lastCompletedPayment != payment {
+					lastCompletedPayment = payment
 					selectedPayment = payment
 				}
 			}

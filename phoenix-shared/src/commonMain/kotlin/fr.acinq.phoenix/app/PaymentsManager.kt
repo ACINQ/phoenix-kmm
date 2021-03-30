@@ -4,9 +4,7 @@ import fr.acinq.eclair.MilliSatoshi
 import fr.acinq.eclair.db.IncomingPayment
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.db.WalletPayment
-import fr.acinq.eclair.io.PaymentReceived
-import fr.acinq.eclair.io.SwapInConfirmedEvent
-import fr.acinq.eclair.io.SwapInPendingEvent
+import fr.acinq.eclair.io.*
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.eclair.utils.UUID
 import fr.acinq.eclair.utils.getValue
@@ -40,6 +38,9 @@ class PaymentsManager(
     internal val incomingSwaps = MutableStateFlow<Map<String, MilliSatoshi>>(HashMap())
     private var _incomingSwaps by incomingSwaps
 
+    private val _lastCompletedPayment = MutableStateFlow<WalletPayment?>(null)
+    val lastCompletedPayment: StateFlow<WalletPayment?> = _lastCompletedPayment
+
     /**
      * Broadcasts the most recent incoming payment since the app was launched.
      *
@@ -66,7 +67,16 @@ class PaymentsManager(
         launch {
             peerManager.getPeer().openListenerEventSubscription().consumeEach { event ->
                 when (event) {
+                    is PaymentSent -> {
+                        _lastCompletedPayment.value = event.payment
+                    }
+                    is PaymentNotSent -> {
+                        paymentsDb.getOutgoingPayment(event.request.paymentId)?.let {
+                            _lastCompletedPayment.value = it
+                        }
+                    }
                     is PaymentReceived -> {
+                        _lastCompletedPayment.value = event.incomingPayment
                         _lastIncomingPayment.value = event.incomingPayment
                     }
                     is SwapInPendingEvent -> {
