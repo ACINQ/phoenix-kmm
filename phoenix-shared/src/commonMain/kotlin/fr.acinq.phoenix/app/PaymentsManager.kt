@@ -8,6 +8,7 @@ import fr.acinq.eclair.io.PaymentReceived
 import fr.acinq.eclair.io.SwapInConfirmedEvent
 import fr.acinq.eclair.io.SwapInPendingEvent
 import fr.acinq.eclair.payment.PaymentRequest
+import fr.acinq.eclair.utils.UUID
 import fr.acinq.eclair.utils.getValue
 import fr.acinq.eclair.utils.setValue
 import fr.acinq.eclair.utils.toMilliSatoshi
@@ -78,6 +79,8 @@ class PaymentsManager(
             }
         }
     }
+
+    suspend fun getOutgoingPayment(id: UUID): OutgoingPayment? = paymentsDb.getOutgoingPayment(id)
 
     fun subscribeToLastIncomingPayment(): StateFlow<WalletPayment?> = lastIncomingPayment
 }

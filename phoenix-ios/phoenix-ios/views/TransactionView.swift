@@ -188,7 +188,7 @@ struct PaymentView : View {
 			// so we can improve our fees description.
 			
 			let paymentId = outgoingPayment.component1()
-			AppDelegate.get().business.getOutgoingPayment(id: paymentId) {
+			AppDelegate.get().business.paymentsManager.getOutgoingPayment(id: paymentId) {
 				(fullOutgoingPayment: Eclair_kmpOutgoingPayment?, error: Error?) in
 				
 				if let fullOutgoingPayment = fullOutgoingPayment {

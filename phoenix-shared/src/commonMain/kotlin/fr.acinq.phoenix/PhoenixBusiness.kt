@@ -69,7 +69,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
 
     private val walletManager by lazy { WalletManager() }
     private val peerManager by lazy { PeerManager(loggerFactory, walletManager, appConfigurationManager, paymentsDb, tcpSocketBuilder, electrumWatcher, chain, ctx) }
-    private val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peerManager) }
+    val paymentsManager by lazy { PaymentsManager(loggerFactory, paymentsDb, peerManager) }
     val appConfigurationManager by lazy { AppConfigurationManager(appDb, httpClient, electrumClient, chain, loggerFactory) }
 
     val currencyManager by lazy { CurrencyManager(loggerFactory, appDb, httpClient) }
@@ -118,10 +118,6 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     fun getXpub(): Pair<String, String>? = walletManager.wallet.value?.xpub(chain.isMainnet())
 
     fun peerState() = peerManager.peerState
-
-    suspend fun getOutgoingPayment(id: UUID): OutgoingPayment? {
-        return paymentsDb.getOutgoingPayment(id)
-    }
 
     // The (node_id, fcm_token) tuple only needs to be registered once.
     // And after that, only if the tuple changes (e.g. different fcm_token).
