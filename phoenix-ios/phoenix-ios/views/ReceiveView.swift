@@ -139,6 +139,7 @@ struct ReceiveLightningView: View, ViewName {
 	@State var notificationsDisabled = false
 	@State var alertsDisabled = false
 	@State var badgesDisabled = false
+	@State var showRequestPushPermissionPopupTimer: Timer? = nil
 	
 	@Environment(\.horizontalSizeClass) var horizontalSizeClass: UserInterfaceSizeClass?
 	@Environment(\.verticalSizeClass) var verticalSizeClass: UserInterfaceSizeClass?
@@ -168,6 +169,9 @@ struct ReceiveLightningView: View, ViewName {
 		} // </Group>
 		.onAppear {
 			onAppear()
+		}
+		.onDisappear {
+			onDisappear()
 		}
 		.onChange(of: mvi.model, perform: { newModel in
 			onModelChange(model: newModel)
@@ -505,14 +509,21 @@ struct ReceiveLightningView: View, ViewName {
 			// But let's show the popup after a brief delay,
 			// to allow the user to see what this view is about.
 			
-			DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-				showRequestPushPermissionPopup()
-			}
+			showRequestPushPermissionPopupTimer =
+				Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false) { _ in
+					showRequestPushPermissionPopup()
+				}
 			
 		} else {
 			
 			checkPushPermissions()
 		}
+	}
+	
+	func onDisappear() -> Void {
+		log.trace("[\(viewName)] onDisappear()")
+		
+		showRequestPushPermissionPopupTimer?.invalidate()
 	}
 	
 	func onModelChange(model: Receive.Model) -> Void {
