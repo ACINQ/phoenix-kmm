@@ -25,6 +25,10 @@ struct HomeView : MVIView {
 	@State var selectedPayment: PhoenixShared.Eclair_kmpWalletPayment? = nil
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
+	
+	let lastIncomingPaymentPublisher = KotlinPassthroughSubject<Eclair_kmpWalletPayment>(
+		AppDelegate.get().business.paymentsManager.lastIncomingPayment
+	)
 
 	@ViewBuilder
 	var view: some View {
@@ -32,13 +36,13 @@ struct HomeView : MVIView {
 		main
 			.navigationBarTitle("", displayMode: .inline)
 			.navigationBarHidden(true)
-			.onChange(of: mvi.model, perform: { newModel in
-
-				if lastPayment != newModel.lastPayment {
-					lastPayment = newModel.lastPayment
-					selectedPayment = lastPayment
+			.onReceive(lastIncomingPaymentPublisher) { (payment: Eclair_kmpWalletPayment) in
+				
+				if lastPayment != payment {
+					lastPayment = payment
+					selectedPayment = payment
 				}
-			})
+			}
 	}
 	
 	@ViewBuilder
@@ -383,8 +387,7 @@ class HomeView_Previews: PreviewProvider {
 		HomeView().mock(Home.Model(
 			balance: Eclair_kmpMilliSatoshi(msat: 123500),
 			incomingBalance: Eclair_kmpMilliSatoshi(msat: 0),
-			payments: [],
-			lastPayment: nil
+			payments: []
 		))
 		.preferredColorScheme(.dark)
 		.previewDevice("iPhone 8")
@@ -393,8 +396,7 @@ class HomeView_Previews: PreviewProvider {
 		HomeView().mock(Home.Model(
 			balance: Eclair_kmpMilliSatoshi(msat: 1000000),
 			incomingBalance: Eclair_kmpMilliSatoshi(msat: 12000000),
-			payments: [],
-			lastPayment: nil
+			payments: []
 		))
 		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")

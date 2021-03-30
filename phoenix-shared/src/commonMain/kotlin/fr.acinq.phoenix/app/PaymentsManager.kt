@@ -53,7 +53,8 @@ class PaymentsManager(
      *
      * As a side effect, this allows the app to show a notification when a payment has been received.
      */
-    private val lastIncomingPayment = MutableStateFlow<WalletPayment?>(null)
+    private val _lastIncomingPayment = MutableStateFlow<WalletPayment?>(null)
+    val lastIncomingPayment: StateFlow<WalletPayment?> = _lastIncomingPayment
 
     init {
         launch {
@@ -66,7 +67,7 @@ class PaymentsManager(
             peerManager.getPeer().openListenerEventSubscription().consumeEach { event ->
                 when (event) {
                     is PaymentReceived -> {
-                        lastIncomingPayment.value = event.incomingPayment
+                        _lastIncomingPayment.value = event.incomingPayment
                     }
                     is SwapInPendingEvent -> {
                         _incomingSwaps = _incomingSwaps + (event.swapInPending.bitcoinAddress to event.swapInPending.amount.toMilliSatoshi())
@@ -81,8 +82,6 @@ class PaymentsManager(
     }
 
     suspend fun getOutgoingPayment(id: UUID): OutgoingPayment? = paymentsDb.getOutgoingPayment(id)
-
-    fun subscribeToLastIncomingPayment(): StateFlow<WalletPayment?> = lastIncomingPayment
 }
 
 fun WalletPayment.desc(): String? = when (this) {
