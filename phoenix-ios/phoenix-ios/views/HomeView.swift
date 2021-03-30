@@ -317,10 +317,15 @@ struct BottomBar: View, ViewName {
 
 	@ObservedObject var toast: Toast
 	
-	@State var isShowingScan: Bool = false
-	@State var externalLightningRequest: Scan.ModelValidate? = nil
-
+	@State private var selectedTag: String? = nil
+	enum Tag: String {
+		case ConfigurationView
+		case ReceiveView
+		case ScanView
+	}
+	
 	@State var temp: [AppScanController] = []
+	@State var externalLightningRequest: Scan.ModelValidate? = nil
 	
 	@Environment(\.colorScheme) var colorScheme
 	
@@ -329,7 +334,9 @@ struct BottomBar: View, ViewName {
 		HStack {
 
 			NavigationLink(
-				destination: ConfigurationView()
+				destination: ConfigurationView(),
+				tag: Tag.ConfigurationView.rawValue,
+				selection: $selectedTag
 			) {
 				Image("ic_settings")
 					.resizable()
@@ -342,7 +349,9 @@ struct BottomBar: View, ViewName {
 			Spacer()
 			
 			NavigationLink(
-				destination: ReceiveView()
+				destination: ReceiveView(),
+				tag: Tag.ReceiveView.rawValue,
+				selection: $selectedTag
 			) {
 				HStack {
 					Image("ic_receive")
@@ -358,8 +367,9 @@ struct BottomBar: View, ViewName {
 			Spacer()
 
 			NavigationLink(
-				destination: ScanView(isShowing: $isShowingScan, firstModel: externalLightningRequest),
-				isActive: $isShowingScan
+				destination: ScanView(firstModel: externalLightningRequest),
+				tag: Tag.ScanView.rawValue,
+				selection: $selectedTag
 			) {
 				HStack {
 					Image("ic_scan")
@@ -379,8 +389,10 @@ struct BottomBar: View, ViewName {
 		.onReceive(AppDelegate.get().externalLightningUrlPublisher, perform: { (url: URL) in
 			didReceiveExternalLightningUrl(url)
 		})
-		.onChange(of: isShowingScan, perform: { value in
-			if value == false {
+		.onChange(of: selectedTag, perform: { tag in
+			if tag == nil {
+				// If we pushed the ScanView with a external lightning url,
+				// we should nil out the url (since the user is finished with it now).
 				self.externalLightningRequest = nil
 			}
 		})
@@ -389,10 +401,24 @@ struct BottomBar: View, ViewName {
 	func didReceiveExternalLightningUrl(_ url: URL) -> Void {
 		log.trace("[\(viewName)] didReceiveExternalLightningUrl()")
 		
-		if isShowingScan {
+		if selectedTag == Tag.ScanView.rawValue {
 			log.debug("[\(viewName)] Ignoring: handled by ScanView")
 			return
 		}
+		
+		// We want to:
+		// - Parse the incoming lightning url
+		// - If it's invalid, we want to display a warning (using the Toast view)
+		// - Otherwise we want to jump DIRECTLY to the "Confirm Payment" screen.
+		//
+		// In particular, we do **NOT** want the user experience to be:
+		// - switch to ScanView
+		// - then again switch to ConfirmView
+		// This feels jittery :(
+		//
+		// So we need to:
+		// - get a Scan.ModelValidate instance
+		// - pass this to ScanView as the `firstModel` parameter
 		
 		guard let scanController = AppDelegate.get().business.controllers.scan() as? AppScanController else {
 			return
@@ -410,10 +436,11 @@ struct BottomBar: View, ViewName {
 			
 			if let model = model as? Scan.ModelValidate {
 				self.externalLightningRequest = model
-				self.isShowingScan = true
+				self.selectedTag = Tag.ScanView.rawValue
 				
 			} else if let _ = model as? Scan.ModelBadRequest {
-				toast.toast(text: "Invalid Lightning Request", duration: 4.0, location: .middle)
+				let msg = NSLocalizedString("Invalid Lightning Request", comment: "toast warning")
+				toast.toast(text: msg, duration: 4.0, location: .middle)
 			}
 			
 			// Cleanup

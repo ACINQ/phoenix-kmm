@@ -19,21 +19,16 @@ struct ScanView: MVIView {
 	
 	@Environment(\.controllerFactory) var factoryEnv
 	var factory: ControllerFactory { return factoryEnv }
-	
-	@Binding var isShowing: Bool
 
 	@State var paymentRequest: String? = nil
 	@State var isWarningDisplayed: Bool = false
 	
 	@StateObject var toast = Toast()
-
-	init(isShowing: Binding<Bool>) {
-		self.init(isShowing: isShowing, firstModel: nil)
-	}
 	
-	init(isShowing: Binding<Bool>, firstModel: Scan.Model?) {
+	@Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
+	
+	init(firstModel: Scan.Model? = nil) {
 		
-		self._isShowing = isShowing
 		self._mvi = StateObject.init(wrappedValue: MVIState.init {
 			$0.scan(firstModel: firstModel)
 		})
@@ -60,7 +55,8 @@ struct ScanView: MVIView {
 				paymentRequest = model.request
 			}
 			else if newModel is Scan.ModelSending {
-				isShowing = false
+				// Pop self from NavigationStack; Back to HomeView
+				presentationMode.wrappedValue.dismiss()
 			}
 		})
 		.onReceive(AppDelegate.get().externalLightningUrlPublisher, perform: { (url: URL) in
@@ -599,13 +595,11 @@ struct SendingView: View {
 class ScanView_Previews: PreviewProvider {
 	
 	static let request = "lntb15u1p0hxs84pp5662ywy9px43632le69s5am03m6h8uddgln9cx9l8v524v90ylmesdq4xysyymr0vd4kzcmrd9hx7cqp2xqrrss9qy9qsqsp5xr4khzu3xter2z7dldnl3eqggut200vzth6cj8ppmqvx29hzm30q0as63ks9zddk3l5vf46lmkersynge3fy9nywwn8z8ttfdpak5ka9dvcnfrq95e6s06jacnsdryq8l8mrjkrfyd3vxgyv4axljvplmwsqae7yl9"
-	
-	@State static var isShowing = true
 
 	static var previews: some View {
 		
 		NavigationView {
-			ScanView(isShowing: $isShowing).mock(Scan.ModelValidate(
+			ScanView().mock(Scan.ModelValidate(
 				request: request,
 				amountMsat: 1_500,
 				requestDescription: "1 Blockaccino",
