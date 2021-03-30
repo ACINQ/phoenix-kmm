@@ -49,13 +49,13 @@ sealed class OutgoingStatusData {
         data class V0(
             val txIds: List<@Serializable(with = ByteVector32KSerializer::class) ByteVector32>,
             @Serializable(with = SatoshiKSerializer::class) val claimed: Satoshi,
-            val closingType: ChannelClosingType
+            val closingType: String
         ) : SucceededOnChain()
     }
 
     sealed class Failed : OutgoingStatusData() {
         @Serializable
-        data class V0(val reason: FinalFailure) : Failed()
+        data class V0(val reason: String) : Failed()
     }
 
     companion object {
@@ -65,12 +65,34 @@ sealed class OutgoingStatusData {
                     OutgoingPayment.Status.Completed.Succeeded.OffChain(it.preimage, completedAt)
                 }
                 OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 -> format.decodeFromString<SucceededOnChain.V0>(json).let {
-                    OutgoingPayment.Status.Completed.Succeeded.OnChain(it.txIds, it.claimed, it.closingType, completedAt)
+                    OutgoingPayment.Status.Completed.Succeeded.OnChain(it.txIds, it.claimed, deserializeClosingType(it.closingType), completedAt)
                 }
                 OutgoingStatusTypeVersion.FAILED_V0 -> format.decodeFromString<Failed.V0>(json).let {
-                    OutgoingPayment.Status.Completed.Failed(it.reason, completedAt)
+                    OutgoingPayment.Status.Completed.Failed(deserializeFinalFailure(it.reason), completedAt)
                 }
             }
+        }
+
+        internal fun serializeFinalFailure(failure: FinalFailure): String = failure::class.simpleName ?: "UnknownError"
+
+        private fun deserializeFinalFailure(failure: String): FinalFailure = when (failure) {
+            FinalFailure.InvalidPaymentAmount::class.simpleName -> FinalFailure.InvalidPaymentAmount
+            FinalFailure.InvalidPaymentId::class.simpleName -> FinalFailure.InvalidPaymentId
+            FinalFailure.NoAvailableChannels::class.simpleName -> FinalFailure.NoAvailableChannels
+            FinalFailure.InsufficientBalance::class.simpleName -> FinalFailure.InsufficientBalance
+            FinalFailure.NoRouteToRecipient::class.simpleName -> FinalFailure.NoRouteToRecipient
+            FinalFailure.RecipientUnreachable::class.simpleName -> FinalFailure.RecipientUnreachable
+            FinalFailure.RetryExhausted::class.simpleName -> FinalFailure.RetryExhausted
+            FinalFailure.WalletRestarted::class.simpleName -> FinalFailure.WalletRestarted
+            else -> FinalFailure.UnknownError
+        }
+
+        internal fun serializeClosingType(closingType: ChannelClosingType) = closingType.name
+
+        private fun deserializeClosingType(closingType: String): ChannelClosingType = try {
+            ChannelClosingType.valueOf(closingType)
+        } catch (e: Exception) {
+            ChannelClosingType.Other
         }
     }
 }
@@ -79,7 +101,7 @@ fun OutgoingPayment.Status.Completed.mapToDb(): Pair<OutgoingStatusTypeVersion, 
     is OutgoingPayment.Status.Completed.Succeeded.OffChain -> OutgoingStatusTypeVersion.SUCCEEDED_OFFCHAIN_V0 to
             Json.encodeToString(OutgoingStatusData.SucceededOffChain.V0(preimage)).toByteArray(Charsets.UTF_8)
     is OutgoingPayment.Status.Completed.Succeeded.OnChain -> OutgoingStatusTypeVersion.SUCCEEDED_ONCHAIN_V0 to
-            Json.encodeToString(OutgoingStatusData.SucceededOnChain.V0(txids, claimed, closingType)).toByteArray(Charsets.UTF_8)
+            Json.encodeToString(OutgoingStatusData.SucceededOnChain.V0(txids, claimed, OutgoingStatusData.serializeClosingType(closingType))).toByteArray(Charsets.UTF_8)
     is OutgoingPayment.Status.Completed.Failed -> OutgoingStatusTypeVersion.FAILED_V0 to
-            Json.encodeToString(OutgoingStatusData.Failed.V0(reason)).toByteArray(Charsets.UTF_8)
+            Json.encodeToString(OutgoingStatusData.Failed.V0(OutgoingStatusData.serializeFinalFailure(reason))).toByteArray(Charsets.UTF_8)
 }
