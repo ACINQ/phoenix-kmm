@@ -23,7 +23,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		willConnectTo session: UISceneSession,
 		options connectionOptions: UIScene.ConnectionOptions
 	) {
-
+		log.trace("scene(_:willConnectTo:options:)")
+		
 		let contentView = ContentView()
 		
 		if let windowScene = scene as? UIWindowScene {
@@ -50,12 +51,30 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 			// prevent your UI from supporting the system color prior to app re-launch.
 			// There may be other variations I didn't try, but this solution is currently the most stable.
 		}
+		
+		// From Apple docs:
+		//
+		// > If your app has opted into Scenes, and your app is not running, the system delivers the
+		// > URL to the `scene(_:willConnectTo:options:)` delegate method after launch,
+		// > and to `scene(_:openURLContexts:)` when your app opens a URL while running or suspended in memory.
+		
+		if let context = connectionOptions.urlContexts.first {
+			log.debug("openURL: \(context.url)")
+			
+			// At this moment, the UI isn't ready to respond to the externalLightningUrlPublisher.
+			// Because it hasn't been displayed yet.
+			let url = context.url
+			DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+				AppDelegate.get().externalLightningUrlPublisher.send(url)
+			}
+		}
 	}
 
 	func sceneDidDisconnect(_ scene: UIScene) {
 		// Called as the scene is being released by the system.
 		// This occurs shortly after the scene enters the background, or when its session is discarded.
-		// Release any resources associated with this scene that can be re-created the next time the scene connects.
+		// Release any resources associated with this scene that can be re-created the next time the
+		// scene connects.
 		// The scene may re-connect later, as its session was not neccessarily discarded
 		// (see `application:didDiscardSceneSessions` instead).
 	}
@@ -93,9 +112,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 		}
 	}
 	
+	/// From Apple docs:
+	///
+	/// > If your app has opted into Scenes, and your app is not running, the system delivers the
+	/// > URL to the `scene(_:willConnectTo:options:)` delegate method after launch,
+	/// > and to `scene(_:openURLContexts:)` when your app opens a URL while running or suspended in memory.
+	///
 	func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) -> Void {
+		log.trace("scene(_:openURLContexts:)")
 		
 		if let context = URLContexts.first {
+			log.debug("openURL: \(context.url)")
 			AppDelegate.get().externalLightningUrlPublisher.send(context.url)
 		}
 	}
