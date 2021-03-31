@@ -30,7 +30,7 @@ struct ScanView: MVIView {
 	init(firstModel: Scan.Model? = nil) {
 		
 		self._mvi = StateObject.init(wrappedValue: MVIState.init {
-			$0.scan(firstModel: firstModel)
+			$0.scan(firstModel: firstModel ?? Scan.ModelReady())
 		})
 	}
 	

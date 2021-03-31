@@ -101,7 +101,7 @@ class AppScanController(
         val balanceMsat = balanceMsat(peerManager.getPeer().channels)
         val expiryTimestamp = paymentRequest.expirySeconds?.let {
             paymentRequest.timestampSeconds + it
-        } ?: null
+        }
         model(
             Scan.Model.Validate(
                 request = request,

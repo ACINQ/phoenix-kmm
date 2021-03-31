@@ -141,10 +141,7 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
         override fun receive(): ReceiveController =
             AppReceiveController(loggerFactory, chain, peerManager)
 
-        override fun scan(): ScanController =
-            scan(firstModel = null)
-
-        override fun scan(firstModel: Scan.Model?): ScanController =
+        override fun scan(firstModel: Scan.Model): ScanController =
             AppScanController(loggerFactory, firstModel, peerManager)
 
         override fun restoreWallet(): RestoreWalletController =

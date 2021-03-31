@@ -420,7 +420,8 @@ struct BottomBar: View, ViewName {
 		// - get a Scan.ModelValidate instance
 		// - pass this to ScanView as the `firstModel` parameter
 		
-		guard let scanController = AppDelegate.get().business.controllers.scan() as? AppScanController else {
+		let controllers = AppDelegate.get().business.controllers
+		guard let scanController = controllers.scan(firstModel: Scan.ModelReady()) as? AppScanController else {
 			return
 		}
 		temp.append(scanController)

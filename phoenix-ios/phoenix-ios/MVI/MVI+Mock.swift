@@ -173,16 +173,8 @@ class MockControllerFactory : ControllerFactory {
 	var mock_scan: Scan.Model? = nil
 	init(_ mock: Scan.Model) {
 		mock_scan = mock
-	}
-	func scan() -> MVIController<Scan.Model, Scan.Intent> {
-		if let mock = mock_scan {
-			return MVIControllerMock(model: mock)
-		} else {
-			return base.scan()
-		}
-	}
-	
-	func scan(firstModel: Scan.Model?) -> MVIController<Scan.Model, Scan.Intent> {
+	}	
+	func scan(firstModel: Scan.Model) -> MVIController<Scan.Model, Scan.Intent> {
 		if let mock = mock_scan {
 			return MVIControllerMock(model: mock)
 		} else {
