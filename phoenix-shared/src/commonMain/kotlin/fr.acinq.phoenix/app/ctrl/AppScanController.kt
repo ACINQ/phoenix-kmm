@@ -4,11 +4,13 @@ import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.eclair.Feature
 import fr.acinq.eclair.Features
-import fr.acinq.eclair.channel.ChannelState
+import fr.acinq.eclair.MilliSatoshi
+import fr.acinq.eclair.channel.*
 import fr.acinq.eclair.db.OutgoingPayment
 import fr.acinq.eclair.io.SendPayment
 import fr.acinq.eclair.payment.PaymentRequest
 import fr.acinq.eclair.utils.UUID
+import fr.acinq.eclair.utils.sum
 import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.ctrl.Scan
 import fr.acinq.phoenix.data.toMilliSatoshi
@@ -42,7 +44,15 @@ class AppScanController(
     }
 
     private fun balanceMsat(channels: Map<ByteVector32, ChannelState>): Long {
-        return channels.values.sumOf { it.localCommitmentSpec?.toLocal?.toLong() ?: 0 }
+        return channels.values.map {
+            when (it) {
+                is Closing -> MilliSatoshi(0)
+                is Closed -> MilliSatoshi(0)
+                is Aborted -> MilliSatoshi(0)
+                is ErrorInformationLeak -> MilliSatoshi(0)
+                else -> it.localCommitmentSpec?.toLocal ?: MilliSatoshi(0)
+            }
+        }.sum().toLong()
     }
 
     override fun process(intent: Scan.Intent) {
