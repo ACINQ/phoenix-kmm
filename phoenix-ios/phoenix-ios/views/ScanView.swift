@@ -272,6 +272,7 @@ struct ValidateView: View, ViewName {
 	
 	@State var altAmount: String = ""
 	@State var isInvalidAmount: Bool = false
+	@State var isExpiredInvoice: Bool = false
 	
 	@StateObject var connectionsMonitor = ObservableConnectionsMonitor()
 	
@@ -358,7 +359,7 @@ struct ValidateView: View, ViewName {
 				
 				Text(altAmount)
 					.font(.caption)
-					.foregroundColor(isInvalidAmount ? Color.appRed : .secondary)
+					.foregroundColor((isInvalidAmount || isExpiredInvoice) ? Color.appRed : .secondary)
 					.padding(.top, 4)
 				
 				Text(model.requestDescription ?? "")
@@ -387,9 +388,9 @@ struct ValidateView: View, ViewName {
 					backgroundFill: Color.appHorizon,
 					disabledBackgroundFill: Color.gray
 				))
-				.disabled(isInvalidAmount || isDisconnected)
+				.disabled(isInvalidAmount || isExpiredInvoice || isDisconnected)
 			
-				if !isInvalidAmount && isDisconnected {
+				if !isInvalidAmount && !isExpiredInvoice && isDisconnected {
 					
 					Button {
 						showConnectionsPopover()
@@ -517,16 +518,28 @@ struct ValidateView: View, ViewName {
 				}
 			}
 			
-			if let msat = msat {
+			if let msat = msat, let alt = alt {
 				if msat > model.balanceMsat {
 					isInvalidAmount = true
-					altAmount = "Amount exceeds your balance"
+					altAmount = NSLocalizedString("Amount exceeds your balance", comment: "error message")
 					
 				} else {
-					altAmount = "≈ \(alt!.string)"
+					altAmount = "≈ \(alt.string)"
 				}
 			}
-		}
+			
+			if let expiryTimestamp = model.expiryTimestamp?.doubleValue,
+			   Date(timeIntervalSince1970: expiryTimestamp) <= Date()
+			{
+				isExpiredInvoice = true
+				if !isInvalidAmount {
+					altAmount = NSLocalizedString("Invoice is expired", comment: "error message")
+				}
+			} else {
+				isExpiredInvoice = false
+			}
+			
+		} // </switch parsedAmount>
 	}
 	
 	func sendPayment() -> Void {
@@ -601,6 +614,7 @@ class ScanView_Previews: PreviewProvider {
 			ScanView().mock(Scan.ModelValidate(
 				request: request,
 				amountMsat: 1_500,
+				expiryTimestamp: nil,
 				requestDescription: "1 Blockaccino",
 				balanceMsat: 300_000_000
 			))
