@@ -272,7 +272,6 @@ struct ValidateView: View, ViewName {
 	
 	@State var altAmount: String = ""
 	@State var isInvalidAmount: Bool = false
-	@State var exceedsWalletCapacity: Bool = false
 	
 	@StateObject var connectionsMonitor = ObservableConnectionsMonitor()
 	
@@ -388,9 +387,9 @@ struct ValidateView: View, ViewName {
 					backgroundFill: Color.appHorizon,
 					disabledBackgroundFill: Color.gray
 				))
-				.disabled(isInvalidAmount || exceedsWalletCapacity || isDisconnected)
+				.disabled(isInvalidAmount || isDisconnected)
 			
-				if !isInvalidAmount && !exceedsWalletCapacity && isDisconnected {
+				if !isInvalidAmount && isDisconnected {
 					
 					Button {
 						showConnectionsPopover()
