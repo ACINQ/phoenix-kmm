@@ -33,7 +33,11 @@ struct ElectrumConfigurationView: MVIView {
 	func connectionAddress() -> String {
 		
 		if mvi.model.connection == .established || mvi.model.isCustom() {
-			return mvi.model.configuration?.server.host ?? ""
+			if let customConfig = mvi.model.configuration as? ElectrumConfig.Custom {
+				return customConfig.server.host
+			} else {
+				return ""
+			}
 		} else {
 			return NSLocalizedString("Random server", comment: "Connection info")
 		}
@@ -145,6 +149,15 @@ struct ElectrumConfigurationView: MVIView {
 				showing: $isModifying
 			).padding()
 		}
+		.onAppear {
+			onAppear()
+		}
+	}
+	
+	func onAppear() -> Void {
+		log.trace("onAppear()")
+		
+		log.debug("mvi.model: \(mvi.model)")
 	}
 	
 	struct ListHeader: View {
@@ -212,8 +225,9 @@ struct ElectrumAddressPopup: View {
 		_showing = showing
 		
 		_isCustomized = State(initialValue: model.isCustom())
-		let host = model.configuration?.server.host ?? ""
-		let port = model.configuration?.server.port ?? 0
+		let customConfig = model.configuration as? ElectrumConfig.Custom
+		let host = customConfig?.server.host ?? ""
+		let port = customConfig?.server.port ?? 0
 		
 		if model.isCustom() && host.count > 0 {
 			_host = State(initialValue: host)
