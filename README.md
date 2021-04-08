@@ -27,9 +27,7 @@ See instructions [here](https://github.com/ACINQ/phoenix-kmm/blob/master/BUILD.m
 
 ## Contribute
 
-We use GitHub for bug tracking. Search the existing issues for your bug and create a new one if needed.
-
-https://github.com/ACINQ/phoenix-kmm/issues
+We use GitHub for bug tracking. Search [the existing issues](https://github.com/ACINQ/phoenix-kmm/issues) for your bug and create a new one if needed.
 
 You can also contribute to the project by submitting pull requests to improve the codebase or bring new features. Pull request will be reviewed by members of the ACINQ team.
 
