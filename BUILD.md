@@ -5,6 +5,8 @@ It can run on many different platforms, including mobile devices (iOS and Androi
 
 ## Requirements
 
+You will need to install the Large File Storage Git extension: https://git-lfs.github.com/.
+
 For iOS, you need [Intellij IDEA Community edition](https://www.jetbrains.com/idea/download/) and [Xcode](https://developer.apple.com/xcode/). For Android, you only need [Android Studio Preview](https://developer.android.com/studio/preview) Canary Build.
 
 ## Build lightning-kmp
@@ -38,10 +40,10 @@ Which generates the phoenix-ios-framework for iOS.
 
 #### Skip the Android app
 
-If you are only in the iOS application, create a `local.properties` file at the root of the project, and add the following line:
+If you are only interested in the iOS application, create a `local.properties` file at the root of the project, and add the following line:
 
 ```
-skip.android=false
+skip.android=true
 ```
 
 ### Build the iOS app
