@@ -7,11 +7,9 @@ Phoenix is a Bitcoin wallet developed by [ACINQ](https://acinq.co), that allows 
 
 This is a [Kotlin Multiplatform Mobile](https://kotlinlang.org/docs/mobile/home.html) application and can run on iOS and Android. It uses the [lightning-kmp](https://github.com/ACINQ/lightning-kmp) implementation to connect and interact with the Lightning Network. You can read more about the technological choices for this application in our [blog post](https://medium.com/@ACINQ/when-ios-cdf798d5f8ef).
 
-# Run Phoenix
-
 ---
 
-:construction: Phoenix runs on Mainnet but is still experimental. Do not put too much money in the wallet.
+:construction: Phoenix runs on Mainnet but is still experimental. Do not put too much money in the wallet. Backup your seed so you do not lose your bitcoins.
 
 ---
 
@@ -23,11 +21,11 @@ Phoenix is available on TestFlight, and requires iOS 14+. You can apply for the 
 
 The KMM Android application is not ready yet. In the meantime, you can install the existing, battle-tested Phoenix Wallet application from the [GitHub repository](https://github.com/ACINQ/phoenix) or from [Google Play](https://play.google.com/store/apps/details?id=fr.acinq.phoenix.mainnet). Eventually, the KMM Android app will replace the existing Android application.
 
-# Build and test Phoenix
+## Build and test Phoenix
 
 See instructions [here](https://github.com/ACINQ/phoenix-kmm/blob/master/BUILD.md) to build and test the application.
 
-# Contribute
+## Contribute
 
 We use GitHub for bug tracking. Search the existing issues for your bug and create a new one if needed.
 
@@ -37,10 +35,10 @@ You can also contribute to the project by submitting pull requests to improve th
 
 To contribute to Lightning in general, take a look at the [Eclair repository](https://github.com/ACINQ/eclair) for routing nodes, or the [lightning-kmp repository](https://github.com/ACINQ/lightning-kmp) for mobile nodes.
 
-# Support
+## Support
 
 For troubleshooting and questions, visit our support page: https://phoenix.acinq.co/support
 
-# License
+## License
 
 Phoenix is released under the terms of the Apache 2.0 license. See LICENSE for more information.
