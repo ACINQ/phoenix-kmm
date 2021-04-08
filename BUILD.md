@@ -54,7 +54,7 @@ If the project builds successfully, you can then run it on a device or an emulat
 
 ### Build the Android app
 
-Open the entire phoenix-kmm project in Android Studio, then build the application. Note that the Android app uses Jetpack compose, which currently requires to Android Studio Canary. Using a regular Android Studio release will not work.
+Open the entire phoenix-kmm project in Android Studio, then build the application. Note that the Android app uses Jetpack compose, which currently requires Android Studio Canary. Using a regular Android Studio release will not work.
 
 ## Troubleshooting
 
