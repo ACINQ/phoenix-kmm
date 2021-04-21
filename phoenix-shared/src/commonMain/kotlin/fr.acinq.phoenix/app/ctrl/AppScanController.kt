@@ -146,6 +146,16 @@ class AppScanController(
             }
         } catch (t: Throwable) {
             // The qrcode doesn't appear to be for a lightning invoice.
+            // Is it a LNURL ?
+            val isLnUrl = when {
+                input.startsWith("lightning://lnurl1", true) -> true
+                input.startsWith("lightning:lnurl1", true) -> true
+                input.startsWith("lnurl1", true) -> true
+                else -> false
+            }
+            if (isLnUrl) {
+                return Either.Left(Scan.BadRequestReason.isLnUrl)
+            }
             // Is it for a bitcoin address ?
             return when (val result = utilities.parseBitcoinAddress(input)) {
                 is Either.Left -> {

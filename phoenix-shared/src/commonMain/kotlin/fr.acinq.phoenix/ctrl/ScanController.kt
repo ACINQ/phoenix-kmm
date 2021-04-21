@@ -11,6 +11,7 @@ object Scan {
 
     sealed class BadRequestReason {
         data class ChainMismatch(val myChain: Chain, val requestChain: Chain?): BadRequestReason()
+        object isLnUrl: BadRequestReason()
         object IsBitcoinAddress: BadRequestReason()
         object UnknownFormat: BadRequestReason()
     }

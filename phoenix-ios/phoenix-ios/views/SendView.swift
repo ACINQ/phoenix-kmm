@@ -100,6 +100,13 @@ struct SendView: MVIView {
 				"The invoice is for \(requestChain), but you're on \(reason.myChain.name)",
 				comment: "Error message - scanning lightning invoice"
 			)
+		
+		} else if model.reason is Scan.BadRequestReasonIsLnUrl {
+			
+			msg = NSLocalizedString(
+				"Phoenix does not support the LNURL protocol yet",
+				comment: "Error message - scanning lightning invoice"
+			)
 			
 		} else if model.reason is Scan.BadRequestReasonIsBitcoinAddress {
 			
