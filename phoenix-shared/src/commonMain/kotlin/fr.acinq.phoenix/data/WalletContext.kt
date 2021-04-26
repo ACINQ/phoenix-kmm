@@ -74,13 +74,11 @@ object WalletContext {
 
     @Serializable
     data class V0(val testnet: ChainContext, val mainnet: ChainContext) {
-    //    fun export(chain: Chain): ChainContext = if (chain.isMainnet()) {
-    //        mainnet
-    //    } else {
-    //       testnet
-    //    }
-
-        fun export(chain: Chain): ChainContext = mainnet
+        fun export(chain: Chain): ChainContext = if (chain.isMainnet()) {
+            mainnet
+        } else {
+           testnet
+        }
 
         @Serializable
         data class ChainContext(
