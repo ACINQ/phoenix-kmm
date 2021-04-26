@@ -155,6 +155,7 @@ struct ReceiveLightningView: View, ViewName {
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
 	let lastIncomingPaymentPublisher = AppDelegate.get().business.paymentsManager.lastIncomingPaymentPublisher()
+	let chainContextPublisher = AppDelegate.get().business.appConfigurationManager.chainContextPublisher()
 	
 	let willEnterForegroundPublisher = NotificationCenter.default.publisher(for:
 		UIApplication.willEnterForegroundNotification
@@ -184,9 +185,12 @@ struct ReceiveLightningView: View, ViewName {
 		.onReceive(lastIncomingPaymentPublisher) {
 			lastIncomingPaymentChanged($0)
 		}
-		.onReceive(willEnterForegroundPublisher, perform: { _ in
+		.onReceive(chainContextPublisher) {
+			chainContextChanged($0)
+		}
+		.onReceive(willEnterForegroundPublisher) { _ in
 			willEnterForeground()
-		})
+		}
 		.sheet(isPresented: Binding( // SwiftUI only allows for 1 ".sheet"
 			get: { sheet != nil },
 			set: { if !$0 { sheet = nil }}
@@ -730,6 +734,13 @@ struct ReceiveLightningView: View, ViewName {
 		{
 			presentationMode.wrappedValue.dismiss()
 		}
+	}
+	
+	func chainContextChanged(_ context: WalletContext.V0ChainContext) -> Void {
+		log.trace("[\(viewName)] chainContextChanged()")
+		
+		isSwapInEnabled = context.swapIn.v1.status is WalletContext.V0ServiceStatusActive
+		isPayToOpenEnabled = context.payToOpen.v1.status is WalletContext.V0ServiceStatusActive
 	}
 	
 	func didTapSwapInButton() -> Void {

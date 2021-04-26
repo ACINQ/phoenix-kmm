@@ -28,6 +28,7 @@ struct HomeView : MVIView, ViewName {
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
 	let lastCompletedPaymentPublisher = AppDelegate.get().business.paymentsManager.lastCompletedPaymentPublisher()
+	let chainContextPublisher = AppDelegate.get().business.appConfigurationManager.chainContextPublisher()
 	
 	let incomingSwapsPublisher = AppDelegate.get().business.paymentsManager.incomingSwapsPublisher()
 	@State var lastIncomingSwaps = [String: Lightning_kmpMilliSatoshi]()
@@ -61,8 +62,11 @@ struct HomeView : MVIView, ViewName {
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.navigationBarTitle("", displayMode: .inline)
 		.navigationBarHidden(true)
-		.onReceive(lastCompletedPaymentPublisher) { (payment: Lightning_kmpWalletPayment) in
-			lastCompletedPaymentChanged(payment)
+		.onReceive(lastCompletedPaymentPublisher) {
+			lastCompletedPaymentChanged($0)
+		}
+		.onReceive(chainContextPublisher) {
+			chainContextChanged($0)
 		}
 		.onReceive(incomingSwapsPublisher) { incomingSwaps in
 			onIncomingSwapsChanged(incomingSwaps)
@@ -208,6 +212,12 @@ struct HomeView : MVIView, ViewName {
 		if selectedPayment == nil {
 			selectedPayment = payment // selection triggers display of PaymentView sheet
 		}
+	}
+	
+	func chainContextChanged(_ context: WalletContext.V0ChainContext) -> Void {
+		log.trace("[\(viewName)] chainContextChanged()")
+		
+		isMempoolFull = context.mempool.v1.highUsage
 	}
 	
 	func onIncomingSwapsChanged(_ incomingSwaps: [String: Lightning_kmpMilliSatoshi]) -> Void {
