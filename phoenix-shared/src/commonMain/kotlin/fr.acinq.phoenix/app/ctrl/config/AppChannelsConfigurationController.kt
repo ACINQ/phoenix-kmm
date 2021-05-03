@@ -2,8 +2,8 @@ package fr.acinq.phoenix.app.ctrl.config
 
 import fr.acinq.lightning.channel.ChannelStateWithCommitments
 import fr.acinq.lightning.channel.Normal
-import fr.acinq.lightning.serialization.ByteVector32KSerializer
-import fr.acinq.lightning.serialization.Serialization.lightningSerializersModule
+import fr.acinq.lightning.serialization.v2.ByteVector32KSerializer
+import fr.acinq.lightning.serialization.v2.Serialization.lightningSerializersModule
 import fr.acinq.phoenix.app.PeerManager
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.ChannelsConfiguration
