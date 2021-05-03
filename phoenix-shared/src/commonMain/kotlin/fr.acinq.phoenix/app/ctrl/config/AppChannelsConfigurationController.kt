@@ -42,9 +42,9 @@ class AppChannelsConfigurationController(
                     peer.nodeParams.keyManager.nodeId.toString(),
                     json.encodeToString(MapSerializer(
                         ByteVector32KSerializer,
-                        fr.acinq.lightning.serialization.v1.ChannelState.serializer()
+                        fr.acinq.lightning.serialization.v2.ChannelState.serializer()
                     ),
-                    it.mapValues { m ->  fr.acinq.lightning.serialization.v1.ChannelState.import(m.value) } ),
+                    it.mapValues { m ->  fr.acinq.lightning.serialization.v2.ChannelState.import(m.value) } ),
                     it.map { (id, state) ->
                         ChannelsConfiguration.Model.Channel(
                             id = id.toHex(),
@@ -55,8 +55,8 @@ class AppChannelsConfigurationController(
                                     .toLong() to (it.toLocal + it.toRemote).truncateToSatoshi().toLong()
                             },
                             json = json.encodeToString(
-                                fr.acinq.lightning.serialization.v1.ChannelState.serializer(),
-                                fr.acinq.lightning.serialization.v1.ChannelState.import(state)
+                                fr.acinq.lightning.serialization.v2.ChannelState.serializer(),
+                                fr.acinq.lightning.serialization.v2.ChannelState.import(state)
                             ),
                             txUrl = if (state is ChannelStateWithCommitments) {
                                 val txId = state.commitments.commitInput.outPoint.txid
