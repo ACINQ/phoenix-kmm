@@ -30,7 +30,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	private var badgeCount = 0
 	private var cancellables = Set<AnyCancellable>()
 	
-	private var didIncrementDisconnectCount = false
+	private var isInBackground = false
+	
+	private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
 	
 	public var externalLightningUrlPublisher = PassthroughSubject<URL, Never>()
 	
@@ -127,11 +129,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	func _applicationDidEnterBackground(_ application: UIApplication) {
 		log.trace("### applicationDidEnterBackground(_:)")
 		
-		if !didIncrementDisconnectCount {
+		if !isInBackground {
 			business.appConnectionsDaemon?.incrementDisconnectCount(
 				target: AppConnectionsDaemon.ControlTarget.all
 			)
-			didIncrementDisconnectCount = true
+			isInBackground = true
 		}
 		
 		scheduleBackgroundTasks()
@@ -140,11 +142,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	func _applicationWillEnterForeground(_ application: UIApplication) {
 		log.trace("### applicationWillEnterForeground(_:)")
 		
-		if didIncrementDisconnectCount {
+		if isInBackground {
 			business.appConnectionsDaemon?.decrementDisconnectCount(
 				target: AppConnectionsDaemon.ControlTarget.all
 			)
-			didIncrementDisconnectCount = false
+			isInBackground = false
 		}
 	}
 	
@@ -551,6 +553,52 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			finishTask(true)
 		}
 	}
+
+	// --------------------------------------------------
+	// MARK: Background Execution
+	// --------------------------------------------------
+	
+	func setupActivePaymentsListener() -> Void {
+		
+		business.paymentsManager.inFlightOutgoingPaymentsPublisher().sink { [weak self](count: Int) in
+			
+			log.debug("inFlightOutgoingPaymentsPublisher: count = \(count)")
+			if count > 0 {
+				self?.beginBackgroundTask()
+			} else {
+				self?.endBackgroundTask()
+			}
+			
+		}.store(in: &cancellables)
+	}
+	
+	func beginBackgroundTask() {
+		log.trace("beginBackgroundTask()")
+		assertMainThread()
+		
+		if backgroundTask == .invalid {
+			backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+				self?.endBackgroundTask()
+			}
+			log.debug("Invoking: business.decrementDisconnectCount()")
+			business.decrementDisconnectCount()
+		}
+	}
+	
+	func endBackgroundTask() {
+		log.trace("endBackgroundTask()")
+		assertMainThread()
+		
+		if backgroundTask != .invalid {
+			
+			let bgTask = backgroundTask
+			backgroundTask = .invalid
+			
+			UIApplication.shared.endBackgroundTask(bgTask)
+			log.debug("Invoking: business.incrementDisconnectCount()")
+			self.business.incrementDisconnectCount()
+		}
+	}
 	
 	// --------------------------------------------------
 	// MARK: PhoenixBusiness
@@ -571,6 +619,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			business.loadWallet(seed: seed)
 			walletLoaded = true
 			maybeRegisterFcmToken()
+			setupActivePaymentsListener()
 		}
 	}
 	
