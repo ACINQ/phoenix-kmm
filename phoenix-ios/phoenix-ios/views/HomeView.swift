@@ -3,7 +3,7 @@ import PhoenixShared
 import Network
 import os.log
 
-#if DEBUG && false
+#if DEBUG && true
 fileprivate var log = Logger(
 	subsystem: Bundle.main.bundleIdentifier!,
 	category: "HomeView"
@@ -20,7 +20,6 @@ struct HomeView : MVIView, ViewName {
 	var factory: ControllerFactory { return factoryEnv }
 
 	@State var selectedPayment: Lightning_kmpWalletPayment? = nil
-	
 	@State var isMempoolFull = false
 	
 	@StateObject var toast = Toast()
@@ -40,28 +39,34 @@ struct HomeView : MVIView, ViewName {
 	@Environment(\.popoverState) var popoverState: PopoverState
 	@Environment(\.openURL) var openURL
 	
+	@State var didAppear = false
+	@State var didPreFetch = false
+	
 	@ViewBuilder
 	var view: some View {
-
+		
 		ZStack {
-			
+
 			Color.primaryBackground
 				.edgesIgnoringSafeArea(.all)
-			
+
 			if AppDelegate.get().business.chain.isTestnet() {
 				Image("testnet_bg")
 					.resizable(resizingMode: .tile)
 					.edgesIgnoringSafeArea([.horizontal, .bottom]) // not underneath status bar
 			}
-			
+
 			main
-			
+
 			toast.view()
-			
+
 		} // </ZStack>
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.navigationBarTitle("", displayMode: .inline)
 		.navigationBarHidden(true)
+		.onChange(of: mvi.model) { newModel in
+			onModelChange(model: newModel)
+		}
 		.onReceive(lastCompletedPaymentPublisher) {
 			lastCompletedPaymentChanged($0)
 		}
@@ -72,7 +77,7 @@ struct HomeView : MVIView, ViewName {
 			onIncomingSwapsChanged(incomingSwaps)
 		}
 	}
-	
+
 	@ViewBuilder
 	var main: some View {
 		
@@ -170,11 +175,22 @@ struct HomeView : MVIView, ViewName {
 			// === Payments List ====
 			ScrollView {
 				LazyVStack {
-					ForEach(mvi.model.payments.indices, id: \.self) { index in
+					// mvi.model.paymentsOrder: [WalletPaymentId]
+					// WalletPaymentOrderRow.identifiable: String (defined in KotlinExtensions)
+					//
+					// Here's how this works:
+					// - ForEach uses the given `id` (which conforms to Swift's Identifiable protocol)
+					//   to determine whether or not the row is new/modified or the same as before.
+					// - If the row is new/modified, then it it initialized with fresh state,
+					//   and the row's `onAppear` will fire.
+					// - If the row is unmodified, then it is initialized with existing state,
+					//   and the row's `onAppear` with NOT fire.
+					//
+					ForEach(mvi.model.paymentsOrder, id: \.identifiable) { row in
 						Button {
-							selectedPayment = mvi.model.payments[index]
+							didSelectPayment(row: row)
 						} label: {
-							PaymentCell(payment: mvi.model.payments[index])
+							PaymentCell(row: row)
 						}
 					}
 				}
@@ -183,6 +199,9 @@ struct HomeView : MVIView, ViewName {
 			BottomBar(toast: toast)
 		
 		} // </VStack>
+		.onAppear {
+			onAppear()
+		}
 		.sheet(isPresented: Binding(
 			get: { selectedPayment != nil },
 			set: { if !$0 { selectedPayment = nil }} // needed if user slides the sheet to dismiss
@@ -195,7 +214,7 @@ struct HomeView : MVIView, ViewName {
 			.modifier(GlobalEnvironment()) // SwiftUI bug (prevent crash)
 		}
 	}
-	
+
 	func incomingAmount() -> FormattedAmount? {
 		
 		let msatTotal = lastIncomingSwaps.values.reduce(Int64(0)) {(sum, item) -> Int64 in
@@ -206,6 +225,24 @@ struct HomeView : MVIView, ViewName {
 		} else {
 			return nil
 		}
+	}
+	
+	func didSelectPayment(row: WalletPaymentOrderRow) -> Void {
+		log.trace("[\(viewName)] didSelectPayment()")
+		
+		// pretty much guaranteed to be in the cache
+		PaymentsFetcher.shared.getPayment(row: row) { (result: PaymentsFetcher.Result) in
+			
+			if let payment = result.payment {
+				selectedPayment = payment
+			}
+		}
+	}
+	
+	func onModelChange(model: Home.Model) -> Void {
+		log.trace("[\(viewName)] onModelChange()")
+		
+		maybePreFetchPaymentsFromDatabase()
 	}
 	
 	func lastCompletedPaymentChanged(_ payment: Lightning_kmpWalletPayment) -> Void {
@@ -238,6 +275,37 @@ struct HomeView : MVIView, ViewName {
 			// This isn't added to the transaction list, but is instead displayed under the balance.
 			// So let's add a little animation to draw the user's attention to it.
 			startAnimatingIncomingSwapText()
+		}
+	}
+	
+	func onAppear() {
+		log.trace("[\(viewName)] onAppear()")
+		
+		didAppear = true
+		maybePreFetchPaymentsFromDatabase()
+	}
+	
+	func maybePreFetchPaymentsFromDatabase() -> Void {
+		
+		if didAppear && !didPreFetch && mvi.model.paymentsOrder.count > 0 {
+			
+			didPreFetch = true
+			prefetchPaymentsFromDatabase(idx: 0)
+		}
+	}
+	
+	func prefetchPaymentsFromDatabase(idx: Int) {
+		
+		guard idx < mvi.model.paymentsOrder.count else {
+			// recursion complete
+			return
+		}
+		
+		let row = mvi.model.paymentsOrder[idx]
+		log.debug("[\(viewName)] Pre-fetching: \(row.identifiable)")
+		
+		PaymentsFetcher.shared.getPayment(row: row) { _ in
+			prefetchPaymentsFromDatabase(idx: idx + 1)
 		}
 	}
 	
@@ -326,66 +394,77 @@ struct HomeView : MVIView, ViewName {
 	}
 }
 
-fileprivate struct PaymentCell : View {
+fileprivate struct PaymentCell : View, ViewName {
 
-	let payment: PhoenixShared.Lightning_kmpWalletPayment
+	let row: WalletPaymentOrderRow
+	
+	@State var fetched: PaymentsFetcher.Result
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
+	init(row: WalletPaymentOrderRow) {
+		self.row = row
+		
+		let result = PaymentsFetcher.shared.getCachedPayment(row: row)
+		self._fetched = State(initialValue: result)
+	}
+	
 	var body: some View {
+		
 		HStack {
-			switch payment.state() {
-			case .success:
-				Image("payment_holder_def_success")
-					.foregroundColor(Color.accentColor)
+			if let payment = fetched.payment {
+				
+				switch payment.state() {
+					case .success:
+						Image("payment_holder_def_success")
+							.foregroundColor(Color.accentColor)
+							.padding(4)
+							.background(
+								RoundedRectangle(cornerRadius: .infinity)
+									.fill(Color.appAccent)
+							)
+					case .pending:
+						Image("payment_holder_def_pending")
+							.padding(4)
+					case .failure:
+						Image("payment_holder_def_failed")
+							.padding(4)
+					default:
+						Image(systemName: "doc.text.magnifyingglass")
+							.padding(4)
+				}
+			} else {
+				
+				Image(systemName: "doc.text.magnifyingglass")
 					.padding(4)
-					.background(
-						RoundedRectangle(cornerRadius: .infinity)
-							.fill(Color.appAccent)
-					)
-			case .pending:
-				Image("payment_holder_def_pending")
-					.padding(4)
-			case .failure:
-				Image("payment_holder_def_failed")
-					.padding(4)
-			default: EmptyView()
 			}
-			
+
 			VStack(alignment: .leading) {
-				Text(payment.desc() ?? NSLocalizedString("No description", comment: "placeholder text"))
+				Text(paymentDescription())
 					.lineLimit(1)
 					.truncationMode(.tail)
 					.foregroundColor(.primaryForeground)
-				
-				let timestamp = payment.timestamp()
-				let timestampStr = timestamp > 0
-					? timestamp.formatDateMS()
-					: NSLocalizedString("pending", comment: "timestamp string for pending transaction")
-				
-				Text(timestampStr)
+
+				Text(paymentTimestamp())
 					.font(.caption)
 					.foregroundColor(.secondary)
 			}
 			.frame(maxWidth: .infinity, alignment: .leading)
 			.padding([.leading, .trailing], 6)
-			
+
 			HStack(alignment: VerticalAlignment.firstTextBaseline, spacing: 0) {
-				
-				let amount = Utils.format(currencyPrefs, msat: payment.amountMsat())
-				
-				let isFailure = payment.state() == WalletPaymentState.failure
-				let isNegative = payment.amountMsat() < 0
-				
+
+				let (amount, isFailure, isNegative) = paymentAmountInfo()
+
 				let color: Color = isFailure ? .secondary : (isNegative ? .appNegative : .appPositive)
-				
+
 				Text(isNegative ? "" : "+")
 					.foregroundColor(color)
 					.padding(.trailing, 1)
-				
+
 				Text(amount.digits)
 					.foregroundColor(color)
-					
+
 				Text(" " + amount.type)
 					.font(.caption)
 					.foregroundColor(.gray)
@@ -393,6 +472,69 @@ fileprivate struct PaymentCell : View {
 		}
 		.padding([.top, .bottom], 14)
 		.padding([.leading, .trailing], 12)
+		.onAppear {
+			onAppear()
+		}
+	}
+
+	func paymentDescription() -> String {
+
+		if let payment = fetched.payment {
+			return payment.desc() ?? NSLocalizedString("No description", comment: "placeholder text")
+		} else {
+			return ""
+		}
+	}
+	
+	func paymentTimestamp() -> String {
+
+		if let payment = fetched.payment {
+			let timestamp = payment.timestamp()
+			return timestamp > 0
+				? timestamp.formatDateMS()
+				: NSLocalizedString("pending", comment: "timestamp string for pending transaction")
+		} else {
+			return ""
+		}
+	}
+	
+	func paymentAmountInfo() -> (FormattedAmount, Bool, Bool) {
+
+		if let payment = fetched.payment {
+
+			let amount = Utils.format(currencyPrefs, msat: payment.amountMsat())
+
+			let isFailure = payment.state() == WalletPaymentState.failure
+			let isNegative = payment.amountMsat() < 0
+
+			return (amount, isFailure, isNegative)
+
+		} else {
+
+			let type: String
+			switch currencyPrefs.currencyType {
+				case .fiat    : type = currencyPrefs.fiatCurrency.shortName
+				case .bitcoin : type = currencyPrefs.bitcoinUnit.shortName
+			}
+
+			let amount = FormattedAmount(digits: "", type: type, decimalSeparator: " ")
+
+			let isFailure = false
+			let isNegative = true
+
+			return (amount, isFailure, isNegative)
+		}
+	}
+	
+	func onAppear() -> Void {
+		log.trace("[\(viewName)] onAppear()")
+		
+		if fetched.payment == nil {
+			
+			PaymentsFetcher.shared.getPayment(row: row) { (result: PaymentsFetcher.Result) in
+				self.fetched = result
+			}
+		}
 	}
 }
 
@@ -678,20 +820,20 @@ class HomeView_Previews: PreviewProvider {
 	)
 
 	static var previews: some View {
-
+		
 		HomeView().mock(Home.Model(
 			balance: Lightning_kmpMilliSatoshi(msat: 123500),
 			incomingBalance: Lightning_kmpMilliSatoshi(msat: 0),
-			payments: []
+			paymentsOrder: []
 		))
 		.preferredColorScheme(.dark)
 		.previewDevice("iPhone 8")
 		.environmentObject(CurrencyPrefs.mockEUR())
-		
+
 		HomeView().mock(Home.Model(
 			balance: Lightning_kmpMilliSatoshi(msat: 1000000),
 			incomingBalance: Lightning_kmpMilliSatoshi(msat: 12000000),
-			payments: []
+			paymentsOrder: []
 		))
 		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")

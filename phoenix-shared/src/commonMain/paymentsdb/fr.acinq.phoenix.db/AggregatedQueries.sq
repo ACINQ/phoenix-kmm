@@ -79,3 +79,27 @@ LIMIT ?, ?;
 -- 15: incoming_received_with_fees
 -- 16: created_at                       payment creation timestamp
 -- 17: completed_at                     payment completion timestamp
+
+listAllPaymentsOrder:
+SELECT *
+FROM (
+    SELECT
+        'outgoing'              AS direction,
+        id                      AS outgoing_payment_id,
+        NULL                    AS incoming_payment_id,
+        created_at              AS created_at,
+        completed_at            AS completed_at
+    FROM outgoing_payments
+    GROUP BY id
+UNION ALL
+    SELECT
+        'incoming'              AS direction,
+        NULL                    AS outgoing_payment_id,
+        payment_hash            AS incoming_payment_id,
+        created_at              AS created_at,
+        received_at             AS completed_at
+    FROM incoming_payments
+	WHERE received_amount_msat > 0
+)
+ORDER BY COALESCE(completed_at, created_at) DESC
+LIMIT ?, ?;

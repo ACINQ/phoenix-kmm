@@ -140,6 +140,18 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     // ---- list ALL payments
 
+    suspend fun listPaymentsOrder(count: Int, skip: Int): List<WalletPaymentOrderRow> {
+        return withContext(Dispatchers.Default) {
+            aggrQueries.listAllPaymentsOrder(skip.toLong(), count.toLong(), ::allPaymentsOrderMapper).executeAsList()
+        }
+    }
+
+    suspend fun listPaymentsOrderFlow(count: Int, skip: Int): Flow<List<WalletPaymentOrderRow>> {
+        return withContext(Dispatchers.Default) {
+            aggrQueries.listAllPaymentsOrder(skip.toLong(), count.toLong(), ::allPaymentsOrderMapper).asFlow().mapToList()
+        }
+    }
+
     override suspend fun listPayments(count: Int, skip: Int, filters: Set<PaymentTypeFilter>): List<WalletPayment> {
         return withContext(Dispatchers.Default) {
             aggrQueries.listAllPayments(skip.toLong(), count.toLong(), ::allPaymentsMapper).executeAsList()
@@ -152,6 +164,28 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         }
     }
 
+    private fun allPaymentsOrderMapper(
+        direction: String,
+        outgoing_payment_id: String?,
+        incoming_payment_id: ByteArray?,
+        @Suppress("UNUSED_PARAMETER") created_at: Long,
+        @Suppress("UNUSED_PARAMETER") completed_at: Long?
+    ): WalletPaymentOrderRow {
+        val paymentId = when(direction.toLowerCase()) {
+            "outgoing" -> WalletPaymentId.OutgoingPaymentId(
+                id = UUID.fromString(outgoing_payment_id!!)
+            )
+            "incoming" -> WalletPaymentId.IncomingPaymentId(
+                paymentHash = ByteVector32(incoming_payment_id!!)
+            )
+            else -> throw UnhandledDirection(direction)
+        }
+        return WalletPaymentOrderRow(
+            id = paymentId,
+            createdAt = created_at,
+            completedAt = completed_at
+        )
+    }
 
     private fun allPaymentsMapper(
         direction: String,
@@ -238,3 +272,14 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 class OutgoingPaymentPartNotFound(partId: UUID) : RuntimeException("could not find outgoing payment part with part_id=$partId")
 class IncomingPaymentNotFound(paymentHash: ByteVector32) : RuntimeException("missing payment for payment_hash=$paymentHash")
 class UnhandledDirection(direction: String) : RuntimeException("unhandled direction=$direction")
+
+sealed class WalletPaymentId {
+    data class OutgoingPaymentId(val id: UUID): WalletPaymentId()
+    data class IncomingPaymentId(val paymentHash: ByteVector32): WalletPaymentId()
+}
+
+data class WalletPaymentOrderRow(
+    val id: WalletPaymentId,
+    val createdAt: Long,
+    val completedAt: Long?
+)

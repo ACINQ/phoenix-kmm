@@ -4,6 +4,40 @@ import Combine
 import CryptoKit
 
 
+extension WalletPaymentId {
+	
+	var identifiable: String {
+		
+		if let incoming = self as? IncomingPaymentId {
+			
+			return "incoming|\(incoming.paymentHash.toHex())"
+			
+		} else {
+			
+			let outgoing = self as! OutgoingPaymentId
+			return "outgoing|\(outgoing.id.description())"
+		}
+	}
+}
+
+extension WalletPaymentOrderRow {
+	
+	var identifiable: String {
+		
+		let completed = completedAt?.description ?? "null"
+		
+		if let incoming = id as? WalletPaymentId.IncomingPaymentId {
+			
+			return "\(incoming.identifiable)|\(createdAt)|\(completed)"
+			
+		} else {
+			let outgoing = id as! WalletPaymentId.OutgoingPaymentId
+			
+			return "\(outgoing.identifiable)|\(createdAt)|\(completed)"
+		}
+	}
+}
+
 extension Lightning_kmpIncomingPayment {
 	
 	var createdAtDate: Date {

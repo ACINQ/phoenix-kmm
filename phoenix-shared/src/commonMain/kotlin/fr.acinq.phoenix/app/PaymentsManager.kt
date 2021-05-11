@@ -1,8 +1,10 @@
 package fr.acinq.phoenix.app
 
+import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.MilliSatoshi
 import fr.acinq.lightning.db.IncomingPayment
 import fr.acinq.lightning.db.OutgoingPayment
+import fr.acinq.lightning.db.PaymentsDb
 import fr.acinq.lightning.db.WalletPayment
 import fr.acinq.lightning.io.*
 import fr.acinq.lightning.payment.PaymentRequest
@@ -11,6 +13,8 @@ import fr.acinq.lightning.utils.getValue
 import fr.acinq.lightning.utils.setValue
 import fr.acinq.lightning.utils.toMilliSatoshi
 import fr.acinq.phoenix.db.SqlitePaymentsDb
+import fr.acinq.phoenix.db.WalletPaymentId
+import fr.acinq.phoenix.db.WalletPaymentOrderRow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.MainScope
@@ -29,8 +33,11 @@ class PaymentsManager(
 ) : CoroutineScope by MainScope() {
     private val log = newLogger(loggerFactory)
 
-    /** A flow containing a list of payments, directly taken from the database and automatically refreshed when the database changes. */
-    internal val payments = MutableStateFlow<List<WalletPayment>>(emptyList())
+    /**
+     * A flow containing a list of paymentIds,
+     * directly taken from the database and automatically refreshed when the database changes.
+     */
+    internal val paymentsOrder = MutableStateFlow<List<WalletPaymentOrderRow>>(emptyList())
 
     /** Flow of map of (bitcoinAddress -> amount) swap-ins. */
     private val _incomingSwaps = MutableStateFlow<Map<String, MilliSatoshi>>(HashMap())
@@ -48,9 +55,8 @@ class PaymentsManager(
 
     init {
         launch {
-            val db = nodeParamsManager.databases.filterNotNull().first()
-            (db.payments as SqlitePaymentsDb).listPaymentsFlow(150, 0, emptySet()).collect {
-                payments.value = it
+            paymentsDb().listPaymentsOrderFlow(150, 0).collect {
+                paymentsOrder.value = it
             }
         }
 
@@ -61,7 +67,7 @@ class PaymentsManager(
                         _lastCompletedPayment.value = event.payment
                     }
                     is PaymentNotSent -> {
-                        db()?.getOutgoingPayment(event.request.paymentId)?.let {
+                        getOutgoingPayment(event.request.paymentId)?.let {
                             _lastCompletedPayment.value = it
                         }
                     }
@@ -82,7 +88,18 @@ class PaymentsManager(
 
     fun db() = nodeParamsManager.databases.value?.payments
 
-    suspend fun getOutgoingPayment(id: UUID): OutgoingPayment? = db()?.getOutgoingPayment(id)
+    private suspend fun paymentsDb(): SqlitePaymentsDb {
+        val db = nodeParamsManager.databases.filterNotNull().first()
+        return db.payments as SqlitePaymentsDb
+    }
+
+    suspend fun getOutgoingPayment(id: UUID): OutgoingPayment? {
+        return paymentsDb().getOutgoingPayment(id)
+    }
+
+    suspend fun getIncomingPayment(paymentHash: ByteVector32): IncomingPayment? {
+        return paymentsDb().getIncomingPayment(paymentHash)
+    }
 }
 
 fun WalletPayment.desc(): String? = when (this) {
