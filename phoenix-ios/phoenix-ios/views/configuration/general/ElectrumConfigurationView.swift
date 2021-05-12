@@ -19,28 +19,41 @@ struct ElectrumConfigurationView: MVIView {
 	var factory: ControllerFactory { return factoryEnv }
 	
 	@State var isModifying = false
-
-	func connectionStatus() -> String {
-		if mvi.model.connection == .established {
-			return NSLocalizedString("Connected to:", comment: "Connection status")
-		} else if mvi.model.connection == .establishing {
-			return NSLocalizedString("Connecting to:", comment: "Connection status")
-		} else {
-			return NSLocalizedString("Will connect to:", comment: "Connection status")
-		}
-	}
 	
-	func connectionAddress() -> String {
+	func connectionInfo() -> (String, String) {
 		
-		if mvi.model.connection == .established || mvi.model.isCustom() {
-			if let customConfig = mvi.model.configuration as? ElectrumConfig.Custom {
-				return customConfig.server.host
+		var status: String
+		var address: String
+		
+		if mvi.model.connection == Lightning_kmpConnection.established {
+			
+			status = NSLocalizedString("Connected to:", comment: "Connection status")
+			if let server = mvi.model.currentServer {
+				address = "\(server.host):\(server.port)"
 			} else {
-				return ""
+				address = "?" // this state shouldn't be possible
 			}
+			
+		} else if mvi.model.connection == .establishing {
+			
+			status = NSLocalizedString("Connecting to:", comment: "Connection status")
+			if let server = mvi.model.currentServer {
+				address = "\(server.host):\(server.port)"
+			} else {
+				address = "?" // this state shouldn't be possible
+			}
+			
 		} else {
-			return NSLocalizedString("Random server", comment: "Connection info")
+			
+			status = NSLocalizedString("Will connect to:", comment: "Connection status")
+			if let customConfig = mvi.model.configuration as? ElectrumConfig.Custom {
+				address = "\(customConfig.server.host):\(customConfig.server.port)"
+			} else {
+				address = NSLocalizedString("Random server", comment: "Connection info")
+			}
 		}
+		
+		return (status, address)
 	}
 	
 	@ViewBuilder
@@ -60,14 +73,15 @@ struct ElectrumConfigurationView: MVIView {
 			
 				VStack(alignment: .leading) {
 					
+					let (status, address) = connectionInfo()
+					
 					HStack {
-						Text(connectionStatus())
+						Text(status)
 							.foregroundColor(Color.secondary)
 						
 						Spacer()
 						Button {
 							isModifying = true
-						//	showPopover()
 						} label: {
 							HStack {
 								Image(systemName: "square.and.pencil").imageScale(.small)
@@ -76,7 +90,7 @@ struct ElectrumConfigurationView: MVIView {
 						}
 					}
 					
-					Text(connectionAddress()).bold()
+					Text(address).bold()
 						.padding(.top, 2)
 					
 					if let errMsg = mvi.model.error?.message {
@@ -110,8 +124,10 @@ struct ElectrumConfigurationView: MVIView {
 						Text("-")
 					}
 				}
-				
-				/* if let xpub = mvi.model.xpub {
+
+			/*	Why is this removed ?
+
+				if let xpub = mvi.model.xpub {
 					ListItem(header: Text("Master public key")) {
 						Text(xpub)
 							.contextMenu {
@@ -135,7 +151,8 @@ struct ElectrumConfigurationView: MVIView {
 								}
 							}
 					}
-				} */
+				}
+			*/
 				
 			} // </Section: Status>
 			
@@ -256,7 +273,7 @@ struct ElectrumAddressPopup: View {
 			}
 			.padding(.bottom, 15)
 			.background(Color(UIColor.systemBackground))
-			.zIndex(1)
+			.zIndex(2)
 			
 			if isCustomized { // animation control
 			
@@ -362,10 +379,25 @@ struct ElectrumAddressPopup: View {
 					}
 			
 				} // </VStack>
-				.transition(.move(edge: .top))
-				.zIndex(0)
+				.transition(.move(edge: .top).animation(.easeInOut(duration: 0.3)))
+				.zIndex(1)
 				
-			} // </if isCustomized>
+			} /* </if isCustomized> */ else {
+				
+				HStack(alignment: VerticalAlignment.center, spacing: 0) {
+					
+					Text("A random electrum server will be selected on each connection attempt.")
+						.font(.footnote)
+					
+					Spacer()
+				}
+				.padding(.top, 10)
+				.transition(.asymmetric(
+					insertion : .opacity.animation(.easeInOut(duration: 0.1).delay(0.3)),
+					removal   : .identity // .opacity.animation(.linear(duration: 0.05))
+				))
+				.zIndex(0)
+			}
 			
 			Spacer()
 			
@@ -497,17 +529,18 @@ class ElectrumConfigurationView_Previews: PreviewProvider {
 	static let electrumServer1 = Lightning_kmpServerAddress(
 		host: "tn.not.fyi",
 		port: 55002,
-        tls: nil
+		tls: nil
 	)
 	
 	static let electrumServer2 = Lightning_kmpServerAddress(
 		host: "",
 		port: 0,
-        tls: nil
+		tls: nil
 	)
 	
 	static let mockModel = ElectrumConfiguration.Model(
 		configuration: ElectrumConfig.Custom(server: electrumServer2),
+		currentServer: nil,
 		connection: Lightning_kmpConnection.closed,
 		feeRate: 9999,
 		blockHeight: 1234,

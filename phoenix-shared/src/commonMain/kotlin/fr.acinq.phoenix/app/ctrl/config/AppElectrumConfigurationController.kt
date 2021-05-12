@@ -26,11 +26,13 @@ class AppElectrumConfigurationController(
         launch {
             combine(
                 configurationManager.electrumConfig(),
+                appConnectionsDaemon.lastElectrumServerAddress,
                 electrumClient.connectionState,
                 configurationManager.electrumMessages(),
-                transform = { configState, connectionState, message ->
+                transform = { configState, currentServer, connectionState, message ->
                     ElectrumConfiguration.Model(
                         configuration = configState,
+                        currentServer = currentServer,
                         connection = connectionState,
                         blockHeight = message?.height ?: 0,
                         tipTimestamp = message?.header?.time ?: 0,

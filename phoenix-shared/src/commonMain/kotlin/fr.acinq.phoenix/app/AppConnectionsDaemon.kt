@@ -73,7 +73,8 @@ class AppConnectionsDaemon(
     private val httpApiControlFlow = MutableStateFlow(TrafficControl())
     private val httpApiControlChanges = Channel<TrafficControl.() -> TrafficControl>()
 
-    var lastElectrumServerAddress: ServerAddress? = null
+    private var _lastElectrumServerAddress = MutableStateFlow<ServerAddress?>(null)
+    val lastElectrumServerAddress: StateFlow<ServerAddress?> = _lastElectrumServerAddress
 
     init {
         fun enableControlFlow(
@@ -109,7 +110,7 @@ class AppConnectionsDaemon(
                                     logger.info { "connecting to electrum server=$electrumServerAddress" }
                                     electrumClient.connect(electrumServerAddress)
                                 }
-                                lastElectrumServerAddress = electrumServerAddress
+                                _lastElectrumServerAddress.value = electrumServerAddress
                             }
                         }
                     }

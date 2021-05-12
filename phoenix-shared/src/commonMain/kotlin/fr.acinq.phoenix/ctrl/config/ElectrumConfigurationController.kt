@@ -11,7 +11,7 @@ object ElectrumConfiguration {
 
     data class Model(
         val configuration: ElectrumConfig? = null,
-    //  val currentServer: ServerAddress? = null,
+        val currentServer: ServerAddress? = null,
         val connection: Connection = Connection.CLOSED,
         val feeRate: Long = 0,
         val blockHeight: Int = 0,
