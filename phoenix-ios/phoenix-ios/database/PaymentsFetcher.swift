@@ -49,6 +49,45 @@ class PaymentsFetcher {
 		return cache[key] ?? Result(payment: nil)
 	}
 	
+	/// Searches the cache for a stale version of the payment.
+	/// Sometimes a stale version of the object is better than nothing.
+	///
+	public func getCachedStalePayment(
+		row: WalletPaymentOrderRow
+	) -> Result {
+		
+		let prefix = row.identifiablePrefix
+		let max = cache.filteredKeys { (key: String) in
+			
+			return key.hasPrefix(prefix)
+			
+		}.reduce(into: [String: Int64]()) { (result: inout [String: Int64], key: String) in
+			
+			let startIdx = key.index(key.startIndex, offsetBy: prefix.count)
+			let endIdx = key.endIndex
+			
+			let suffix = key[startIdx..<endIdx]
+			
+			result[key] = Int64(String(suffix)) ?? 0
+			
+		}.max {
+			// areInIncreasingOrder:
+			// A predicate that returns true if its first argument should be ordered before its second argument.
+			
+			let num0 = $0.value
+			let num1 = $1.value
+			
+			return num0 < num1
+		}
+		
+		var mostRecentStaleValue: Result? = nil
+		if let mostRecentStaleKey = max?.key {
+			mostRecentStaleValue = cache[mostRecentStaleKey]
+		}
+		
+		return mostRecentStaleValue ?? Result(payment: nil)
+	}
+	
 	/// Fetches the payment, either via the cache or via a database fetch.
 	/// The given completion is always invoked on the main thread, and always on a future runloop cycle.
 	///

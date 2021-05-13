@@ -8,14 +8,16 @@ extension WalletPaymentId {
 	
 	var identifiable: String {
 		
+		// Form is: "<incoming||outgoing>|<paymentHash||uuid>"
+		
 		if let incoming = self as? IncomingPaymentId {
-			
 			return "incoming|\(incoming.paymentHash.toHex())"
 			
-		} else {
-			
-			let outgoing = self as! OutgoingPaymentId
+		} else if let outgoing = self as? OutgoingPaymentId {
 			return "outgoing|\(outgoing.id.description())"
+			
+		} else {
+			fatalError("Unknown WalletPaymentId type")
 		}
 	}
 }
@@ -24,17 +26,15 @@ extension WalletPaymentOrderRow {
 	
 	var identifiable: String {
 		
-		let completed = completedAt?.description ?? "null"
+		// Form is: "<incoming||outgoing>|<paymentHash||uuid>|<createdAt>|<completedAt||null>"
 		
-		if let incoming = id as? WalletPaymentId.IncomingPaymentId {
-			
-			return "\(incoming.identifiable)|\(createdAt)|\(completed)"
-			
-		} else {
-			let outgoing = id as! WalletPaymentId.OutgoingPaymentId
-			
-			return "\(outgoing.identifiable)|\(createdAt)|\(completed)"
-		}
+		return "\(self.identifiablePrefix)\(completedAt?.description ?? "null")"
+	}
+	
+	var identifiablePrefix: String {
+		
+		// Form is: "<incoming||outgoing>|<paymentHash||uuid>|<createdAt>|"
+		return "\(id.identifiable)|\(createdAt)|"
 	}
 }
 

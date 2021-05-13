@@ -399,14 +399,25 @@ fileprivate struct PaymentCell : View, ViewName {
 	let row: WalletPaymentOrderRow
 	
 	@State var fetched: PaymentsFetcher.Result
+	@State var fetchedIsStale: Bool
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
 	init(row: WalletPaymentOrderRow) {
 		self.row = row
 		
-		let result = PaymentsFetcher.shared.getCachedPayment(row: row)
-		self._fetched = State(initialValue: result)
+		var result = PaymentsFetcher.shared.getCachedPayment(row: row)
+		if let _ = result.payment {
+			
+			self._fetched = State(initialValue: result)
+			self._fetchedIsStale = State(initialValue: false)
+		} else {
+			
+			result = PaymentsFetcher.shared.getCachedStalePayment(row: row)
+			
+			self._fetched = State(initialValue: result)
+			self._fetchedIsStale = State(initialValue: true)
+		}
 	}
 	
 	var body: some View {
@@ -529,7 +540,7 @@ fileprivate struct PaymentCell : View, ViewName {
 	func onAppear() -> Void {
 		log.trace("[\(viewName)] onAppear()")
 		
-		if fetched.payment == nil {
+		if fetched.payment == nil || fetchedIsStale {
 			
 			PaymentsFetcher.shared.getPayment(row: row) { (result: PaymentsFetcher.Result) in
 				self.fetched = result

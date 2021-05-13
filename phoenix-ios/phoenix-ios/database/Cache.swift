@@ -267,4 +267,21 @@ class Cache<Key: Hashable, Value: Any> {
 		
 		return _dict[key] != nil
 	}
+	
+	func filteredKeys(_ isIncluded: (Key) -> Bool) -> [Key] {
+		
+		var results = [Key]()
+		
+		var item = mostRecentCacheItem
+		while item != nil {
+			
+			if isIncluded(item!.key) {
+				results.append(item!.key)
+			}
+			
+			item = item?.next
+		}
+		
+		return results
+	}
 }
