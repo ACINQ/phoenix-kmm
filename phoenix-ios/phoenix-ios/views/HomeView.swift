@@ -26,6 +26,9 @@ struct HomeView : MVIView, ViewName {
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
+	let paymentsPagerPublisher = AppDelegate.get().business.paymentsManager.paymentsPagePublisher()
+	@State var paymentsPage = PaymentsManager.PaymentsPage(offset: 0, count: 0, rows: [])
+	
 	let lastCompletedPaymentPublisher = AppDelegate.get().business.paymentsManager.lastCompletedPaymentPublisher()
 	let chainContextPublisher = AppDelegate.get().business.appConfigurationManager.chainContextPublisher()
 	
@@ -39,7 +42,6 @@ struct HomeView : MVIView, ViewName {
 	@Environment(\.popoverState) var popoverState: PopoverState
 	@Environment(\.openURL) var openURL
 	
-	@State var didAppear = false
 	@State var didPreFetch = false
 	
 	@ViewBuilder
@@ -66,6 +68,9 @@ struct HomeView : MVIView, ViewName {
 		.navigationBarHidden(true)
 		.onChange(of: mvi.model) { newModel in
 			onModelChange(model: newModel)
+		}
+		.onReceive(paymentsPagerPublisher) {
+			paymentsPageChanged($0)
 		}
 		.onReceive(lastCompletedPaymentPublisher) {
 			lastCompletedPaymentChanged($0)
@@ -175,7 +180,7 @@ struct HomeView : MVIView, ViewName {
 			// === Payments List ====
 			ScrollView {
 				LazyVStack {
-					// mvi.model.paymentsOrder: [WalletPaymentId]
+					// paymentsPage.rows: [WalletPaymentOrderRow]
 					// WalletPaymentOrderRow.identifiable: String (defined in KotlinExtensions)
 					//
 					// Here's how this works:
@@ -186,7 +191,7 @@ struct HomeView : MVIView, ViewName {
 					// - If the row is unmodified, then it is initialized with existing state,
 					//   and the row's `onAppear` with NOT fire.
 					//
-					ForEach(mvi.model.paymentsOrder, id: \.identifiable) { row in
+					ForEach(paymentsPage.rows, id: \.identifiable) { row in
 						Button {
 							didSelectPayment(row: row)
 						} label: {
@@ -239,9 +244,22 @@ struct HomeView : MVIView, ViewName {
 		}
 	}
 	
+	func onAppear() {
+		log.trace("[\(viewName)] onAppear()")
+		
+		AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: 0, count: 50)
+	}
+	
 	func onModelChange(model: Home.Model) -> Void {
 		log.trace("[\(viewName)] onModelChange()")
 		
+		// Todo: maybe update paymentsPage subscription ?
+	}
+	
+	func paymentsPageChanged(_ page: PaymentsManager.PaymentsPage) -> Void {
+		log.trace("[\(viewName)] paymentsPageChanged()")
+		
+		paymentsPage = page
 		maybePreFetchPaymentsFromDatabase()
 	}
 	
@@ -278,32 +296,25 @@ struct HomeView : MVIView, ViewName {
 		}
 	}
 	
-	func onAppear() {
-		log.trace("[\(viewName)] onAppear()")
-		
-		didAppear = true
-		maybePreFetchPaymentsFromDatabase()
-	}
-	
 	func maybePreFetchPaymentsFromDatabase() -> Void {
 		
-		if didAppear && !didPreFetch && mvi.model.paymentsOrder.count > 0 {
-			
+		if !didPreFetch && paymentsPage.rows.count > 0 {
+	
 			didPreFetch = true
 			prefetchPaymentsFromDatabase(idx: 0)
 		}
 	}
 	
 	func prefetchPaymentsFromDatabase(idx: Int) {
-		
-		guard idx < mvi.model.paymentsOrder.count else {
+
+		guard idx < paymentsPage.rows.count else {
 			// recursion complete
 			return
 		}
-		
-		let row = mvi.model.paymentsOrder[idx]
+
+		let row = paymentsPage.rows[idx]
 		log.debug("[\(viewName)] Pre-fetching: \(row.identifiable)")
-		
+
 		PaymentsFetcher.shared.getPayment(row: row) { _ in
 			prefetchPaymentsFromDatabase(idx: idx + 1)
 		}
@@ -835,7 +846,7 @@ class HomeView_Previews: PreviewProvider {
 		HomeView().mock(Home.Model(
 			balance: Lightning_kmpMilliSatoshi(msat: 123500),
 			incomingBalance: Lightning_kmpMilliSatoshi(msat: 0),
-			paymentsOrder: []
+			paymentsCount: 0
 		))
 		.preferredColorScheme(.dark)
 		.previewDevice("iPhone 8")
@@ -844,7 +855,7 @@ class HomeView_Previews: PreviewProvider {
 		HomeView().mock(Home.Model(
 			balance: Lightning_kmpMilliSatoshi(msat: 1000000),
 			incomingBalance: Lightning_kmpMilliSatoshi(msat: 12000000),
-			paymentsOrder: []
+			paymentsCount: 0
 		))
 		.preferredColorScheme(.light)
 		.previewDevice("iPhone 8")

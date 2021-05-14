@@ -11,11 +11,14 @@ object Home {
     data class Model(
         val balance: MilliSatoshi,
         val incomingBalance: MilliSatoshi?,
-        val paymentsOrder: List<WalletPaymentOrderRow>
+        val paymentsCount: Long
     ) : MVI.Model()
 
-    val emptyModel = Model(MilliSatoshi(0), null, emptyList())
+    val emptyModel = Model(
+        balance = MilliSatoshi(0),
+        incomingBalance = null,
+        paymentsCount = 0
+    )
 
     sealed class Intent : MVI.Intent()
-
 }

@@ -13,6 +13,10 @@ import PhoenixShared
 ///
 class PaymentsFetcher {
 	
+	/// Singleton instance
+	///
+	public static let shared = PaymentsFetcher()
+	
 	struct Result {
 		let payment: Lightning_kmpWalletPayment?
 		
@@ -31,10 +35,6 @@ class PaymentsFetcher {
 	private var pendingFetches = [String: [CompletionHandler]]()
 	
 	private let paymentsManager = AppDelegate.get().business.paymentsManager
-	
-	/// Singleton instance
-	///
-	public static let shared = PaymentsFetcher()
 	
 	private init() {/* MUST use singleton instance */}
 	

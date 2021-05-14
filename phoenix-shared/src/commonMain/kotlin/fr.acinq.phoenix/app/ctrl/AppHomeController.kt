@@ -56,9 +56,11 @@ class AppHomeController(
         }
 
         launch {
-            paymentsManager.paymentsOrder.collect {
+            paymentsManager.paymentsCount.collect {
                 model {
-                    copy(paymentsOrder = it)
+                    copy(
+                        paymentsCount = it
+                    )
                 }
             }
         }

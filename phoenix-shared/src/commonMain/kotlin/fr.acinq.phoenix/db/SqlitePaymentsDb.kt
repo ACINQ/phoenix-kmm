@@ -20,6 +20,7 @@ import com.squareup.sqldelight.EnumColumnAdapter
 import com.squareup.sqldelight.db.SqlDriver
 import com.squareup.sqldelight.runtime.coroutines.asFlow
 import com.squareup.sqldelight.runtime.coroutines.mapToList
+import com.squareup.sqldelight.runtime.coroutines.mapToOne
 import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.bitcoin.PublicKey
@@ -140,6 +141,18 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     // ---- list ALL payments
 
+    suspend fun listPaymentsCount(): Long {
+        return withContext(Dispatchers.Default) {
+            aggrQueries.listAllPaymentsCount(::allPaymentsCountMapper).executeAsList().first()
+        }
+    }
+
+    suspend fun listPaymentsCountFlow(): Flow<Long> {
+        return withContext(Dispatchers.Default) {
+            aggrQueries.listAllPaymentsCount(::allPaymentsCountMapper).asFlow().mapToOne()
+        }
+    }
+
     suspend fun listPaymentsOrder(count: Int, skip: Int): List<WalletPaymentOrderRow> {
         return withContext(Dispatchers.Default) {
             aggrQueries.listAllPaymentsOrder(skip.toLong(), count.toLong(), ::allPaymentsOrderMapper).executeAsList()
@@ -162,6 +175,12 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         return withContext(Dispatchers.Default) {
             aggrQueries.listAllPayments(skip.toLong(), count.toLong(), ::allPaymentsMapper).asFlow().mapToList()
         }
+    }
+
+    private fun allPaymentsCountMapper(
+        result: Long?
+    ): Long {
+        return result ?: 0
     }
 
     private fun allPaymentsOrderMapper(

@@ -90,7 +90,6 @@ FROM (
         created_at              AS created_at,
         completed_at            AS completed_at
     FROM outgoing_payments
-    GROUP BY id
 UNION ALL
     SELECT
         'incoming'              AS direction,
@@ -99,7 +98,14 @@ UNION ALL
         created_at              AS created_at,
         received_at             AS completed_at
     FROM incoming_payments
-	WHERE received_amount_msat > 0
+    WHERE received_amount_msat > 0
 )
 ORDER BY COALESCE(completed_at, created_at) DESC
 LIMIT ?, ?;
+
+listAllPaymentsCount:
+SELECT SUM(result) AS result FROM (
+    SELECT COUNT(*) AS result FROM outgoing_payments
+    UNION ALL
+    SELECT COUNT(*) AS result FROM incoming_payments WHERE received_amount_msat > 0
+);

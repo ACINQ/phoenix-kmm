@@ -15,12 +15,9 @@ import fr.acinq.lightning.utils.toMilliSatoshi
 import fr.acinq.phoenix.db.SqlitePaymentsDb
 import fr.acinq.phoenix.db.WalletPaymentId
 import fr.acinq.phoenix.db.WalletPaymentOrderRow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
@@ -33,11 +30,29 @@ class PaymentsManager(
 ) : CoroutineScope by MainScope() {
     private val log = newLogger(loggerFactory)
 
+    data class PaymentsPage(
+        val offset: Int,
+        val count: Int,
+        val rows: List<WalletPaymentOrderRow>
+    ) {
+        constructor(): this(0, 0, emptyList())
+    }
+
     /**
-     * A flow containing a list of paymentIds,
-     * directly taken from the database and automatically refreshed when the database changes.
+     * A flow containing a page of payment rows.
+     * This is controlled by the `subscribeToPaymentsPage()` function.
+     * You use that function to control initialize the flow, and to modify it.
      */
-    internal val paymentsOrder = MutableStateFlow<List<WalletPaymentOrderRow>>(emptyList())
+    val paymentsPage = MutableStateFlow<PaymentsPage>(PaymentsPage())
+    private var paymentsPage_offset: Int = 0
+    private var paymentsPage_count: Int = 0
+    private var paymentsPage_job: Job? = null
+
+    /**
+     * A flow containing the total number of payments in the database,
+     * and automatically refreshed when the database changes.
+     */
+    internal val paymentsCount = MutableStateFlow<Long>(0)
 
     /** Flow of map of (bitcoinAddress -> amount) swap-ins. */
     private val _incomingSwaps = MutableStateFlow<Map<String, MilliSatoshi>>(HashMap())
@@ -55,8 +70,8 @@ class PaymentsManager(
 
     init {
         launch {
-            paymentsDb().listPaymentsOrderFlow(150, 0).collect {
-                paymentsOrder.value = it
+            paymentsDb().listPaymentsCountFlow().collect {
+                paymentsCount.value = it
             }
         }
 
@@ -99,6 +114,25 @@ class PaymentsManager(
 
     suspend fun getIncomingPayment(paymentHash: ByteVector32): IncomingPayment? {
         return paymentsDb().getIncomingPayment(paymentHash)
+    }
+
+    fun subscribeToPaymentsPage(offset: Int, count: Int): Unit {
+        if (paymentsPage_offset == offset && paymentsPage_count == count) {
+            // No changes
+            return
+        }
+        paymentsPage_job?.let {
+            it.cancel()
+            paymentsPage_job = null
+        }
+
+        paymentsPage_offset = offset
+        paymentsPage_count = count
+        paymentsPage_job = launch {
+            paymentsDb().listPaymentsOrderFlow(count = count, skip = offset).collect {
+                paymentsPage.value = PaymentsPage(offset = offset, count = count, rows = it)
+            }
+        }
     }
 }
 
