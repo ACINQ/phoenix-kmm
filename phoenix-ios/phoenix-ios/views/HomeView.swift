@@ -12,6 +12,10 @@ fileprivate var log = Logger(
 fileprivate var log = Logger(OSLog.disabled)
 #endif
 
+fileprivate let PAGE_COUNT_START = 20
+fileprivate let PAGE_COUNT_INCREMENT = 20
+fileprivate let PAGE_COUNT_MAX = 60
+
 struct HomeView : MVIView, ViewName {
 
 	@StateObject var mvi = MVIState({ $0.home() })
@@ -195,7 +199,7 @@ struct HomeView : MVIView, ViewName {
 						Button {
 							didSelectPayment(row: row)
 						} label: {
-							PaymentCell(row: row)
+							PaymentCell(row: row, didAppearCallback: paymentCellDidAppear)
 						}
 					}
 				}
@@ -247,7 +251,10 @@ struct HomeView : MVIView, ViewName {
 	func onAppear() {
 		log.trace("[\(viewName)] onAppear()")
 		
-		AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: 0, count: 50)
+		AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(
+			offset: 0,
+			count: Int32(PAGE_COUNT_START)
+		)
 	}
 	
 	func onModelChange(model: Home.Model) -> Void {
@@ -403,19 +410,105 @@ struct HomeView : MVIView, ViewName {
 			openURL(url)
 		}
 	}
+	
+	func paymentCellDidAppear(row: WalletPaymentOrderRow) -> Void {
+		log.trace("[\(viewName)] paymentCellDidAppear()")
+		
+		// Infinity Scrolling
+		//
+		// Here's the general idea:
+		//
+		// - We start by fetching a small "page" from the database.
+		//   For example: Page(offset=0, count=50)
+		// - When the user scrolls to the bottom, we can increase the count.
+		//   For example: Page(offset=0, count=100)
+		// - At some point, rather than increase the count, we increment the offset.
+		//   For example: Page(offset=50, count=200)
+		// - If the user scrolls back up to the top, we decrement the offset.
+		//   For example: Page(offset=0, count=200)
+		
+		var rowIdxWithinPage: Int? = nil
+		for (idx, r) in paymentsPage.rows.enumerated() {
+			
+			if row == r {
+				rowIdxWithinPage = idx
+				break
+			}
+		}
+		
+		guard let rowIdxWithinPage = rowIdxWithinPage else {
+			// Row not found within current page.
+			// Perhaps the page just changed, and it no longer includes this row.
+			return
+		}
+		
+		let isFirstRowWithinPage = rowIdxWithinPage == 0
+		let isLastRowWithinPage = rowIdxWithinPage + 1 == paymentsPage.rows.count
+		
+		if isLastRowWithinPage {
+		
+			let rowIdxWithinDatabase = Int(paymentsPage.offset) + rowIdxWithinPage
+			let hasMoreRowsInDatabase = rowIdxWithinDatabase + 1 < mvi.model.paymentsCount
+			
+			if hasMoreRowsInDatabase {
+				
+				// Example:
+				// - We start with Page(offset=0, count=50).
+				// - We expand in increments of 50 until we reach Page(offset=0, count=200).
+				// - Then we slide the window like Page(offset=50, count=200)
+				
+				if paymentsPage.count < PAGE_COUNT_MAX {
+					
+					// increase paymentsPage.count
+					
+					let offset = paymentsPage.offset
+					let newCount = paymentsPage.count + Int32(PAGE_COUNT_INCREMENT)
+					
+					AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: offset, count: newCount)
+					
+				} else {
+					
+					// increase paymentsPage.offset
+					
+					let newOffset = paymentsPage.offset + Int32(PAGE_COUNT_INCREMENT)
+					let count = paymentsPage.count
+					
+					AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: newOffset, count: count)
+				}
+			}
+			
+		} else if isFirstRowWithinPage {
+			
+			let rowIdxWithinDatabase = Int(paymentsPage.offset) + rowIdxWithinPage
+			let hasEarlierRowsInDatabase = rowIdxWithinDatabase > 0
+			
+			if hasEarlierRowsInDatabase {
+				
+				// We only increase the count while scrolling down.
+				// If we scroll back up to the top, we decrease the offset.
+				
+				let newOffset = paymentsPage.offset - Int32(PAGE_COUNT_INCREMENT)
+				let count = paymentsPage.count
+				
+				AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: newOffset, count: count)
+			}
+		}
+	}
 }
 
 fileprivate struct PaymentCell : View, ViewName {
 
 	let row: WalletPaymentOrderRow
+	let didAppearCallback: (WalletPaymentOrderRow) -> Void
 	
 	@State var fetched: PaymentsFetcher.Result
 	@State var fetchedIsStale: Bool
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
-	init(row: WalletPaymentOrderRow) {
+	init(row: WalletPaymentOrderRow, didAppearCallback: @escaping (WalletPaymentOrderRow)->Void) {
 		self.row = row
+		self.didAppearCallback = didAppearCallback
 		
 		var result = PaymentsFetcher.shared.getCachedPayment(row: row)
 		if let _ = result.payment {
@@ -557,6 +650,8 @@ fileprivate struct PaymentCell : View, ViewName {
 				self.fetched = result
 			}
 		}
+		
+		didAppearCallback(row)
 	}
 }
 
