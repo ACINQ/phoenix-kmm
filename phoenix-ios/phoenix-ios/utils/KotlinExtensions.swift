@@ -4,7 +4,7 @@ import Combine
 import CryptoKit
 
 
-extension WalletPaymentId {
+extension WalletPaymentId: Identifiable {
 	
 	var identifiable: String {
 		
@@ -22,7 +22,7 @@ extension WalletPaymentId {
 	}
 }
 
-extension WalletPaymentOrderRow {
+extension WalletPaymentOrderRow: Identifiable {
 	
 	var identifiable: String {
 		

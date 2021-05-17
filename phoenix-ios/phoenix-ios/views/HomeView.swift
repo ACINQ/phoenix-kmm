@@ -12,9 +12,8 @@ fileprivate var log = Logger(
 fileprivate var log = Logger(OSLog.disabled)
 #endif
 
-fileprivate let PAGE_COUNT_START = 20
-fileprivate let PAGE_COUNT_INCREMENT = 20
-fileprivate let PAGE_COUNT_MAX = 60
+fileprivate let PAGE_COUNT_START = 25
+fileprivate let PAGE_COUNT_INCREMENT = 25
 
 struct HomeView : MVIView, ViewName {
 
@@ -194,6 +193,10 @@ struct HomeView : MVIView, ViewName {
 					//   and the row's `onAppear` will fire.
 					// - If the row is unmodified, then it is initialized with existing state,
 					//   and the row's `onAppear` with NOT fire.
+					//
+					// Since we use WalletPaymentOrderRow.identifiable, our unique identifier
+					// contains the row's completedAt date, which is modified when the row changes.
+					// Thus our row is automatically refreshed after it fails/succeeds.
 					//
 					ForEach(paymentsPage.rows, id: \.identifiable) { row in
 						Button {
@@ -411,8 +414,8 @@ struct HomeView : MVIView, ViewName {
 		}
 	}
 	
-	func paymentCellDidAppear(row: WalletPaymentOrderRow) -> Void {
-		log.trace("[\(viewName)] paymentCellDidAppear()")
+	func paymentCellDidAppear(_ visibleRow: WalletPaymentOrderRow) -> Void {
+		log.trace("[\(viewName)] paymentCellDidAppear(): \(visibleRow.id)")
 		
 		// Infinity Scrolling
 		//
@@ -422,15 +425,20 @@ struct HomeView : MVIView, ViewName {
 		//   For example: Page(offset=0, count=50)
 		// - When the user scrolls to the bottom, we can increase the count.
 		//   For example: Page(offset=0, count=100)
-		// - At some point, rather than increase the count, we increment the offset.
-		//   For example: Page(offset=50, count=200)
-		// - If the user scrolls back up to the top, we decrement the offset.
-		//   For example: Page(offset=0, count=200)
+		//
+		// Note:
+		// In the original design, we didn't increase the count forever.
+		// At some poing we incremented the offset instead.
+		// However, this doesn't work well with LazyVStack, because the contentOffset isn't adjusted.
+		// So the end result is that the user's position within the scrollView jumps,
+		// and results in a very confusing user experience.
+		// I cannot find a clean way of accomplishing a solution with pure SwiftUI.
+		// So this remains a todo item for future improvement.
 		
 		var rowIdxWithinPage: Int? = nil
 		for (idx, r) in paymentsPage.rows.enumerated() {
 			
-			if row == r {
+			if r == visibleRow {
 				rowIdxWithinPage = idx
 				break
 			}
@@ -442,9 +450,7 @@ struct HomeView : MVIView, ViewName {
 			return
 		}
 		
-		let isFirstRowWithinPage = rowIdxWithinPage == 0
 		let isLastRowWithinPage = rowIdxWithinPage + 1 == paymentsPage.rows.count
-		
 		if isLastRowWithinPage {
 		
 			let rowIdxWithinDatabase = Int(paymentsPage.offset) + rowIdxWithinPage
@@ -452,45 +458,17 @@ struct HomeView : MVIView, ViewName {
 			
 			if hasMoreRowsInDatabase {
 				
-				// Example:
-				// - We start with Page(offset=0, count=50).
-				// - We expand in increments of 50 until we reach Page(offset=0, count=200).
-				// - Then we slide the window like Page(offset=50, count=200)
+				// increase paymentsPage.count
 				
-				if paymentsPage.count < PAGE_COUNT_MAX {
-					
-					// increase paymentsPage.count
-					
-					let offset = paymentsPage.offset
-					let newCount = paymentsPage.count + Int32(PAGE_COUNT_INCREMENT)
-					
-					AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: offset, count: newCount)
-					
-				} else {
-					
-					// increase paymentsPage.offset
-					
-					let newOffset = paymentsPage.offset + Int32(PAGE_COUNT_INCREMENT)
-					let count = paymentsPage.count
-					
-					AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: newOffset, count: count)
-				}
-			}
-			
-		} else if isFirstRowWithinPage {
-			
-			let rowIdxWithinDatabase = Int(paymentsPage.offset) + rowIdxWithinPage
-			let hasEarlierRowsInDatabase = rowIdxWithinDatabase > 0
-			
-			if hasEarlierRowsInDatabase {
+				let prvOffset = paymentsPage.offset
+				let newCount = paymentsPage.count + Int32(PAGE_COUNT_INCREMENT)
 				
-				// We only increase the count while scrolling down.
-				// If we scroll back up to the top, we decrease the offset.
+				log.debug("[\(viewName)] increasing page.count: Page(offset=\(prvOffset), count=\(newCount)")
 				
-				let newOffset = paymentsPage.offset - Int32(PAGE_COUNT_INCREMENT)
-				let count = paymentsPage.count
-				
-				AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(offset: newOffset, count: count)
+				AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(
+					offset: prvOffset,
+					count: newCount
+				)
 			}
 		}
 	}
@@ -506,7 +484,10 @@ fileprivate struct PaymentCell : View, ViewName {
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 
-	init(row: WalletPaymentOrderRow, didAppearCallback: @escaping (WalletPaymentOrderRow)->Void) {
+	init(
+		row: WalletPaymentOrderRow,
+		didAppearCallback: @escaping (WalletPaymentOrderRow)->Void
+	) {
 		self.row = row
 		self.didAppearCallback = didAppearCallback
 		
@@ -642,7 +623,6 @@ fileprivate struct PaymentCell : View, ViewName {
 	}
 	
 	func onAppear() -> Void {
-		log.trace("[\(viewName)] onAppear()")
 		
 		if fetched.payment == nil || fetchedIsStale {
 			
