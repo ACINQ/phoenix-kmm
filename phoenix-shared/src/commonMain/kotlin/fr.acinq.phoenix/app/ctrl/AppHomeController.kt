@@ -10,6 +10,7 @@ import fr.acinq.phoenix.ctrl.Home
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -25,27 +26,24 @@ class AppHomeController(
     loggerFactory,
     firstModel = Home.emptyModel
 ) {
-    private var normalChannelsReady = false
+    private var isBoot = true
 
     init {
         launch {
-            // Fetch initial "boot" balance.
-            // This allows us to show the user his/her balance before the connection is up.
-            val bootChannels = peerManager.getPeer().bootChannelsFlow.filterNotNull().first()
-            if (!normalChannelsReady) {
-                updateBalance(bootChannels)
-            }
-        }
-        launch {
-            peerManager.getPeer().channelsFlow.collect { channels ->
-                // On boot, this fires with an empty channels map.
-                // We want to ignore this false information.
-                if (!normalChannelsReady && channels.size > 0) {
-                    normalChannelsReady = true
+            val peer = peerManager.getPeer()
+            val bootFlow = peer.bootChannelsFlow.filterNotNull()
+            val channelsFlow = peer.channelsFlow
+            combine(bootFlow, channelsFlow) { bootChannels, channels ->
+                // The bootFlow will fire once, after the channels have been read from the database.
+                // The channelsFlow is initialized with an empty HashMap.
+                if (isBoot) {
+                    isBoot = false
+                    bootChannels
+                } else {
+                    channels
                 }
-                if (normalChannelsReady) {
-                    updateBalance(channels)
-                }
+            }.collect { channels ->
+                updateBalance(channels)
             }
         }
 
