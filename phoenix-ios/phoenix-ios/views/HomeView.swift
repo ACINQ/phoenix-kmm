@@ -45,6 +45,7 @@ struct HomeView : MVIView, ViewName {
 	@Environment(\.popoverState) var popoverState: PopoverState
 	@Environment(\.openURL) var openURL
 	
+	@State var didAppear = false
 	@State var didPreFetch = false
 	
 	@ViewBuilder
@@ -254,10 +255,14 @@ struct HomeView : MVIView, ViewName {
 	func onAppear() {
 		log.trace("[\(viewName)] onAppear()")
 		
-		AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(
-			offset: 0,
-			count: Int32(PAGE_COUNT_START)
-		)
+		// Careful: this function may be called when returning from the Receive/Send view
+		if !didAppear {
+			didAppear = true
+			AppDelegate.get().business.paymentsManager.subscribeToPaymentsPage(
+				offset: 0,
+				count: Int32(PAGE_COUNT_START)
+			)
+		}
 	}
 	
 	func onModelChange(model: Home.Model) -> Void {
