@@ -42,6 +42,10 @@ class PaymentsManager(
      * A flow containing a page of payment rows.
      * This is controlled by the `subscribeToPaymentsPage()` function.
      * You use that function to control initialize the flow, and to modify it.
+     *
+     * Note:
+     * iOS (with SwiftUI & LazyVStack) has some issues supporting a non-zero offset.
+     * So on iOS, we're currently only incrementing the count.
      */
     val paymentsPage = MutableStateFlow<PaymentsPage>(PaymentsPage())
     private var paymentsPage_offset: Int = 0
@@ -125,6 +129,10 @@ class PaymentsManager(
             it.cancel()
             paymentsPage_job = null
         }
+
+        // There could be a significant delay between requesting the list
+        // and receiving the list. So paymentsPage_offset/count are used to track
+        // the current request, even if it hasn't completed yet.
 
         paymentsPage_offset = offset
         paymentsPage_count = count
