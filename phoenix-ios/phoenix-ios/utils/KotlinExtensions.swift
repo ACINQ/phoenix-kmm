@@ -7,34 +7,38 @@ import CryptoKit
 extension WalletPaymentId: Identifiable {
 	
 	var identifiable: String {
-		
-		// Form is: "<incoming||outgoing>|<paymentHash||uuid>"
-		
-		if let incoming = self as? IncomingPaymentId {
-			return "incoming|\(incoming.paymentHash.toHex())"
-			
-		} else if let outgoing = self as? OutgoingPaymentId {
-			return "outgoing|\(outgoing.id.description())"
-			
-		} else {
-			fatalError("Unknown WalletPaymentId type")
-		}
+		return self.identifier
 	}
 }
 
 extension WalletPaymentOrderRow: Identifiable {
 	
 	var identifiable: String {
+		return self.identifier
+	}
+}
+
+extension PaymentsManager {
+	
+	func getCachedPayment(row: WalletPaymentOrderRow) -> PaymentsFetcher.Result {
 		
-		// Form is: "<incoming||outgoing>|<paymentHash||uuid>|<createdAt>|<completedAt||null>"
-		
-		return "\(self.identifiablePrefix)\(completedAt?.description ?? "null")"
+		return fetcher.getCachedPayment(row: row)
 	}
 	
-	var identifiablePrefix: String {
+	func getCachedStalePayment(row: WalletPaymentOrderRow) -> PaymentsFetcher.Result {
 		
-		// Form is: "<incoming||outgoing>|<paymentHash||uuid>|<createdAt>|"
-		return "\(id.identifiable)|\(createdAt)|"
+		return fetcher.getCachedStalePayment(row: row)
+	}
+	
+	func getPayment(
+		row: WalletPaymentOrderRow,
+		completion: @escaping (PaymentsFetcher.Result) -> Void
+	) -> Void {
+		
+		fetcher.getPayment(row: row) { (result: PaymentsFetcher.Result?, _: Error?) in
+			
+			completion(result ?? PaymentsFetcher.Result(payment: nil))
+		}
 	}
 }
 

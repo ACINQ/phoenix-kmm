@@ -295,10 +295,33 @@ class UnhandledDirection(direction: String) : RuntimeException("unhandled direct
 sealed class WalletPaymentId {
     data class OutgoingPaymentId(val id: UUID): WalletPaymentId()
     data class IncomingPaymentId(val paymentHash: ByteVector32): WalletPaymentId()
+
+    val identifier: String get() = when(this) {
+        is OutgoingPaymentId -> "outgoing|${this.id.toString()}"
+        is IncomingPaymentId -> "incoming|${this.paymentHash.toHex()}"
+    }
 }
 
 data class WalletPaymentOrderRow(
     val id: WalletPaymentId,
     val createdAt: Long,
     val completedAt: Long?
-)
+) {
+    /// Returns a unique identifier, suitable for use in a HashMap.
+    /// Form is:
+    /// - "outgoing|id|createdAt|completedAt"
+    /// - "incoming|paymentHash|createdAt|completedAt"
+    ///
+    val identifier: String get() {
+        return "${this.staleIdentifierPrefix}${completedAt?.toString() ?: "null"}"
+    }
+
+    /// Returns a prefix that can be used to detect older (stale) versions of the row.
+    /// Form is:
+    /// - "outgoing|id|createdAt|"
+    /// - "incoming|paymentHash|createdAt|"
+    ///
+    val staleIdentifierPrefix: String get() {
+        return "${id.identifier}|${createdAt}|"
+    }
+}

@@ -17,6 +17,9 @@ fileprivate let PAGE_COUNT_INCREMENT = 25
 
 struct HomeView : MVIView, ViewName {
 
+	static let phoenixBusiness = AppDelegate.get().business
+	let phoenixBusiness: PhoenixBusiness = HomeView.phoenixBusiness
+	
 	@StateObject var mvi = MVIState({ $0.home() })
 
 	@Environment(\.controllerFactory) var factoryEnv
@@ -29,13 +32,13 @@ struct HomeView : MVIView, ViewName {
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
-	let paymentsPagerPublisher = AppDelegate.get().business.paymentsManager.paymentsPagePublisher()
+	let paymentsPagerPublisher = phoenixBusiness.paymentsManager.paymentsPagePublisher()
 	@State var paymentsPage = PaymentsManager.PaymentsPage(offset: 0, count: 0, rows: [])
 	
-	let lastCompletedPaymentPublisher = AppDelegate.get().business.paymentsManager.lastCompletedPaymentPublisher()
-	let chainContextPublisher = AppDelegate.get().business.appConfigurationManager.chainContextPublisher()
+	let lastCompletedPaymentPublisher = phoenixBusiness.paymentsManager.lastCompletedPaymentPublisher()
+	let chainContextPublisher = phoenixBusiness.appConfigurationManager.chainContextPublisher()
 	
-	let incomingSwapsPublisher = AppDelegate.get().business.paymentsManager.incomingSwapsPublisher()
+	let incomingSwapsPublisher = phoenixBusiness.paymentsManager.incomingSwapsPublisher()
 	@State var lastIncomingSwaps = [String: Lightning_kmpMilliSatoshi]()
 	@State var incomingSwapScaleFactor: CGFloat = 1.0
 	@State var incomingSwapAnimationsRemaining = 0
@@ -56,7 +59,7 @@ struct HomeView : MVIView, ViewName {
 			Color.primaryBackground
 				.edgesIgnoringSafeArea(.all)
 
-			if AppDelegate.get().business.chain.isTestnet() {
+			if phoenixBusiness.chain.isTestnet() {
 				Image("testnet_bg")
 					.resizable(resizingMode: .tile)
 					.edgesIgnoringSafeArea([.horizontal, .bottom]) // not underneath status bar
@@ -244,7 +247,7 @@ struct HomeView : MVIView, ViewName {
 		log.trace("[\(viewName)] didSelectPayment()")
 		
 		// pretty much guaranteed to be in the cache
-		PaymentsFetcher.shared.getPayment(row: row) { (result: PaymentsFetcher.Result) in
+		phoenixBusiness.paymentsManager.getPayment(row: row) { (result: PaymentsFetcher.Result) in
 			
 			if let payment = result.payment {
 				selectedPayment = payment
@@ -330,7 +333,7 @@ struct HomeView : MVIView, ViewName {
 		let row = paymentsPage.rows[idx]
 		log.debug("[\(viewName)] Pre-fetching: \(row.identifiable)")
 
-		PaymentsFetcher.shared.getPayment(row: row) { _ in
+		phoenixBusiness.paymentsManager.getPayment(row: row) { _ in
 			prefetchPaymentsFromDatabase(idx: idx + 1)
 		}
 	}
@@ -484,6 +487,8 @@ fileprivate struct PaymentCell : View, ViewName {
 	let row: WalletPaymentOrderRow
 	let didAppearCallback: (WalletPaymentOrderRow) -> Void
 	
+	let phoenixBusiness: PhoenixBusiness = AppDelegate.get().business
+	
 	@State var fetched: PaymentsFetcher.Result
 	@State var fetchedIsStale: Bool
 	
@@ -496,14 +501,14 @@ fileprivate struct PaymentCell : View, ViewName {
 		self.row = row
 		self.didAppearCallback = didAppearCallback
 		
-		var result = PaymentsFetcher.shared.getCachedPayment(row: row)
+		var result = phoenixBusiness.paymentsManager.getCachedPayment(row: row)
 		if let _ = result.payment {
 			
 			self._fetched = State(initialValue: result)
 			self._fetchedIsStale = State(initialValue: false)
 		} else {
 			
-			result = PaymentsFetcher.shared.getCachedStalePayment(row: row)
+			result = phoenixBusiness.paymentsManager.getCachedStalePayment(row: row)
 			
 			self._fetched = State(initialValue: result)
 			self._fetchedIsStale = State(initialValue: true)
@@ -631,7 +636,7 @@ fileprivate struct PaymentCell : View, ViewName {
 		
 		if fetched.payment == nil || fetchedIsStale {
 			
-			PaymentsFetcher.shared.getPayment(row: row) { (result: PaymentsFetcher.Result) in
+			phoenixBusiness.paymentsManager.getPayment(row: row) { (result: PaymentsFetcher.Result) in
 				self.fetched = result
 			}
 		}
