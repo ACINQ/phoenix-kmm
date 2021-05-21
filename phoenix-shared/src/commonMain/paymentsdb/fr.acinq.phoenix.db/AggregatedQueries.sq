@@ -59,7 +59,7 @@ UNION ALL
     WHERE received_amount_msat > 0
 )
 ORDER BY COALESCE(completed_at, created_at) DESC
-LIMIT ?, ?;
+LIMIT :limit OFFSET :offset;
 
 --  0: ['outgoing', 'incoming']
 --  1: outgoing_payment_id              a UUID identifying an functional outgoing payment (made of parts)
@@ -101,7 +101,7 @@ UNION ALL
     WHERE received_amount_msat > 0
 )
 ORDER BY COALESCE(completed_at, created_at) DESC
-LIMIT ?, ?;
+LIMIT :limit OFFSET :offset;
 
 listAllPaymentsCount:
 SELECT SUM(result) AS result FROM (

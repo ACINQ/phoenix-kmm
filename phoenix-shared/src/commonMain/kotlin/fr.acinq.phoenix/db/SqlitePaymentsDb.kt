@@ -155,25 +155,41 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     suspend fun listPaymentsOrder(count: Int, skip: Int): List<WalletPaymentOrderRow> {
         return withContext(Dispatchers.Default) {
-            aggrQueries.listAllPaymentsOrder(skip.toLong(), count.toLong(), ::allPaymentsOrderMapper).executeAsList()
+            aggrQueries.listAllPaymentsOrder(
+                limit = count.toLong(),
+                offset = skip.toLong(),
+                mapper = ::allPaymentsOrderMapper
+            ).executeAsList()
         }
     }
 
     suspend fun listPaymentsOrderFlow(count: Int, skip: Int): Flow<List<WalletPaymentOrderRow>> {
         return withContext(Dispatchers.Default) {
-            aggrQueries.listAllPaymentsOrder(skip.toLong(), count.toLong(), ::allPaymentsOrderMapper).asFlow().mapToList()
+            aggrQueries.listAllPaymentsOrder(
+                limit = count.toLong(),
+                offset = skip.toLong(),
+                mapper = ::allPaymentsOrderMapper
+            ).asFlow().mapToList()
         }
     }
 
     override suspend fun listPayments(count: Int, skip: Int, filters: Set<PaymentTypeFilter>): List<WalletPayment> {
         return withContext(Dispatchers.Default) {
-            aggrQueries.listAllPayments(skip.toLong(), count.toLong(), ::allPaymentsMapper).executeAsList()
+            aggrQueries.listAllPayments(
+                limit = count.toLong(),
+                offset = skip.toLong(),
+                mapper = ::allPaymentsMapper
+            ).executeAsList()
         }
     }
 
     suspend fun listPaymentsFlow(count: Int, skip: Int, filters: Set<PaymentTypeFilter>): Flow<List<WalletPayment>> {
         return withContext(Dispatchers.Default) {
-            aggrQueries.listAllPayments(skip.toLong(), count.toLong(), ::allPaymentsMapper).asFlow().mapToList()
+            aggrQueries.listAllPayments(
+                limit = count.toLong(),
+                offset = skip.toLong(),
+                mapper = ::allPaymentsMapper
+            ).asFlow().mapToList()
         }
     }
 
