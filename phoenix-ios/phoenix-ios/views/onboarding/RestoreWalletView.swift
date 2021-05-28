@@ -78,8 +78,11 @@ struct WarningView: View {
 		VStack {
 			
 			Text(
-				"Do not import a seed that was NOT created by this application.\n\n" +
-				"Also, make sure that you don't have another Phoenix wallet running with the same seed."
+				"""
+				Do not import a seed that was NOT created by this application.
+				
+				Also, make sure that you don't have another Phoenix wallet running with the same seed.
+				"""
 			)
 			.font(.title3)
 			.padding(.top, 20)
@@ -137,8 +140,8 @@ struct RestoreView: View {
 	@State var wordInput: String = ""
 	@State var isProcessingPaste = false
 	
-	let topID = "top"
-	let inputID = "input"
+	let topID = "top"     // Todo: replace with: @Namespace var topID
+	let inputID = "input" // Todo: replace with: @Namespace var inputID
 	let keyboardWillShow = NotificationCenter.default.publisher(for:
 		UIApplication.keyboardWillShowNotification
 	)
@@ -226,8 +229,11 @@ struct RestoreView: View {
 
 			if mvi.model is RestoreWallet.ModelInvalidMnemonics {
 				Text(
-					"This seed is invalid and cannot be imported.\n\n" +
-					"Please try again"
+					"""
+					This seed is invalid and cannot be imported.
+					
+					Please try again
+					"""
 				)
 				.padding([.top, .bottom])
 				.foregroundColor(Color.red)
