@@ -5,15 +5,9 @@ buildscript {
     }
 
     dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.32")
-
-//        val isIntelliJ = System.getProperty("isIntelliJ")!!.toBoolean()
-//        val androidVersion = if (isIntelliJ) "4.0.1" else "7.1.0-alpha01"
-//        val androidVersion = "7.1.0-alpha01"
-//        classpath("com.android.tools.build:gradle:$androidVersion")
         classpath("com.android.tools.build:gradle:4.2.1")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.32")
-        classpath("org.jetbrains.kotlin:kotlin-serialization:1.4.32")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${Versions.kotlin}")
+        classpath("org.jetbrains.kotlin:kotlin-serialization:${Versions.kotlin}")
         classpath("com.squareup.sqldelight:gradle-plugin:1.4.4")
     }
 }

@@ -1,88 +1,44 @@
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
-//    val withAndroid = System.getProperty("withAndroid")!!.toBoolean()
-//    if (withAndroid) id("com.android.library")
     kotlin("multiplatform")
     id("kotlinx-serialization")
-    id("com.android.library")
-//    kotlin("plugin.serialization") version "1.4.31"
     id("com.squareup.sqldelight")
+    if (System.getProperty("includeAndroid")?.toBoolean() == true) {
+        id("com.android.library")
+    }
 }
 
-val currentOs = org.gradle.internal.os.OperatingSystem.current()
+val includeAndroid = System.getProperty("includeAndroid")?.toBoolean() ?: false
+if (includeAndroid) {
+    extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
+        compileSdkVersion(30)
+        defaultConfig {
+            minSdkVersion(24)
+            targetSdkVersion(30)
+        }
 
-//val withAndroid = System.getProperty("withAndroid")?.toBoolean() ?: true
+        compileOptions {
+            sourceCompatibility = JavaVersion.VERSION_1_8
+            targetCompatibility = JavaVersion.VERSION_1_8
+        }
 
-android {
-    compileSdkVersion(30)
-    defaultConfig {
-        minSdkVersion(24)
-        targetSdkVersion(30)
+        testOptions {
+            unitTests.isReturnDefaultValues = true
+        }
+
+        sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
     }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    testOptions {
-        unitTests.isReturnDefaultValues = true
-    }
-
-    sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
-
-    // workaround for https://youtrack.jetbrains.com/issue/KT-43944
-//    configurations {
-////        create("androidTestApi")
-//        create("androidTestDebugApi")
-//        create("androidTestReleaseApi")
-//        create("testApi")
-//        create("testDebugApi")
-//        create("testReleaseApi")
-//    }
 }
-
-//if (withAndroid) {
-//    // The `android` extension function is not in classpath if android plugin is not applied
-//    extensions.configure<com.android.build.gradle.LibraryExtension>("android") {
-//        compileSdkVersion(30)
-//        defaultConfig {
-//            minSdkVersion(24)
-//            targetSdkVersion(30)
-//        }
-//
-//        compileOptions {
-//            sourceCompatibility = JavaVersion.VERSION_1_8
-//            targetCompatibility = JavaVersion.VERSION_1_8
-//        }
-//
-//        testOptions {
-//            unitTests.isReturnDefaultValues = true
-//        }
-//
-//        sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
-//
-//        // workaround for https://youtrack.jetbrains.com/issue/KT-43944
-//        configurations {
-//            create("androidTestApi")
-//            create("androidTestDebugApi")
-//            create("androidTestReleaseApi")
-//            create("testApi")
-//            create("testDebugApi")
-//            create("testReleaseApi")
-//        }
-//    }
-//}
 
 kotlin {
-//    if (withAndroid) {
-    android {
-        compilations.all {
-            kotlinOptions.jvmTarget = "1.8"
+    if (includeAndroid) {
+        android {
+            compilations.all {
+                kotlinOptions.jvmTarget = "1.8"
+            }
         }
     }
-//    }
 
     ios {
         binaries {
@@ -107,18 +63,18 @@ kotlin {
 
         val commonMain by getting {
             dependencies {
-                api("fr.acinq.lightning:lightning-kmp:$lightningkmpVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$serializationVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:$serializationVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion")
-                api("org.kodein.memory:kodein-memory-files:$kodeinMemory")
-                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
-                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.1.1")
-                implementation("io.ktor:ktor-client-core:$ktorVersion")
-                implementation("io.ktor:ktor-client-json:$ktorVersion")
-                implementation("io.ktor:ktor-client-serialization:$ktorVersion")
-                implementation("com.squareup.sqldelight:runtime:$sqldelightVersion")
-                implementation("com.squareup.sqldelight:coroutines-extensions:$sqldelightVersion")
+                api("fr.acinq.lightning:lightning-kmp:${Versions.lightningKmp}")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:${Versions.serialization}")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-cbor:${Versions.serialization}")
+                implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:${Versions.serialization}")
+                api("org.kodein.memory:kodein-memory-files:${Versions.kodeinMemory}")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${Versions.coroutines}")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:${Versions.datetime}")
+                implementation("io.ktor:ktor-client-core:${Versions.ktor}")
+                implementation("io.ktor:ktor-client-json:${Versions.ktor}")
+                implementation("io.ktor:ktor-client-serialization:${Versions.ktor}")
+                implementation("com.squareup.sqldelight:runtime:${Versions.sqlDelight}")
+                implementation("com.squareup.sqldelight:coroutines-extensions:${Versions.sqlDelight}")
             }
         }
 
@@ -129,16 +85,16 @@ kotlin {
             }
         }
 
-//        if (withAndroid) {
+        if (includeAndroid) {
             val androidMain by getting {
                 dependencies {
-                    api("androidx.core:core-ktx:1.5.0")
-                    api("fr.acinq.secp256k1:secp256k1-kmp-jni-android:$secp256k1Version")
-                    implementation("io.ktor:ktor-network:$ktorVersion")
-                    implementation("io.ktor:ktor-network-tls:$ktorVersion")
-                    implementation("io.ktor:ktor-client-android:$ktorVersion")
-                    api("org.jetbrains.kotlinx:kotlinx-coroutines-android:$coroutinesVersion")
-                    implementation("com.squareup.sqldelight:android-driver:$sqldelightVersion")
+                    api("androidx.core:core-ktx:${Versions.Android.ktx}")
+                    api("fr.acinq.secp256k1:secp256k1-kmp-jni-android:${Versions.secp256k1}")
+                    implementation("io.ktor:ktor-network:${Versions.ktor}")
+                    implementation("io.ktor:ktor-network-tls:${Versions.ktor}")
+                    implementation("io.ktor:ktor-client-android:${Versions.ktor}")
+                    api("org.jetbrains.kotlinx:kotlinx-coroutines-android:${Versions.coroutines}")
+                    implementation("com.squareup.sqldelight:android-driver:${Versions.sqlDelight}")
                 }
             }
             val androidTest by getting {
@@ -146,29 +102,30 @@ kotlin {
                     implementation(kotlin("test-junit"))
                     implementation("androidx.test.ext:junit:1.1.2")
                     implementation("androidx.test.espresso:espresso-core:3.3.0")
-                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
+                    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:${Versions.coroutines}")
+                    val currentOs = org.gradle.internal.os.OperatingSystem.current()
                     val target = when {
                         currentOs.isLinux -> "linux"
                         currentOs.isMacOsX -> "darwin"
                         currentOs.isWindows -> "mingw"
                         else -> error("Unsupported OS $currentOs")
                     }
-                    implementation("fr.acinq.secp256k1:secp256k1-kmp-jni-jvm-$target:$secp256k1Version")
-                    implementation("com.squareup.sqldelight:sqlite-driver:$sqldelightVersion")
+                    implementation("fr.acinq.secp256k1:secp256k1-kmp-jni-jvm-$target:${Versions.secp256k1}")
+                    implementation("com.squareup.sqldelight:sqlite-driver:${Versions.sqlDelight}")
                 }
             }
-//        }
+        }
 
         val iosMain by getting {
             dependencies {
-                implementation("io.ktor:ktor-client-ios:$ktorVersion")
-                implementation("com.squareup.sqldelight:native-driver:$sqldelightVersion")
+                implementation("io.ktor:ktor-client-ios:${Versions.ktor}")
+                implementation("com.squareup.sqldelight:native-driver:${Versions.sqlDelight}")
             }
         }
 
         val iosTest by getting {
             dependencies {
-                implementation("com.squareup.sqldelight:native-driver:$sqldelightVersion")
+                implementation("com.squareup.sqldelight:native-driver:${Versions.sqlDelight}")
             }
         }
 

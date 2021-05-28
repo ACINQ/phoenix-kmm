@@ -3,8 +3,6 @@
 plugins {
     id("com.android.application")
     kotlin("android")
-//    id("kotlin-android")
-//    id("org.jetbrains.kotlin.android") version "1.4.32"
 }
 
 val chain: String by project
@@ -64,8 +62,8 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerVersion = "1.4.32"
-        kotlinCompilerExtensionVersion = composeVersion
+        kotlinCompilerVersion = Versions.kotlin
+        kotlinCompilerExtensionVersion = Versions.Android.compose
     }
 
 }
@@ -83,36 +81,36 @@ dependencies {
     implementation("com.google.android.material:material:1.3.0")
 
     // -- AndroidX
-    implementation("androidx.core:core-ktx:$xCoreKtxVersion")
+    implementation("androidx.core:core-ktx:${Versions.Android.ktx}")
 //    implementation("androidx.appcompat:appcompat:1.2.0")
     // -- AndroidX: preferences
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:$xLifecycleVersion")
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:$xLifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:${Versions.Android.lifecycle}")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:${Versions.Android.lifecycle}")
     // -- AndroidX: preferences
-    implementation("androidx.preference:preference-ktx:$xPrefsVersion")
+    implementation("androidx.preference:preference-ktx:${Versions.Android.prefs}")
 
     // -- jetpack compose
-    implementation("androidx.compose.ui:ui:$composeVersion")
-    implementation("androidx.compose.foundation:foundation:$composeVersion")
-    implementation("androidx.compose.foundation:foundation-layout:$composeVersion")
-    implementation("androidx.compose.ui:ui-tooling:$composeVersion")
-    implementation("androidx.compose.ui:ui-viewbinding:$composeVersion")
-    implementation("androidx.compose.runtime:runtime-livedata:$composeVersion")
-    implementation("androidx.compose.material:material:$composeVersion")
-    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.0-alpha07")
+    implementation("androidx.compose.ui:ui:${Versions.Android.compose}")
+    implementation("androidx.compose.foundation:foundation:${Versions.Android.compose}")
+    implementation("androidx.compose.foundation:foundation-layout:${Versions.Android.compose}")
+    implementation("androidx.compose.ui:ui-tooling:${Versions.Android.compose}")
+    implementation("androidx.compose.ui:ui-viewbinding:${Versions.Android.compose}")
+    implementation("androidx.compose.runtime:runtime-livedata:${Versions.Android.compose}")
+    implementation("androidx.compose.material:material:${Versions.Android.compose}")
+    implementation("androidx.constraintlayout:constraintlayout-compose:${Versions.Android.constraintLayout}")
     // -- jetpack compose: navigation
-    implementation("androidx.navigation:navigation-compose:$navComposeVersion")
+    implementation("androidx.navigation:navigation-compose:${Versions.Android.navCompose}")
 
     // -- scanner zxing
-    implementation("com.journeyapps:zxing-android-embedded:$zxingVersion")
+    implementation("com.journeyapps:zxing-android-embedded:${Versions.Android.zxing}")
 
     // logging
-    implementation("org.slf4j:slf4j-api:1.7.30")
-    implementation("com.github.tony19:logback-android:2.0.0")
+    implementation("org.slf4j:slf4j-api:${Versions.slf4j}")
+    implementation("com.github.tony19:logback-android:${Versions.Android.logback}")
 
-    testImplementation("junit:junit:4.13.2")
+    testImplementation("junit:junit:${Versions.junit}")
     androidTestImplementation("androidx.test.ext:junit:1.1.2")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.3.0")
+    androidTestImplementation("androidx.test.espresso:espresso-core:${Versions.Android.espresso}")
 
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
 }
