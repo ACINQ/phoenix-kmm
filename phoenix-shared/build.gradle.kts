@@ -52,15 +52,6 @@ kotlin {
     }
 
     sourceSets {
-
-        val lightningkmpVersion = "snapshot"
-        val coroutinesVersion = "1.4.3-native-mt"
-        val serializationVersion = "1.1.0"
-        val secp256k1Version = "0.5.1"
-        val ktorVersion = "1.5.2"
-        val kodeinMemory = "0.8.0"
-        val sqldelightVersion = "1.4.4"
-
         val commonMain by getting {
             dependencies {
                 api("fr.acinq.lightning:lightning-kmp:${Versions.lightningKmp}")
