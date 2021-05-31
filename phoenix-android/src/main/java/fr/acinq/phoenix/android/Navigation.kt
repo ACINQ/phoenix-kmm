@@ -18,13 +18,9 @@ package fr.acinq.phoenix.android
 
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
-//import androidx.navigation.compose.KEY_ROUTE
-import androidx.navigation.compose.currentBackStackEntryAsState
-//import androidx.navigation.compose.navigate
 import fr.acinq.phoenix.android.security.KeyState
 import fr.acinq.phoenix.android.utils.logger
 import org.kodein.log.LoggerFactory

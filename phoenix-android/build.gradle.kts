@@ -1,18 +1,9 @@
-//import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     id("com.android.application")
     kotlin("android")
 }
 
 val chain: String by project
-
-val xCoreKtxVersion = "1.5.0"
-val xLifecycleVersion = "2.3.1"
-val xPrefsVersion = "1.1.1"
-val composeVersion = "1.0.0-beta07"
-val navComposeVersion = "2.4.0-alpha01"
-val zxingVersion = "4.1.0"
 
 android {
     compileSdkVersion(30)
@@ -82,7 +73,6 @@ dependencies {
 
     // -- AndroidX
     implementation("androidx.core:core-ktx:${Versions.Android.ktx}")
-//    implementation("androidx.appcompat:appcompat:1.2.0")
     // -- AndroidX: preferences
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:${Versions.Android.lifecycle}")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:${Versions.Android.lifecycle}")
