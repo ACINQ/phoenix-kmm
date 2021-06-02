@@ -48,17 +48,8 @@ class AppLogsConfigurationController(ctx: PlatformContext, loggerFactory: Logger
         val tmpFile = tmpDir.resolve(fileName)
         tmpFile.openWriteableFile().use { output ->
             files.reversed().forEach { file ->
-                file.openReadableFile().use { input ->
-                    val buffer = ByteArray(16384)
-                    var done = false
-                    do {
-                        val read = input.receive(dst = buffer)
-                        if (read > 0) {
-                            output.putBytes(src = buffer, srcOffset = 0, length = read)
-                        } else {
-                            done = true
-                        }
-                    } while (!done);
+                file.openReadableFile().use {
+                    output.writeBytes(it.readBytes())
                 }
             }
         }

@@ -12,7 +12,7 @@ import org.kodein.memory.file.Path
 import org.kodein.memory.file.createDirs
 import org.kodein.memory.file.openWriteableFile
 import org.kodein.memory.file.resolve
-import org.kodein.memory.text.putString
+import org.kodein.memory.text.writeString
 import org.kodein.memory.use
 import kotlin.time.ExperimentalTime
 import kotlin.time.seconds
@@ -88,6 +88,6 @@ private fun writeLogs(lines: List<LogMemory.Line>, file: Path): Job = GlobalScop
         }
     }
     file.openWriteableFile(append = true).use { wf ->
-        wf.putString(allLines)
+        wf.writeString(allLines)
     }
 }

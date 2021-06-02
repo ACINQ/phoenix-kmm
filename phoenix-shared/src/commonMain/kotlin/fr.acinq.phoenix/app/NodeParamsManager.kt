@@ -17,6 +17,7 @@
 package fr.acinq.phoenix.app
 
 import fr.acinq.bitcoin.Block
+import fr.acinq.bitcoin.ByteVector
 import fr.acinq.lightning.*
 import fr.acinq.lightning.blockchain.fee.FeerateTolerance
 import fr.acinq.lightning.blockchain.fee.OnChainFeeConf
@@ -41,7 +42,6 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
-import org.kodein.memory.text.toHexString
 
 class NodeParamsManager(
     loggerFactory: LoggerFactory,
@@ -127,7 +127,7 @@ class NodeParamsManager(
 
                 _nodeParams.value = nodeParams
 
-                val nodeIdHash = nodeParams.nodeId.hash160().toHexString()
+                val nodeIdHash = ByteVector(nodeParams.nodeId.hash160()).toHex()
                 val channelsDb = SqliteChannelsDb(createChannelsDbDriver(ctx, chain, nodeIdHash), nodeParams.copy())
                 val paymentsDb = SqlitePaymentsDb(createPaymentsDbDriver(ctx, chain, nodeIdHash))
                 log.debug { "databases object created" }

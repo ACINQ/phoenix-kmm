@@ -9,7 +9,7 @@ object Versions {
 
     const val ktor = "1.5.3"
     const val sqlDelight = "1.5.0"
-    const val kodeinMemory = "0.8.0"
+    const val kodeinMemory = "0.9.0"
 
     const val slf4j = "1.7.30"
     const val junit = "4.13"
