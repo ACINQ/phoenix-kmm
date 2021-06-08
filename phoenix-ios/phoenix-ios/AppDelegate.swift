@@ -3,6 +3,7 @@ import PhoenixShared
 import os.log
 import Firebase
 import Combine
+import BackgroundTasks
 
 #if DEBUG && false
 fileprivate var log = Logger(
@@ -32,6 +33,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	private var didIncrementDisconnectCount = false
 	
 	public var externalLightningUrlPublisher = PassthroughSubject<URL, Never>()
+	
+	// The taskID must match the value in Info.plist
+	private let taskId_watchTower = "co.acinq.phoenix.WatchTower"
 
 	override init() {
 		setenv("CFNETWORK_DIAGNOSTICS", "3", 1);
@@ -61,6 +65,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		
 		FirebaseApp.configure()
 		Messaging.messaging().delegate = self
+	
+		registerBackgroundTasks()
 
 		let nc = NotificationCenter.default
 		
@@ -122,16 +128,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		log.trace("### applicationDidEnterBackground(_:)")
 		
 		if !didIncrementDisconnectCount {
-			business.incrementDisconnectCount()
+			business.appConnectionsDaemon?.incrementDisconnectCount(
+				target: AppConnectionsDaemon.ControlTarget.all
+			)
 			didIncrementDisconnectCount = true
 		}
+		
+		scheduleBackgroundTasks()
 	}
 	
 	func _applicationWillEnterForeground(_ application: UIApplication) {
 		log.trace("### applicationWillEnterForeground(_:)")
 		
 		if didIncrementDisconnectCount {
-			business.decrementDisconnectCount()
+			business.appConnectionsDaemon?.decrementDisconnectCount(
+				target: AppConnectionsDaemon.ControlTarget.all
+			)
 			didIncrementDisconnectCount = false
 		}
 	}
@@ -195,7 +207,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		
 		log.debug("Received remote notification: \(userInfo)")
 		
-		business.decrementDisconnectCount() // allow network connection, even if app in background
+		// allow network connection, even if app in background
+		let appConnectionsDaemon = business.appConnectionsDaemon
+		let all = AppConnectionsDaemon.ControlTarget.all
+		appConnectionsDaemon?.decrementDisconnectCount(target: all)
 		
 		var didReceivePayment = false
 		var totalTimer: Timer? = nil
@@ -210,7 +225,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			
 			if !isFinished {
 				isFinished = true
-				self.business.incrementDisconnectCount() // balance previous decrement call
+				
+				// balance previous decrement call
+				appConnectionsDaemon?.incrementDisconnectCount(target: all)
 				
 				totalTimer?.invalidate()
 				postPaymentTimer?.invalidate()
@@ -339,6 +356,102 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		}
 	}
 
+	// --------------------------------------------------
+	// MARK: Background Execution
+	// --------------------------------------------------
+	
+	func registerBackgroundTasks() -> Void {
+		log.trace("registerWatchTowerTask()")
+		
+		BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId_watchTower, using: nil) { (task) in
+			
+			if let task = task as? BGAppRefreshTask {
+				self.performWatchTowerTask(task)
+			}
+		}
+	}
+	
+	func scheduleBackgroundTasks(soon: Bool = false) {
+		
+		// As per the docs:
+		// > There can be a total of 1 refresh task and 10 processing tasks scheduled at any time.
+		// > Trying to schedule more tasks returns BGTaskScheduler.Error.Code.tooManyPendingTaskRequests.
+		
+		let task = BGAppRefreshTaskRequest(identifier: taskId_watchTower)
+		
+		// As per WWDC talk (https://developer.apple.com/videos/play/wwdc2019/707):
+		// It's recommended this value be a week or less.
+		//
+		if soon { // last attempt failed
+			task.earliestBeginDate = Date(timeIntervalSinceNow: (60 * 60 * 4)) // 4 hours
+			
+		} else { // last attempt succeeded
+			task.earliestBeginDate = Date(timeIntervalSinceNow: (60 * 60 * 24 * 5)) // 5 days
+		}
+		
+	#if !targetEnvironment(simulator) // background tasks not available in simulator
+		do {
+			try BGTaskScheduler.shared.submit(task)
+		} catch {
+			log.error("BGTaskScheduler.submit: \(error.localizedDescription)")
+		}
+	#endif
+	}
+	
+	func performWatchTowerTask(_ task: BGAppRefreshTask) -> Void {
+		log.trace("performWatchTowerTask()")
+		
+		let appConnectionsDaemon = business.appConnectionsDaemon
+		let electrumTarget = AppConnectionsDaemon.ControlTarget.electrum
+		
+		var upToDateListener: AnyCancellable? = nil
+		
+		var isFinished = false
+		let finishTask = {(success: Bool) in
+			
+			let cleanup = {
+				if isFinished {
+					return
+				}
+				isFinished = true
+				
+				appConnectionsDaemon?.incrementDisconnectCount(target: electrumTarget) // balance decrement call
+				upToDateListener?.cancel()
+				
+				self.scheduleBackgroundTasks(soon: success ? false : true)
+				task.setTaskCompleted(success: false)
+			}
+			
+			if Thread.isMainThread {
+				cleanup()
+			} else {
+				DispatchQueue.main.async { cleanup() }
+			}
+		}
+		
+		task.expirationHandler = {
+			finishTask(false)
+		}
+		
+		appConnectionsDaemon?.decrementDisconnectCount(target: electrumTarget)
+		
+		guard let peer = business.getPeer() else {
+			return finishTask(false)
+		}
+		
+		// We setup a handler so we know when the WatchTower task has completed.
+		// I.e. when the channel subscriptions are considered up-to-date.
+		
+		upToDateListener = peer.watcher.upToDatePublisher().sink { (millis: Int64) in
+			
+			finishTask(true)
+		}
+		
+		// How to debug this:
+		// https://www.andyibanez.com/posts/modern-background-tasks-ios13/
+		
+	}
+	
 	// --------------------------------------------------
 	// MARK: PhoenixBusiness
 	// --------------------------------------------------
