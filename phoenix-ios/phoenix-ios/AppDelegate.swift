@@ -366,7 +366,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId_watchTower, using: nil) { (task) in
 			
 			if let task = task as? BGAppRefreshTask {
-				self.performWatchTowerTask(task)
+				log.debug("BGTaskScheduler.executeTask: WatchTower")
+				
+				DispatchQueue.main.async {
+					self.performWatchTowerTask(task)
+				}
 			}
 		}
 	}
@@ -392,18 +396,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	#if !targetEnvironment(simulator) // background tasks not available in simulator
 		do {
 			try BGTaskScheduler.shared.submit(task)
+			log.debug("BGTaskScheduler.submit: success")
 		} catch {
 			log.error("BGTaskScheduler.submit: \(error.localizedDescription)")
 		}
 	#endif
 	}
 	
+	/// How to debug this:
+	/// https://www.andyibanez.com/posts/modern-background-tasks-ios13/
+	///
 	func performWatchTowerTask(_ task: BGAppRefreshTask) -> Void {
 		log.trace("performWatchTowerTask()")
+		
+		// kotlin will crash below if we attempt to run this code on non-main thread
+		assertMainThread()
 		
 		let appConnectionsDaemon = business.appConnectionsDaemon
 		let electrumTarget = AppConnectionsDaemon.ControlTarget.electrum
 		
+		var didDecrement = false
 		var upToDateListener: AnyCancellable? = nil
 		
 		var isFinished = false
@@ -415,7 +427,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 				}
 				isFinished = true
 				
-				appConnectionsDaemon?.incrementDisconnectCount(target: electrumTarget) // balance decrement call
+				if didDecrement { // need to balance decrement call
+					appConnectionsDaemon?.incrementDisconnectCount(target: electrumTarget)
+				}
 				upToDateListener?.cancel()
 				
 				self.scheduleBackgroundTasks(soon: success ? false : true)
@@ -433,11 +447,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			finishTask(false)
 		}
 		
-		appConnectionsDaemon?.decrementDisconnectCount(target: electrumTarget)
-		
 		guard let peer = business.getPeer() else {
 			return finishTask(false)
 		}
+		
+		appConnectionsDaemon?.decrementDisconnectCount(target: electrumTarget)
+		didDecrement = true
 		
 		// We setup a handler so we know when the WatchTower task has completed.
 		// I.e. when the channel subscriptions are considered up-to-date.
@@ -446,10 +461,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			
 			finishTask(true)
 		}
-		
-		// How to debug this:
-		// https://www.andyibanez.com/posts/modern-background-tasks-ios13/
-		
 	}
 	
 	// --------------------------------------------------
