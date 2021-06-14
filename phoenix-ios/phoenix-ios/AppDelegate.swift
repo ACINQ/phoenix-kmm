@@ -266,7 +266,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			didReceivePayment = true
 			postPaymentTimer?.invalidate()
 			postPaymentTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: false, block: Finish)
-			self.displayLocalNotification(payment)
+			self.displayLocalNotification_receivedPayment(payment)
 		})
 	}
 	
@@ -285,6 +285,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	// --------------------------------------------------
 	
 	func requestPermissionForLocalNotifications(_ callback: @escaping (Bool) -> Void) {
+		log.trace("requestPermissionForLocalNotifications()")
 		
 		let center = UNUserNotificationCenter.current()
 		center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
@@ -300,7 +301,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		}
 	}
 	
-	func displayLocalNotification(_ payment: Lightning_kmpWalletPayment) {
+	func displayLocalNotification_receivedPayment(_ payment: Lightning_kmpIncomingPayment) {
+		log.trace("displayLocalNotification_receivedPayment()")
 		
 		// We are having problems interacting with the `payment` parameter outside the main thread.
 		// This might have to do with the goofy Kotlin freezing stuff.
@@ -355,6 +357,45 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			}
 		}
 	}
+	
+	func displayLocalNotification_revokedCommit() {
+		log.trace("displayLocalNotification_revokedCommit()")
+		
+		let handler = {(settings: UNNotificationSettings) -> Void in
+			
+			guard settings.authorizationStatus == .authorized else {
+				return
+			}
+			
+			self.badgeCount += 1
+			
+			let content = UNMutableNotificationContent()
+			content.title = "Some of your channels have closed"
+			content.body = "Please start Phoenix to review your channels."
+			content.badge = NSNumber(value: self.badgeCount)
+			
+			let request = UNNotificationRequest(
+				identifier: "revokedCommit",
+				content: content,
+				trigger: nil
+			)
+			
+			UNUserNotificationCenter.current().add(request) { error in
+				if let error = error {
+					log.error("NotificationCenter.add(request): error: \(String(describing: error))")
+				}
+			}
+		}
+		
+		UNUserNotificationCenter.current().getNotificationSettings { settings in
+			
+			if Thread.isMainThread {
+				handler(settings)
+			} else {
+				DispatchQueue.main.async { handler(settings) }
+			}
+		}
+	}
 
 	// --------------------------------------------------
 	// MARK: Background Execution
@@ -363,14 +404,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	func registerBackgroundTasks() -> Void {
 		log.trace("registerWatchTowerTask()")
 		
-		BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId_watchTower, using: nil) { (task) in
+		BGTaskScheduler.shared.register(
+			forTaskWithIdentifier: taskId_watchTower,
+			using: DispatchQueue.main
+		) { (task) in
 			
 			if let task = task as? BGAppRefreshTask {
 				log.debug("BGTaskScheduler.executeTask: WatchTower")
 				
-				DispatchQueue.main.async {
-					self.performWatchTowerTask(task)
-				}
+				self.performWatchTowerTask(task)
 			}
 		}
 	}
@@ -390,7 +432,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			task.earliestBeginDate = Date(timeIntervalSinceNow: (60 * 60 * 4)) // 4 hours
 			
 		} else { // last attempt succeeded
-			task.earliestBeginDate = Date(timeIntervalSinceNow: (60 * 60 * 24 * 5)) // 5 days
+			task.earliestBeginDate = Date(timeIntervalSinceNow: (60 * 60 * 24 * 2)) // 2 days
 		}
 		
 	#if !targetEnvironment(simulator) // background tasks not available in simulator
@@ -418,6 +460,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		var didDecrement = false
 		var upToDateListener: AnyCancellable? = nil
 		
+		var peer: Lightning_kmpPeer? = nil
+		var oldChannels: [Bitcoin_kmpByteVector32 : Lightning_kmpChannelState] = [:]
+		
 		var isFinished = false
 		let finishTask = {(success: Bool) in
 			
@@ -431,6 +476,46 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 					appConnectionsDaemon?.incrementDisconnectCount(target: electrumTarget)
 				}
 				upToDateListener?.cancel()
+				
+				var notifyRevokedCommit = false
+				let newChannels = peer?.channels ?? [:]
+				
+				for (channelId, oldChannel) in oldChannels {
+					if let newChannel = newChannels[channelId] {
+						
+						var oldHasRevokedCommit = false
+						do {
+							var oldClosing: Lightning_kmpClosing? = oldChannel.asClosing()
+							if oldClosing == nil {
+								oldClosing = oldChannel.asOffline()?.state.asClosing()
+							}
+							
+							if let oldClosing = oldClosing {
+								oldHasRevokedCommit = !oldClosing.revokedCommitPublished.isEmpty
+							}
+						}
+						
+						var newHasRevokedCommit = false
+						do {
+							var newClosing: Lightning_kmpClosing? = newChannel.asClosing()
+							if newClosing == nil {
+								newClosing = newChannel.asOffline()?.state.asClosing()
+							}
+							
+							if let newClosing = newChannel.asClosing() {
+								newHasRevokedCommit = !newClosing.revokedCommitPublished.isEmpty
+							}
+						}
+						
+						if !oldHasRevokedCommit && newHasRevokedCommit {
+							notifyRevokedCommit = true
+						}
+					}
+				}
+				
+				if notifyRevokedCommit {
+					self.displayLocalNotification_revokedCommit()
+				}
 				
 				self.scheduleBackgroundTasks(soon: success ? false : true)
 				task.setTaskCompleted(success: false)
@@ -447,8 +532,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			finishTask(false)
 		}
 		
-		guard let peer = business.getPeer() else {
-			return finishTask(false)
+		peer = business.getPeer()
+		guard let peer = peer else {
+			// If there's not a peer, then the wallet is locked.
+			return finishTask(true)
+		}
+		
+		oldChannels = peer.channels
+		
+		guard oldChannels.count > 0 else {
+			// We don't have any channels, so there's nothing to watch.
+			return finishTask(true)
 		}
 		
 		appConnectionsDaemon?.decrementDisconnectCount(target: electrumTarget)
