@@ -61,22 +61,22 @@ class IncomingPaymentDbTypeVersionTest {
 
     @Test
     fun incoming_receivedwith_lightning() {
-        val receivedWith = IncomingPayment.ReceivedWith.LightningPayment
-        val deserialized = IncomingReceivedWithData.deserialize(IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0, receivedWith.mapToDb().second)
+        val receivedWith = setOf(IncomingPayment.ReceivedWith.LightningPayment(100_000.msat, ByteVector32.One, 2L))
+        val deserialized = IncomingReceivedWithData.deserialize(IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0, receivedWith.mapToDb()!!.second)
         assertEquals(receivedWith, deserialized)
     }
 
     @Test
     fun incoming_receivedwith_newchannel() {
-        val receivedWith = IncomingPayment.ReceivedWith.NewChannel(123456789.msat, channelId1)
-        val deserialized = IncomingReceivedWithData.deserialize(IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0, receivedWith.mapToDb().second)
+        val receivedWith = setOf(IncomingPayment.ReceivedWith.NewChannel(123456789.msat, 1000.msat, channelId1))
+        val deserialized = IncomingReceivedWithData.deserialize(IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0, receivedWith.mapToDb()!!.second)
         assertEquals(receivedWith, deserialized)
     }
 
     @Test
     fun incoming_receivedwith_newchannel_null() {
-        val receivedWith = IncomingPayment.ReceivedWith.NewChannel(111111111.msat, null)
-        val deserialized = IncomingReceivedWithData.deserialize(IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0, receivedWith.mapToDb().second)
+        val receivedWith = setOf(IncomingPayment.ReceivedWith.NewChannel(111111111.msat, 1000.msat, null))
+        val deserialized = IncomingReceivedWithData.deserialize(IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0, receivedWith.mapToDb()!!.second)
         assertEquals(receivedWith, deserialized)
     }
 }

@@ -115,15 +115,21 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         }
     }
 
-    override suspend fun receivePayment(paymentHash: ByteVector32, amount: MilliSatoshi, receivedWith: IncomingPayment.ReceivedWith, receivedAt: Long) {
+    override suspend fun receivePayment(paymentHash: ByteVector32, receivedWith: Set<IncomingPayment.ReceivedWith>, receivedAt: Long) {
         withContext(Dispatchers.Default) {
-            inQueries.receivePayment(paymentHash, amount, receivedWith, receivedAt)
+            inQueries.receivePayment(paymentHash, receivedWith, receivedAt)
         }
     }
 
-    override suspend fun addAndReceivePayment(preimage: ByteVector32, origin: IncomingPayment.Origin, amount: MilliSatoshi, receivedWith: IncomingPayment.ReceivedWith, createdAt: Long, receivedAt: Long) {
+    override suspend fun addAndReceivePayment(preimage: ByteVector32, origin: IncomingPayment.Origin, receivedWith: Set<IncomingPayment.ReceivedWith>, createdAt: Long, receivedAt: Long) {
         withContext(Dispatchers.Default) {
-            inQueries.addAndReceivePayment(preimage, origin, amount, receivedWith, createdAt, receivedAt)
+            inQueries.addAndReceivePayment(preimage, origin, receivedWith, createdAt, receivedAt)
+        }
+    }
+
+    override suspend fun updateNewChannelReceivedWithChannelId(paymentHash: ByteVector32, channelId: ByteVector32) {
+        withContext(Dispatchers.Default) {
+            inQueries.updateNewChannelReceivedWithChannelId(paymentHash, channelId)
         }
     }
 
