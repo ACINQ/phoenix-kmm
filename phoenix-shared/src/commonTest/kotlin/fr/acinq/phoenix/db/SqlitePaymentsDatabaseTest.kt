@@ -27,6 +27,7 @@ import fr.acinq.lightning.channel.TooManyAcceptedHtlcs
 import fr.acinq.lightning.db.HopDesc
 import fr.acinq.lightning.db.IncomingPayment
 import fr.acinq.lightning.db.OutgoingPayment
+import fr.acinq.lightning.db.WalletPayment
 import fr.acinq.lightning.payment.FinalFailure
 import fr.acinq.lightning.payment.OutgoingPaymentFailure
 import fr.acinq.lightning.payment.PaymentRequest
@@ -42,12 +43,14 @@ class SqlitePaymentsDatabaseTest {
     private val preimage1 = randomBytes32()
     private val paymentHash1 = Crypto.sha256(preimage1).toByteVector32()
     private val origin1 = IncomingPayment.Origin.Invoice(createInvoice(preimage1))
-    private val receivedWith1 = IncomingPayment.ReceivedWith.LightningPayment
+    private val channelId1 = randomBytes32()
+    private val receivedWith1 = setOf(IncomingPayment.ReceivedWith.LightningPayment(100_000.msat, channelId1, 1L))
+    private val receivedWith3 = setOf(IncomingPayment.ReceivedWith.LightningPayment(150_000.msat, channelId1, 1L))
 
     private val preimage2 = randomBytes32()
     private val paymentHash2 = Crypto.sha256(preimage2).toByteVector32()
     private val origin2 = IncomingPayment.Origin.KeySend
-    private val receivedWith2 = IncomingPayment.ReceivedWith.NewChannel(fees = MilliSatoshi(5000), channelId = randomBytes32())
+    private val receivedWith2 = setOf(IncomingPayment.ReceivedWith.NewChannel(amount = 2_000_000.msat, fees = MilliSatoshi(5000), channelId = randomBytes32()))
 
     val origin3 = IncomingPayment.Origin.SwapIn(address = "1PwLgmRdDjy5GAKWyp8eyAC4SFzWuboLLb")
 
@@ -55,7 +58,7 @@ class SqlitePaymentsDatabaseTest {
     fun incoming__empty() = runTest {
         assertNull(db.getIncomingPayment(paymentHash1))
         assertEquals(listOf(), db.listReceivedPayments(10, 0))
-        assertFailsWith(IncomingPaymentNotFound::class) { db.receivePayment(paymentHash1, MilliSatoshi(123), receivedWith1, 5) }
+        assertFailsWith(IncomingPaymentNotFound::class) { db.receivePayment(paymentHash1, receivedWith1, 5) }
     }
 
     @Test
@@ -67,12 +70,12 @@ class SqlitePaymentsDatabaseTest {
             assertEquals(origin1, it.origin)
             assertNull(it.received)
         }
-        db.receivePayment(paymentHash1, MilliSatoshi(123), receivedWith1, 10)
+        db.receivePayment(paymentHash1, receivedWith1, 10)
         db.getIncomingPayment(paymentHash1)!!.let {
             assertEquals(paymentHash1, it.paymentHash)
             assertEquals(preimage1, it.preimage)
             assertEquals(origin1, it.origin)
-            assertEquals(MilliSatoshi(123), it.received?.amount)
+            assertEquals(100_000.msat, it.received?.amount)
             assertEquals(10, it.received?.receivedAt)
             assertEquals(receivedWith1, it.received?.receivedWith)
         }
@@ -89,7 +92,7 @@ class SqlitePaymentsDatabaseTest {
             assertEquals(db.getIncomingPayment(paymentHash2), it[0])
             assertEquals(db.getIncomingPayment(paymentHash1), it[1])
         }
-        db.receivePayment(paymentHash1, MilliSatoshi(123), receivedWith1, 20)
+        db.receivePayment(paymentHash1, receivedWith1, 20)
         db.listReceivedPayments(10, 0).let {
             // reception date takes precedence over creation date
             assertEquals(db.getIncomingPayment(paymentHash1), it[0])
@@ -111,17 +114,18 @@ class SqlitePaymentsDatabaseTest {
     @Test
     fun incoming__receive_should_sum() = runTest {
         db.addIncomingPayment(preimage1, origin1, 0)
-        db.receivePayment(paymentHash1, MilliSatoshi(100), receivedWith1, 10)
-        assertEquals(MilliSatoshi(100), db.getIncomingPayment(paymentHash1)?.received?.amount)
-        db.receivePayment(paymentHash1, MilliSatoshi(50), receivedWith1, 20)
-        assertEquals(MilliSatoshi(150), db.getIncomingPayment(paymentHash1)?.received?.amount)
+        db.receivePayment(paymentHash1, receivedWith1, 10)
+        assertEquals(100_000.msat, db.getIncomingPayment(paymentHash1)?.received?.amount)
+        db.receivePayment(paymentHash1, receivedWith3, 20)
+        assertEquals(250_000.msat, db.getIncomingPayment(paymentHash1)?.received?.amount)
     }
 
     @Test
     fun incoming__add_and_receive() = runTest {
-        db.addAndReceivePayment(preimage1, origin3, MilliSatoshi(1234567), receivedWith2)
+        db.addAndReceivePayment(preimage1, origin3, receivedWith2)
         assertNotNull(db.getIncomingPayment(paymentHash1))
-        assertEquals(MilliSatoshi(1234567), db.getIncomingPayment(paymentHash1)?.received?.amount)
+        assertEquals(2_000_000.msat, db.getIncomingPayment(paymentHash1)?.received?.amount)
+        assertEquals(5_000.msat, WalletPayment.fees(db.getIncomingPayment(paymentHash1)!!))
         assertEquals(origin3, db.getIncomingPayment(paymentHash1)!!.origin)
         assertEquals(receivedWith2, db.getIncomingPayment(paymentHash1)!!.received!!.receivedWith)
     }
@@ -131,7 +135,7 @@ class SqlitePaymentsDatabaseTest {
         val expiredInvoice =
             PaymentRequest.read("lntb1p0ufamxpp5l23zy5f8h2dcr8hxynptkcyuzdygy36pz76hgayp7n9q45a3cwuqdqqxqyjw5q9qtzqqqqqq9qsqsp5vusneyeywvawt4d7sslx3kx0eh7kk68l7j26qr0ge7z04lxhe5ssrzjqwfn3p9278ttzzpe0e00uhyxhned3j5d9acqak5emwfpflp8z2cnfluw6cwxn8wdcyqqqqlgqqqqqeqqjqmjvx0y3cfw54syp4jqw6jlj73qt97vxftjd3w3ywx6v2jqkdx9uxw3hk9qq6st9qyfpu3nzrpefwye63vmnyyzn6z8n7nkqsjj6lsaspu2p3mm")
         db.addIncomingPayment(preimage1, IncomingPayment.Origin.Invoice(expiredInvoice), 0)
-        db.receivePayment(paymentHash1, MilliSatoshi(123), receivedWith1, 10)
+        db.receivePayment(paymentHash1, receivedWith1, 10)
         assertTrue(db.getIncomingPayment(paymentHash1)!!.isExpired())
     }
 
@@ -326,8 +330,9 @@ class SqlitePaymentsDatabaseTest {
         assertEquals(6, db.listPayments(count = 10, skip = 0).size)
 
         // receive incoming1, should be last in resulting list, with a +20_000 msat amount
-        db.receivePayment(incoming1.paymentHash, 20_000.msat, IncomingPayment.ReceivedWith.LightningPayment, receivedAt = 100)
-        val expectedIncoming1 = incoming1.copy(received = IncomingPayment.Received(20_000.msat, IncomingPayment.ReceivedWith.LightningPayment, 100))
+        val recWith1 = setOf(IncomingPayment.ReceivedWith.LightningPayment(20_000.msat, channelId1, 1L))
+        db.receivePayment(incoming1.paymentHash, recWith1, receivedAt = 100)
+        val expectedIncoming1 = incoming1.copy(received = IncomingPayment.Received(recWith1, 100))
 
         // send outgoing 1 with 1 successful part
         db.updateOutgoingPart(outgoing1Parts[0].id, randomBytes32(), completedAt = 102)
@@ -336,8 +341,9 @@ class SqlitePaymentsDatabaseTest {
         assertNotNull(expectedOutgoing1)
 
         // receive incoming 2 with a bit more than expected
-        db.receivePayment(incoming2.paymentHash, 25_000.msat, IncomingPayment.ReceivedWith.NewChannel(250.msat, channelId = null), receivedAt = 105)
-        val expectedIncoming2 = incoming2.copy(received = IncomingPayment.Received(25_000.msat, IncomingPayment.ReceivedWith.NewChannel(250.msat, channelId = null), 105))
+        val recWith2 = setOf(IncomingPayment.ReceivedWith.NewChannel(25_000.msat, 250.msat, channelId = null))
+        db.receivePayment(incoming2.paymentHash, recWith2, receivedAt = 105)
+        val expectedIncoming2 = incoming2.copy(received = IncomingPayment.Received(recWith2, 105))
 
         // fail outgoing2
         db.updateOutgoingPart(outgoing2Parts[0].id, Either.Left(ChannelUnavailable(randomBytes32())), completedAt = 106)
@@ -354,8 +360,9 @@ class SqlitePaymentsDatabaseTest {
         assertNotNull(expectedOutgoing3)
 
         // receive incoming4
-        db.receivePayment(incoming4.paymentHash, 10_000.msat, IncomingPayment.ReceivedWith.LightningPayment, receivedAt = 110)
-        val expectedIncoming4 = incoming4.copy(received = IncomingPayment.Received(10_000.msat, IncomingPayment.ReceivedWith.LightningPayment, 110))
+        val recWith4 = setOf(IncomingPayment.ReceivedWith.LightningPayment(10_000.msat, channelId1, 2L))
+        db.receivePayment(incoming4.paymentHash, recWith4, receivedAt = 110)
+        val expectedIncoming4 = incoming4.copy(received = IncomingPayment.Received(recWith4, 110))
 
         // receive outgoing5, overpaying
         db.updateOutgoingPart(outgoing5Parts[0].id, randomBytes32(), completedAt = 111)
