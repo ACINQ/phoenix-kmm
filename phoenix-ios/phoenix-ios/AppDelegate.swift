@@ -32,7 +32,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	
 	private var isInBackground = false
 	
-	private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+	private var longLivedTask: UIBackgroundTaskIdentifier = .invalid
 	
 	public var externalLightningUrlPublisher = PassthroughSubject<URL, Never>()
 	
@@ -400,6 +400,65 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	}
 
 	// --------------------------------------------------
+	// MARK: Long-Lived Tasks
+	// --------------------------------------------------
+	
+	// A long-lived task is for:
+	//
+	// > when leaving a task unfinished may cause a bad user experience in your app.
+	// > For example: to complete disk writes, finish user-initiated requests, network calls, ...
+	//
+	// For historical reasons, this is also called a "background task".
+	// However, in order to differentiate from the new BGTask's introduced in iOS 13,
+	// we're now calling these "long-lived tasks".
+	
+	func setupActivePaymentsListener() -> Void {
+		
+		business.paymentsManager.inFlightOutgoingPaymentsPublisher().sink { [weak self](count: Int) in
+			
+			log.debug("inFlightOutgoingPaymentsPublisher: count = \(count)")
+			if count > 0 {
+				self?.beginLongLivedTask()
+			} else {
+				self?.endLongLivedTask()
+			}
+			
+		}.store(in: &cancellables)
+	}
+	
+	func beginLongLivedTask() {
+		log.trace("beginLongLivedTask()")
+		assertMainThread()
+		
+		if longLivedTask == .invalid {
+			longLivedTask = UIApplication.shared.beginBackgroundTask { [weak self] in
+				self?.endLongLivedTask()
+			}
+			log.debug("Invoking: business.decrementDisconnectCount()")
+			business.appConnectionsDaemon?.decrementDisconnectCount(
+				target: AppConnectionsDaemon.ControlTarget.all
+			)
+		}
+	}
+	
+	func endLongLivedTask() {
+		log.trace("endLongLivedTask()")
+		assertMainThread()
+		
+		if longLivedTask != .invalid {
+			
+			let task = longLivedTask
+			longLivedTask = .invalid
+			
+			UIApplication.shared.endBackgroundTask(task)
+			log.debug("Invoking: business.incrementDisconnectCount()")
+			business.appConnectionsDaemon?.incrementDisconnectCount(
+				target: AppConnectionsDaemon.ControlTarget.all
+			)
+		}
+	}
+	
+	// --------------------------------------------------
 	// MARK: Background Execution
 	// --------------------------------------------------
 	
@@ -551,52 +610,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		
 		upToDateListener = _peer.watcher.upToDatePublisher().sink { (millis: Int64) in
 			finishTask(true)
-		}
-	}
-
-	// --------------------------------------------------
-	// MARK: Background Execution
-	// --------------------------------------------------
-	
-	func setupActivePaymentsListener() -> Void {
-		
-		business.paymentsManager.inFlightOutgoingPaymentsPublisher().sink { [weak self](count: Int) in
-			
-			log.debug("inFlightOutgoingPaymentsPublisher: count = \(count)")
-			if count > 0 {
-				self?.beginBackgroundTask()
-			} else {
-				self?.endBackgroundTask()
-			}
-			
-		}.store(in: &cancellables)
-	}
-	
-	func beginBackgroundTask() {
-		log.trace("beginBackgroundTask()")
-		assertMainThread()
-		
-		if backgroundTask == .invalid {
-			backgroundTask = UIApplication.shared.beginBackgroundTask { [weak self] in
-				self?.endBackgroundTask()
-			}
-			log.debug("Invoking: business.decrementDisconnectCount()")
-			business.decrementDisconnectCount()
-		}
-	}
-	
-	func endBackgroundTask() {
-		log.trace("endBackgroundTask()")
-		assertMainThread()
-		
-		if backgroundTask != .invalid {
-			
-			let bgTask = backgroundTask
-			backgroundTask = .invalid
-			
-			UIApplication.shared.endBackgroundTask(bgTask)
-			log.debug("Invoking: business.incrementDisconnectCount()")
-			self.business.incrementDisconnectCount()
 		}
 	}
 	
