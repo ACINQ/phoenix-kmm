@@ -369,7 +369,6 @@ private fun PaymentDescription(payment: WalletPayment, modifier: Modifier = Modi
 }
 
 private fun isPaymentFailed(payment: WalletPayment) = (payment is OutgoingPayment && payment.status is OutgoingPayment.Status.Completed.Failed)
-        || (payment is IncomingPayment && payment.isExpired())
 
 @Composable
 private fun PaymentIcon(payment: WalletPayment) {
