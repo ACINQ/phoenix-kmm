@@ -18,11 +18,11 @@ package fr.acinq.phoenix.db.payments
 
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.bitcoin.Crypto
+import fr.acinq.lightning.MilliSatoshi
 import fr.acinq.lightning.db.IncomingPayment
-import fr.acinq.lightning.utils.toByteVector32
+import fr.acinq.lightning.utils.*
 import fr.acinq.phoenix.db.IncomingPaymentNotFound
 import fracinqphoenixdb.IncomingPaymentsQueries
-import fr.acinq.lightning.utils.*
 
 class IncomingQueries(private val queries: IncomingPaymentsQueries) {
 
@@ -101,6 +101,7 @@ class IncomingQueries(private val queries: IncomingPaymentsQueries) {
             created_at: Long,
             origin_type: IncomingOriginTypeVersion,
             origin_blob: ByteArray,
+            received_amount_msat: Long?,
             received_at: Long?,
             received_with_type: IncomingReceivedWithTypeVersion?,
             received_with_blob: ByteArray?,
@@ -108,16 +109,17 @@ class IncomingQueries(private val queries: IncomingPaymentsQueries) {
             return IncomingPayment(
                 preimage = ByteVector32(preimage),
                 origin = IncomingOriginData.deserialize(origin_type, origin_blob),
-                received = mapIncomingReceived(received_at, received_with_type, received_with_blob),
+                received = mapIncomingReceived(received_amount_msat?.msat, received_at, received_with_type, received_with_blob),
                 createdAt = created_at
             )
         }
 
-        private fun mapIncomingReceived(receivedAt: Long?, receivedWithTypeVersion: IncomingReceivedWithTypeVersion?, receivedWithBlob: ByteArray?): IncomingPayment.Received? {
+        private fun mapIncomingReceived(amount: MilliSatoshi?, receivedAt: Long?, receivedWithTypeVersion: IncomingReceivedWithTypeVersion?, receivedWithBlob: ByteArray?): IncomingPayment.Received? {
             return when {
                 receivedAt == null && receivedWithTypeVersion == null && receivedWithBlob == null -> null
-                receivedAt != null && receivedWithTypeVersion != null && receivedWithBlob != null ->
-                    IncomingPayment.Received(IncomingReceivedWithData.deserialize(receivedWithTypeVersion, receivedWithBlob), receivedAt)
+                receivedAt != null && receivedWithTypeVersion != null && receivedWithBlob != null -> {
+                    IncomingPayment.Received(IncomingReceivedWithData.deserialize(receivedWithTypeVersion, receivedWithBlob, amount), receivedAt)
+                }
                 else -> throw UnreadableIncomingReceivedWith(receivedAt, receivedWithTypeVersion, receivedWithBlob)
             }
         }

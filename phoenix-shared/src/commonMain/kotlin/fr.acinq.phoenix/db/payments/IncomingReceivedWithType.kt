@@ -20,6 +20,7 @@ import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.MilliSatoshi
 import fr.acinq.lightning.db.IncomingPayment
 import fr.acinq.lightning.serialization.v1.ByteVector32KSerializer
+import fr.acinq.lightning.utils.msat
 import io.ktor.utils.io.charsets.*
 import io.ktor.utils.io.core.*
 import kotlinx.serialization.SerialName
@@ -27,12 +28,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import fr.acinq.lightning.utils.*
 
 
 enum class IncomingReceivedWithTypeVersion {
-    @Deprecated("Not used anymore, received-with is now a list of payment parts") NEW_CHANNEL_V0,
-    @Deprecated("Not used anymore, received-with is now a list of payment parts") LIGHTNING_PAYMENT_V0,
+    @Deprecated("Not used anymore, received-with is now a list of payment parts")
+    NEW_CHANNEL_V0,
+    @Deprecated("Not used anymore, received-with is now a list of payment parts")
+    LIGHTNING_PAYMENT_V0,
     MULTIPARTS_V0, // where receivedWith is a set of parts (new channel and htlcs)
 }
 
@@ -57,6 +59,7 @@ sealed class IncomingReceivedWithData {
             @Serializable
             data class V0(val amount: MilliSatoshi, @Serializable(with = ByteVector32KSerializer::class) val channelId: ByteVector32, val htlcId: Long) : Htlc()
         }
+
         sealed class NewChannel : Part() {
             @Serializable
             data class V0(val amount: MilliSatoshi, val fees: MilliSatoshi, @Serializable(with = ByteVector32KSerializer::class) val channelId: ByteVector32?) : NewChannel()
@@ -64,13 +67,19 @@ sealed class IncomingReceivedWithData {
     }
 
     companion object {
-        fun deserialize(typeVersion: IncomingReceivedWithTypeVersion, blob: ByteArray): Set<IncomingPayment.ReceivedWith> = DbTypesHelper.decodeBlob(blob) { json, format ->
+        /**
+         * Deserializes a received-with blob from the database using the typeversion given.
+         *
+         * The amount parameter is only used if the typeversion is LIGHTNING_PAYMENT_V0 or NEW_CHANNEL_V0. In that case
+         * we make a list of parts made of only one part and containing this amount.
+         */
+        fun deserialize(typeVersion: IncomingReceivedWithTypeVersion, blob: ByteArray, amount: MilliSatoshi?) = DbTypesHelper.decodeBlob(blob) { json, format ->
             when (typeVersion) {
-                IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0 -> setOf(IncomingPayment.ReceivedWith.LightningPayment(0.msat, ByteVector32.Zeroes, 1L))
-                IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0 -> setOf(format.decodeFromString<NewChannel.V0>(json).let { IncomingPayment.ReceivedWith.NewChannel(0.msat, it.fees, it.channelId) })
+                IncomingReceivedWithTypeVersion.LIGHTNING_PAYMENT_V0 -> setOf(IncomingPayment.ReceivedWith.LightningPayment(amount ?: 0.msat, ByteVector32.Zeroes, 0L))
+                IncomingReceivedWithTypeVersion.NEW_CHANNEL_V0 -> setOf(format.decodeFromString<NewChannel.V0>(json).let { IncomingPayment.ReceivedWith.NewChannel(amount ?: 0.msat, it.fees, it.channelId) })
                 IncomingReceivedWithTypeVersion.MULTIPARTS_V0 -> format.decodeFromString<Set<Part>>(json).map {
-                    when(it) {
-                        is Part.Htlc.V0 -> IncomingPayment.ReceivedWith.LightningPayment(it.amount, ByteVector32.Zeroes, it.htlcId)
+                    when (it) {
+                        is Part.Htlc.V0 -> IncomingPayment.ReceivedWith.LightningPayment(it.amount, it.channelId, it.htlcId)
                         is Part.NewChannel.V0 -> IncomingPayment.ReceivedWith.NewChannel(it.amount, it.fees, it.channelId)
                     }
                 }.toSet()
