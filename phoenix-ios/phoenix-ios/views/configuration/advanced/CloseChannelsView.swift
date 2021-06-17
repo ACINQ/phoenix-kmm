@@ -25,7 +25,10 @@ struct CloseChannelsView : MVIView {
 			.padding(.top, 30)
 			.padding([.leading, .trailing], 30)
 			.padding(.bottom, 10)
-			.navigationBarTitle("Close channels", displayMode: .inline)
+			.navigationBarTitle(
+				NSLocalizedString("Close channels", comment: "Navigation bar title"),
+				displayMode: .inline
+			)
 	}
 	
 	@ViewBuilder
@@ -236,12 +239,13 @@ fileprivate struct StandardWalletView : View {
 			log.debug("result.error = \(error)")
 			
 			if let error = error as? Utilities.BitcoinAddressErrorChainMismatch {
-				detailedErrorMsg = NSLocalizedString(
+				detailedErrorMsg = String(format: NSLocalizedString(
 					"""
-					The address is for \(error.addrChain.name), \
-					but you're on \(error.myChain.name)
+					The address is for %@, \
+					but you're on %@
 					""",
-					comment: "Error message - parsing bitcoin address"
+					comment: "Error message - parsing bitcoin address"),
+					error.addrChain.name, error.myChain.name
 				)
 			}
 			else if error is Utilities.BitcoinAddressErrorUnknownBech32Version {

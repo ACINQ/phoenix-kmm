@@ -172,19 +172,7 @@ struct ReceiveLightningView: View, ViewName {
 	@ViewBuilder
 	var body: some View {
 		
-		// We're using a ZStack here instead of a Group,
-		// because with Group, we get a onAppear/onDisappear whenever the content changes.
-		// E.g. when toggling isFullScreenQrcode
-		//
-		ZStack {
-			if isFullScreenQrcode {
-				fullScreenQrcode()
-			} else if verticalSizeClass == UserInterfaceSizeClass.compact {
-				mainLandscape()
-			} else {
-				mainPortrait()
-			}
-		}
+		content()
 		.onAppear {
 			onAppear()
 		}
@@ -222,7 +210,7 @@ struct ReceiveLightningView: View, ViewName {
 				
 				ModifyInvoiceSheet(
 					mvi: mvi,
-					dismissSheet: { sheet = nil },
+					dismissSheet: { self.sheet = nil },
 					initialAmount: model.amount,
 					desc: model.desc ?? ""
 				)
@@ -230,7 +218,22 @@ struct ReceiveLightningView: View, ViewName {
 			
 			} // </switch>
 		}
-		.navigationBarTitle("Receive", displayMode: .inline)
+		.navigationBarTitle(
+			NSLocalizedString("Receive", comment: "Navigation bar title"),
+			displayMode: .inline
+		)
+	}
+	
+	@ViewBuilder
+	func content() -> some View {
+		
+		if isFullScreenQrcode {
+			fullScreenQrcode()
+		} else if verticalSizeClass == UserInterfaceSizeClass.compact {
+			mainLandscape()
+		} else {
+			mainPortrait()
+		}
 	}
 	
 	@ViewBuilder
@@ -907,12 +910,25 @@ struct ModifyInvoiceSheet: View, ViewName {
 				.padding(.leading, 16)
 				.padding(.bottom, 4)
 
-			HStack {
+			HStack(alignment: VerticalAlignment.center, spacing: 0) {
 				TextField("Description (optional)", text: $desc)
-					.padding([.top, .bottom], 8)
-					.padding([.leading, .trailing], 16)
+				
+				// Clear button (appears when TextField's text is non-empty)
+				Button {
+					desc = ""
+				} label: {
+					Image(systemName: "multiply.circle.fill")
+						.foregroundColor(.secondary)
+				}
+				.isHidden(desc == "")
 			}
-			.background(Capsule().stroke(Color(UIColor.separator)))
+			.padding([.top, .bottom], 8)
+			.padding(.leading, 16)
+			.padding(.trailing, 8)
+			.background(
+				Capsule()
+					.strokeBorder(Color(UIColor.separator))
+			)
 
 			Spacer()
 			HStack {
@@ -1410,7 +1426,10 @@ struct SwapInView: View, ViewName {
 				
 			} // </switch>
 		}
-		.navigationBarTitle("Swap In", displayMode: .inline)
+		.navigationBarTitle(
+			NSLocalizedString("Swap In", comment: "Navigation bar title"),
+			displayMode: .inline
+		)
 		.onChange(of: mvi.model) { newModel in
 			onModelChange(model: newModel)
 		}
@@ -1496,12 +1515,12 @@ struct SwapInView: View, ViewName {
 				.multilineTextAlignment(.leading)
 				.padding(.bottom, 14)
 				
-				Text(styled: NSLocalizedString(
+				Text(styled: String(format: NSLocalizedString(
 					"""
-					Deposits must be at least **\(minFunding.string)**. \
-					The fee is **\(feePercent)%** (\(minFee.string) minimum).
+					Deposits must be at least **%@**. The fee is **%@%%** (%@ minimum).
 					""",
-					comment: "Minimum amount description."
+					comment:	"Minimum amount description."),
+					minFunding.string, feePercent, minFee.string
 				))
 				.lineLimit(nil)
 				.multilineTextAlignment(.leading)
