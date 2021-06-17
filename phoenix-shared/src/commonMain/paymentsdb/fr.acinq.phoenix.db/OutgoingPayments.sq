@@ -47,11 +47,27 @@ CREATE INDEX IF NOT EXISTS parent_id_idx ON outgoing_payment_parts(part_parent_i
 
 -- queries
 
+hasOutgoingPayment:
+SELECT COUNT(*) FROM outgoing_payments
+WHERE id = ?;
+
 addOutgoingPayment:
-INSERT INTO outgoing_payments (id, recipient_amount_msat, recipient_node_id, payment_hash, created_at, details_type, details_blob) VALUES (?, ?, ?, ?, ?, ?, ?);
+INSERT INTO outgoing_payments (
+            id,
+            recipient_amount_msat,
+            recipient_node_id,
+            payment_hash,
+            created_at,
+            details_type,
+            details_blob)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 updateOutgoingPayment:
 UPDATE outgoing_payments SET completed_at=?, status_type=?, status_blob=? WHERE id=?;
+
+hasOutgoingPart:
+SELECT COUNT(*) FROM outgoing_payment_parts
+WHERE part_id = ?;
 
 addOutgoingPart:
 INSERT INTO outgoing_payment_parts (
