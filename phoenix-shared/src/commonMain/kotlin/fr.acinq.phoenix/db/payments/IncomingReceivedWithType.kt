@@ -23,10 +23,8 @@ import fr.acinq.lightning.serialization.v1.ByteVector32KSerializer
 import fr.acinq.lightning.utils.msat
 import io.ktor.utils.io.charsets.*
 import io.ktor.utils.io.core.*
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.*
+import kotlinx.serialization.builtins.SetSerializer
 import kotlinx.serialization.json.Json
 
 
@@ -54,12 +52,11 @@ sealed class IncomingReceivedWithData {
     }
 
     @Serializable
-    sealed class Part : IncomingReceivedWithData() {
+    abstract sealed class Part : IncomingReceivedWithData() {
         sealed class Htlc : Part() {
             @Serializable
             data class V0(val amount: MilliSatoshi, @Serializable(with = ByteVector32KSerializer::class) val channelId: ByteVector32, val htlcId: Long) : Htlc()
         }
-
         sealed class NewChannel : Part() {
             @Serializable
             data class V0(val amount: MilliSatoshi, val fees: MilliSatoshi, @Serializable(with = ByteVector32KSerializer::class) val channelId: ByteVector32?) : NewChannel()
@@ -93,6 +90,7 @@ fun Set<IncomingPayment.ReceivedWith>.mapToDb(): Pair<IncomingReceivedWithTypeVe
         is IncomingPayment.ReceivedWith.LightningPayment -> IncomingReceivedWithData.Part.Htlc.V0(it.amount, it.channelId, it.htlcId)
         is IncomingPayment.ReceivedWith.NewChannel -> IncomingReceivedWithData.Part.NewChannel.V0(it.amount, it.fees, it.channelId)
     }
-}.takeIf { it.isNotEmpty() }?.run {
-    IncomingReceivedWithTypeVersion.MULTIPARTS_V0 to Json.encodeToString(this.toSet()).toByteArray(Charsets.UTF_8)
+}.takeIf { it.isNotEmpty() }?.toSet()?.let {
+    IncomingReceivedWithTypeVersion.MULTIPARTS_V0 to DbTypesHelper.polymorphicFormat.encodeToString(
+        SetSerializer(PolymorphicSerializer(IncomingReceivedWithData.Part::class)), it).toByteArray(Charsets.UTF_8)
 }

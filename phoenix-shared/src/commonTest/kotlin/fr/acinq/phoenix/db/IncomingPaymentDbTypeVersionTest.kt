@@ -21,11 +21,10 @@ import fr.acinq.lightning.db.IncomingPayment
 import fr.acinq.lightning.payment.PaymentRequest
 import fr.acinq.lightning.utils.msat
 import fr.acinq.phoenix.db.payments.*
-import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlin.test.assertTrue
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class IncomingPaymentDbTypeVersionTest {
 
