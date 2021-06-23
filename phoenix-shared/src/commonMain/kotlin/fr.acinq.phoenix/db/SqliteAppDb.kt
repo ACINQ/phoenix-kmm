@@ -10,6 +10,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.Clock
+import kotlinx.datetime.Instant
 import kotlinx.serialization.json.Json
 
 class SqliteAppDb(driver: SqlDriver) {
@@ -65,7 +66,7 @@ class SqliteAppDb(driver: SqlDriver) {
     suspend fun getWalletContextOrNull(version: WalletContext.Version): Pair<Long, WalletContext.V0?> =
         withContext(Dispatchers.Default) {
             paramsQueries.get(version.name, ::mapWalletContext).executeAsOneOrNull()
-        } ?: Clock.System.now().toEpochMilliseconds() to null
+        } ?: Instant.DISTANT_PAST.toEpochMilliseconds() to null
 
     private fun mapWalletContext(
         version: String,
