@@ -5,7 +5,7 @@ import Firebase
 import Combine
 import BackgroundTasks
 
-#if DEBUG && false
+#if DEBUG && true
 fileprivate var log = Logger(
 	subsystem: Bundle.main.bundleIdentifier!,
 	category: "AppDelegate"
@@ -100,8 +100,31 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			self?.business.updateTorUsage(isEnabled: isTorEnabled)
 		}.store(in: &cancellables)
 		
+		listDatabaseFiles()
+		
 		return true
     }
+	
+	func listDatabaseFiles() {
+		
+		log.debug("----------------------------------------------------------------------")
+		
+		let parentDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+		let dbDir = parentDir.appendingPathComponent("databases", isDirectory: true)
+		
+		log.debug("Listing contents of directory: \(dbDir.path)")
+		
+		do {
+			let files = try FileManager.default.contentsOfDirectory(atPath: dbDir.path)
+			for file in files {
+				log.debug("- \(file)")
+			}
+		} catch {
+			log.error("Error listing directory contents: \(String(describing: error))")
+		}
+		
+		log.debug("----------------------------------------------------------------------")
+	}
 	
 	/// This function isn't called, because Firebase broke it with their stupid swizzling stuff.
 	func applicationDidBecomeActive(_ application: UIApplication) {/* :( */}
