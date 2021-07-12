@@ -465,17 +465,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 	func registerBackgroundTasks() -> Void {
 		log.trace("registerWatchTowerTask()")
 		
-		BGTaskScheduler.shared.register(
-			forTaskWithIdentifier: taskId_watchTower,
-			using: DispatchQueue.main
-		) { (task) in
-			
+//		BGTaskScheduler.shared.register(
+//			forTaskWithIdentifier: taskId_watchTower,
+//			using: DispatchQueue.main
+//		) { (task) in
+//
 //			if let task = task as? BGAppRefreshTask {
 //				log.debug("BGTaskScheduler.executeTask: WatchTower")
 //
 //				self.performWatchTowerTask(task)
 //			}
-		}
+//		}
 	}
 	
 	func scheduleBackgroundTasks(soon: Bool = false) {
