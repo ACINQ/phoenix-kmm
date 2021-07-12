@@ -51,6 +51,21 @@ struct HomeView : MVIView, ViewName {
 	@State var didAppear = false
 	@State var didPreFetch = false
 	
+	enum Tag: String {
+		case AboutView
+		case DisplayConfigurationView
+		case ElectrumConfigurationView
+		case TorView
+		case PaymentOptionsView
+		case AppAccessView
+		case RecoverySeedView
+		case LogsConfigurationView
+		case ChannelsConfigurationView
+		case CloseChannelsView
+		case ForceCloseChannelsView
+	}
+	@State private var selectedTag: Tag? = nil
+
 	@ViewBuilder
 	var view: some View {
 		
@@ -65,7 +80,25 @@ struct HomeView : MVIView, ViewName {
 					.edgesIgnoringSafeArea([.horizontal, .bottom]) // not underneath status bar
 			}
 
-			main
+			//main
+			VStack(alignment: HorizontalAlignment.center, spacing: 30) {
+				Text("TestFlight notice")
+					.font(.title2)
+					.multilineTextAlignment(.center)
+
+				Text("Phoenix is leaving TestFlight and is going live!\n\nInstall Phoenix from the App Store, and restore your wallet there using your recovery phrase.\n\nNote that your payments history will not be restored in the App Store application, only your funds.")
+					.multilineTextAlignment(.center)
+
+				NavigationLink(
+					destination: RecoverySeedView(),
+					tag: Tag.RecoverySeedView,
+					selection: $selectedTag
+				) {
+					Label { Text("Get my recovery phrase") } icon: {
+						Image(systemName: "key")
+					}
+				}
+			}.padding(40)
 
 			toast.view()
 

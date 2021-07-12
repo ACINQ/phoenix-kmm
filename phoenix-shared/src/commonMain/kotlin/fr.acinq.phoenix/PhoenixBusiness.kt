@@ -77,18 +77,18 @@ class PhoenixBusiness(private val ctx: PlatformContext) {
     }
 
     fun start() {
-        if (appConnectionsDaemon == null) {
-            logger.debug { "start business" }
-            appConnectionsDaemon = AppConnectionsDaemon(
-                appConfigurationManager,
-                walletManager,
-                peerManager,
-                currencyManager,
-                networkMonitor,
-                electrumClient,
-                loggerFactory,
-            )
-        }
+//        if (appConnectionsDaemon == null) {
+//            logger.debug { "start business" }
+//            appConnectionsDaemon = AppConnectionsDaemon(
+//                appConfigurationManager,
+//                walletManager,
+//                peerManager,
+//                currencyManager,
+//                networkMonitor,
+//                electrumClient,
+//                loggerFactory,
+//            )
+//        }
     }
 
     // Converts a mnemonics list to a seed.

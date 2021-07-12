@@ -269,19 +269,19 @@ class AppConnectionsDaemon(
     }
 
     fun incrementDisconnectCount(target: ControlTarget = ControlTarget.All): Unit {
-        launch {
-            if (target.peer) { peerControlChanges.send { incrementDisconnectCount() } }
-            if (target.electrum) { electrumControlChanges.send { incrementDisconnectCount() } }
-            if (target.http) { httpApiControlChanges.send { incrementDisconnectCount() } }
-        }
+//        launch {
+//            if (target.peer) { peerControlChanges.send { incrementDisconnectCount() } }
+//            if (target.electrum) { electrumControlChanges.send { incrementDisconnectCount() } }
+//            if (target.http) { httpApiControlChanges.send { incrementDisconnectCount() } }
+//        }
     }
 
     fun decrementDisconnectCount(target: ControlTarget = ControlTarget.All): Unit {
-        launch {
-            if (target.peer) { peerControlChanges.send { decrementDisconnectCount() } }
-            if (target.electrum) { electrumControlChanges.send { decrementDisconnectCount() } }
-            if (target.http) { httpApiControlChanges.send { decrementDisconnectCount() } }
-        }
+//        launch {
+//            if (target.peer) { peerControlChanges.send { decrementDisconnectCount() } }
+//            if (target.electrum) { electrumControlChanges.send { decrementDisconnectCount() } }
+//            if (target.http) { httpApiControlChanges.send { decrementDisconnectCount() } }
+//        }
     }
 
     private fun connectionLoop(

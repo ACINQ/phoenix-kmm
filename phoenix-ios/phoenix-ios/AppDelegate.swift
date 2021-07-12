@@ -470,11 +470,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			using: DispatchQueue.main
 		) { (task) in
 			
-			if let task = task as? BGAppRefreshTask {
-				log.debug("BGTaskScheduler.executeTask: WatchTower")
-				
-				self.performWatchTowerTask(task)
-			}
+//			if let task = task as? BGAppRefreshTask {
+//				log.debug("BGTaskScheduler.executeTask: WatchTower")
+//
+//				self.performWatchTowerTask(task)
+//			}
 		}
 	}
 	
