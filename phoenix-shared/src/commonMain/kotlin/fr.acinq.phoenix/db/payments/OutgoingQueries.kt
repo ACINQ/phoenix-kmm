@@ -34,8 +34,11 @@ import fracinqphoenixdb.OutgoingPaymentsQueries
 
 class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
 
-    fun addOutgoingParts(parentId: UUID, parts: List<OutgoingPayment.Part>) {
-        if (parts.size == 0) return
+    fun addOutgoingParts(parentId: UUID, parts: List<OutgoingPayment.Part>): Boolean {
+        var result = true
+        if (parts.size == 0) {
+            return result
+        }
         queries.transaction {
             parts.map {
                 queries.addOutgoingPart(
@@ -47,9 +50,10 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
                 )
             }
             if (queries.changes().executeAsOne() != 1L) {
-                throw OutgoingPaymentPartNotFound(parts.first().id)
+                result = false
             }
         }
+        return result
     }
 
     fun addOutgoingPayment(outgoingPayment: OutgoingPayment) {
@@ -76,7 +80,8 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
         }
     }
 
-    fun completeOutgoingPayment(id: UUID, completed: OutgoingPayment.Status.Completed) {
+    fun completeOutgoingPayment(id: UUID, completed: OutgoingPayment.Status.Completed): Boolean {
+        var result = true
         queries.transaction {
             val (statusType, statusBlob) = completed.mapToDb()
             queries.updateOutgoingPayment(
@@ -85,11 +90,19 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
                 status_type = statusType,
                 status_blob = statusBlob
             )
-            if (queries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(id)
+            if (queries.changes().executeAsOne() != 1L) {
+                result = false
+            }
         }
+        return result
     }
 
-    fun updateOutgoingPart(partId: UUID, preimage: ByteVector32, completedAt: Long) {
+    fun updateOutgoingPart(
+        partId: UUID,
+        preimage: ByteVector32,
+        completedAt: Long
+    ): Boolean {
+        var result = true
         val (statusTypeVersion, statusData) = OutgoingPayment.Part.Status.Succeeded(preimage).mapToDb()
         queries.transaction {
             queries.updateOutgoingPart(
@@ -97,11 +110,19 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
                 part_status_type = statusTypeVersion,
                 part_status_blob = statusData,
                 part_completed_at = completedAt)
-            if (queries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(partId)
+            if (queries.changes().executeAsOne() != 1L) {
+                result = false
+            }
         }
+        return result
     }
 
-    fun updateOutgoingPart(partId: UUID, failure: Either<ChannelException, FailureMessage>, completedAt: Long) {
+    fun updateOutgoingPart(
+        partId: UUID,
+        failure: Either<ChannelException, FailureMessage>,
+        completedAt: Long
+    ): Boolean {
+        var result = true
         val (statusTypeVersion, statusData) = OutgoingPaymentFailure.convertFailure(failure).mapToDb()
         queries.transaction {
             queries.updateOutgoingPart(
@@ -110,8 +131,11 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
                 part_status_blob = statusData,
                 part_completed_at = completedAt
             )
-            if (queries.changes().executeAsOne() != 1L) throw OutgoingPaymentPartNotFound(partId)
+            if (queries.changes().executeAsOne() != 1L) {
+                result = false
+            }
         }
+        return result
     }
 
     fun getOutgoingPart(partId: UUID): OutgoingPayment? {
