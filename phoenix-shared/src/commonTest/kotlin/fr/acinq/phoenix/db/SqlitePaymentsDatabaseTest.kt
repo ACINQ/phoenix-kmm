@@ -217,9 +217,9 @@ class SqlitePaymentsDatabaseTest {
             // The problem is that foreign key constraints are disabled.
             // See iosDbFactory.kt for discussion.
         } else {
-            assertFalse { db.outQueries.addOutgoingParts(UUID.randomUUID(), newParts) }
+            assertFails { db.addOutgoingParts(UUID.randomUUID(), newParts) }
             // New parts must have a unique id.
-            assertFalse { db.outQueries.addOutgoingParts(
+            assertFails { db.addOutgoingParts(
                 parentId = onePartFailed.id,
                 parts = newParts.map { it.copy(id = p.parts[0].id) }
             ) }

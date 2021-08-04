@@ -34,13 +34,11 @@ import fracinqphoenixdb.OutgoingPaymentsQueries
 
 class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
 
-    fun addOutgoingParts(parentId: UUID, parts: List<OutgoingPayment.Part>): Boolean {
-        var result = true
-        if (parts.size == 0) {
-            return result
-        }
+    fun addOutgoingParts(parentId: UUID, parts: List<OutgoingPayment.Part>) {
+        if (parts.size == 0) return
         queries.transaction {
             parts.map {
+                // This will throw an exception if the sqlite foreign-key-constraint is violated.
                 queries.addOutgoingPart(
                     part_id = it.id.toString(),
                     part_parent_id = parentId.toString(),
@@ -49,11 +47,7 @@ class OutgoingQueries(private val queries: OutgoingPaymentsQueries) {
                     part_created_at = it.createdAt
                 )
             }
-            if (queries.changes().executeAsOne() != 1L) {
-                result = false
-            }
         }
-        return result
     }
 
     fun addOutgoingPayment(outgoingPayment: OutgoingPayment) {
