@@ -43,6 +43,7 @@ class OutgoingQueries(val database: PaymentsDatabase) {
         if (parts.isEmpty()) return
         database.transaction {
             parts.map {
+                // This will throw an exception if the sqlite foreign-key-constraint is violated.
                 queries.addOutgoingPart(
                     part_id = it.id.toString(),
                     part_parent_id = parentId.toString(),
@@ -50,9 +51,6 @@ class OutgoingQueries(val database: PaymentsDatabase) {
                     part_route = it.route,
                     part_created_at = it.createdAt
                 )
-            }
-            if (queries.changes().executeAsOne() != 1L) {
-                throw OutgoingPaymentPartNotFound(parts.first().id)
             }
         }
     }
@@ -81,7 +79,8 @@ class OutgoingQueries(val database: PaymentsDatabase) {
         }
     }
 
-    fun completeOutgoingPayment(id: UUID, completed: OutgoingPayment.Status.Completed) {
+    fun completeOutgoingPayment(id: UUID, completed: OutgoingPayment.Status.Completed): Boolean {
+        var result = true
         database.transaction {
             val (statusType, statusBlob) = completed.mapToDb()
             queries.updateOutgoingPayment(
@@ -91,33 +90,48 @@ class OutgoingQueries(val database: PaymentsDatabase) {
                 status_blob = statusBlob
             )
             if (queries.changes().executeAsOne() != 1L) {
-                throw OutgoingPaymentPartNotFound(id)
+                result = false
+            } else {
+                didCompletePaymentRow(OutgoingPaymentId(id), database)
             }
-            didCompletePaymentRow(OutgoingPaymentId(id), database)
         }
+        return result
     }
 
-    fun updateOutgoingPart(partId: UUID, preimage: ByteVector32, completedAt: Long) {
+    fun updateOutgoingPart(
+        partId: UUID,
+        preimage: ByteVector32,
+        completedAt: Long
+    ): Boolean {
+        var result = true
         val (statusTypeVersion, statusData) = OutgoingPayment.Part.Status.Succeeded(preimage).mapToDb()
         database.transaction {
             queries.updateOutgoingPart(
                 part_id = partId.toString(),
                 part_status_type = statusTypeVersion,
                 part_status_blob = statusData,
-                part_completed_at = completedAt)
+                part_completed_at = completedAt
+            )
             if (queries.changes().executeAsOne() != 1L) {
-                throw OutgoingPaymentPartNotFound(partId)
-            }
-            queries.getOutgoingPart(
-                part_id = partId.toString()
-            ).executeAsOneOrNull()?.let {
-                val parentId = UUID.fromString(it.part_parent_id)
-                didCompletePaymentRow(OutgoingPaymentId(parentId), database)
+                result = false
+            } else {
+                queries.getOutgoingPart(
+                    part_id = partId.toString()
+                ).executeAsOneOrNull()?.let {
+                    val parentId = UUID.fromString(it.part_parent_id)
+                    didCompletePaymentRow(OutgoingPaymentId(parentId), database)
+                }
             }
         }
+        return result
     }
 
-    fun updateOutgoingPart(partId: UUID, failure: Either<ChannelException, FailureMessage>, completedAt: Long) {
+    fun updateOutgoingPart(
+        partId: UUID,
+        failure: Either<ChannelException, FailureMessage>,
+        completedAt: Long
+    ): Boolean {
+        var result = true
         val (statusTypeVersion, statusData) = OutgoingPaymentFailure.convertFailure(failure).mapToDb()
         database.transaction {
             queries.updateOutgoingPart(
@@ -127,15 +141,17 @@ class OutgoingQueries(val database: PaymentsDatabase) {
                 part_completed_at = completedAt
             )
             if (queries.changes().executeAsOne() != 1L) {
-                throw OutgoingPaymentPartNotFound(partId)
-            }
-            queries.getOutgoingPart(
-                part_id = partId.toString()
-            ).executeAsOneOrNull()?.let {
-                val parentId = UUID.fromString(it.part_parent_id)
-                didCompletePaymentRow(OutgoingPaymentId(parentId), database)
+                result = false
+            } else {
+                queries.getOutgoingPart(
+                    part_id = partId.toString()
+                ).executeAsOneOrNull()?.let {
+                    val parentId = UUID.fromString(it.part_parent_id)
+                    didCompletePaymentRow(OutgoingPaymentId(parentId), database)
+                }
             }
         }
+        return result
     }
 
     fun getOutgoingPart(partId: UUID): OutgoingPayment? {

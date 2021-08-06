@@ -332,7 +332,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 			}
 			
 			let currencyPrefs = CurrencyPrefs()
-			let formattedAmt = Utils.format(currencyPrefs, msat: payment.amountMsat())
+			let formattedAmt = Utils.format(currencyPrefs, msat: payment.amount)
 
 			var body: String
 			if let desc = payment.desc(), desc.count > 0 {
@@ -838,11 +838,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate, MessagingDelegate {
 		// Which means their existing channels are going to get force closed by the server.
 		// So we need to inform the user about what just happened.
 		
-//		popoverState.display.send(PopoverItem(
-//			
-//			PardonOurMess().anyView,
-//			dismissable: false
-//		))
+//		popoverState.display(dismissable: false) {
+//			PardonOurMess()
+//		}
 	}
 	
 	private func removeAppDbFile() {

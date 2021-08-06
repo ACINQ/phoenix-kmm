@@ -563,11 +563,11 @@ fileprivate struct PaymentCell : View, ViewName {
 
 			HStack(alignment: VerticalAlignment.firstTextBaseline, spacing: 0) {
 
-				let (amount, isFailure, isNegative) = paymentAmountInfo()
+				let (amount, isFailure, isOutgoing) = paymentAmountInfo()
 
-				let color: Color = isFailure ? .secondary : (isNegative ? .appNegative : .appPositive)
+				let color: Color = isFailure ? .secondary : (isOutgoing ? .appNegative : .appPositive)
 
-				Text(isNegative ? "" : "+")
+				Text(isOutgoing ? "-" : "+")
 					.foregroundColor(color)
 					.padding(.trailing, 1)
 
@@ -598,7 +598,7 @@ fileprivate struct PaymentCell : View, ViewName {
 	func paymentTimestamp() -> String {
 
 		if let payment = fetched.payment {
-			let timestamp = payment.timestamp()
+			let timestamp = payment.completedAt()
 			return timestamp > 0
 				? timestamp.formatDateMS()
 				: NSLocalizedString("pending", comment: "timestamp string for pending transaction")
@@ -611,27 +611,22 @@ fileprivate struct PaymentCell : View, ViewName {
 
 		if let payment = fetched.payment {
 
-			let amount = Utils.format(currencyPrefs, msat: payment.amountMsat())
+			let amount = Utils.format(currencyPrefs, msat: payment.amount)
 
 			let isFailure = payment.state() == WalletPaymentState.failure
-			let isNegative = payment.amountMsat() < 0
+			let isOutgoing = payment is Lightning_kmpOutgoingPayment
 
-			return (amount, isFailure, isNegative)
+			return (amount, isFailure, isOutgoing)
 
 		} else {
-
-			let type: String
-			switch currencyPrefs.currencyType {
-				case .fiat    : type = currencyPrefs.fiatCurrency.shortName
-				case .bitcoin : type = currencyPrefs.bitcoinUnit.shortName
-			}
-
-			let amount = FormattedAmount(digits: "", type: type, decimalSeparator: " ")
+			
+			let currency = currencyPrefs.currency
+			let amount = FormattedAmount(currency: currency, digits: "", decimalSeparator: " ")
 
 			let isFailure = false
-			let isNegative = true
+			let isOutgoing = true
 
-			return (amount, isFailure, isNegative)
+			return (amount, isFailure, isOutgoing)
 		}
 	}
 	
@@ -694,11 +689,9 @@ fileprivate struct ConnectionStatusButton : View {
 	func showConnectionsPopover() -> Void {
 		log.trace("(ConnectionStatusButton) showConnectionsPopover()")
 		
-		popoverState.display.send(PopoverItem(
-		
-			ConnectionsPopover().anyView,
-			dismissable: true
-		))
+		popoverState.display(dismissable: true) {
+			ConnectionsPopover()
+		}
 	}
 }
 

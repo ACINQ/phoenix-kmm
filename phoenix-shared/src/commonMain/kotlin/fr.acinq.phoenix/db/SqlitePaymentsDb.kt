@@ -47,7 +47,7 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
         incoming_paymentsAdapter = Incoming_payments.Adapter(origin_typeAdapter = EnumColumnAdapter(), received_with_typeAdapter = EnumColumnAdapter())
     )
     internal val inQueries = IncomingQueries(database)
-    private val outQueries = OutgoingQueries(database)
+    internal val outQueries = OutgoingQueries(database)
     private val aggrQueries = database.aggregatedQueriesQueries
 
     public val cloudKitDb = makeCloudKitDb(database)

@@ -125,7 +125,6 @@ struct ReceiveLightningView: View, ViewName {
 	enum ReceiveViewSheet {
 		case sharingUrl(url: String)
 		case sharingImg(img: UIImage)
-		case editing(model: Receive.ModelGenerated)
 	}
 	
 	// To workaround a bug in SwiftUI, we're using multiple namespaces for our animation.
@@ -141,11 +140,13 @@ struct ReceiveLightningView: View, ViewName {
 	@State var didAppear = false
 	@State var isFullScreenQrcode = false
 	
-	@State var unit: String = "sat"
 	@State var sheet: ReceiveViewSheet? = nil
 	
-	@State var isSwapInEnabled = true
-	@State var isPayToOpenEnabled = true
+	@State var swapIn_enabled = true
+	@State var payToOpen_enabled = true
+	@State var payToOpen_minFundingSat: Int64 = 0
+	
+	@State var channelsCount = 0
 	
 	@State var pushPermissionRequestedFromOS = true
 	@State var bgAppRefreshDisabled = false
@@ -154,16 +155,20 @@ struct ReceiveLightningView: View, ViewName {
 	@State var badgesDisabled = false
 	@State var showRequestPushPermissionPopoverTimer: Timer? = nil
 	
+	@State var modificationUnit = Currency.bitcoin(.sat)
+	
 	@Environment(\.horizontalSizeClass) var horizontalSizeClass: UserInterfaceSizeClass?
 	@Environment(\.verticalSizeClass) var verticalSizeClass: UserInterfaceSizeClass?
 	@Environment(\.presentationMode) var presentationMode: Binding<PresentationMode>
 	@Environment(\.colorScheme) var colorScheme: ColorScheme
 	@Environment(\.popoverState) var popoverState: PopoverState
+	@Environment(\.shortSheetState) var shortSheetState: ShortSheetState
 	
 	@EnvironmentObject var currencyPrefs: CurrencyPrefs
 	
 	let lastIncomingPaymentPublisher = AppDelegate.get().business.paymentsManager.lastIncomingPaymentPublisher()
 	let chainContextPublisher = AppDelegate.get().business.appConfigurationManager.chainContextPublisher()
+	let channelsPublisher = AppDelegate.get().business.peerPublisher().flatMap { $0.channelsPublisher() }
 	
 	let willEnterForegroundPublisher = NotificationCenter.default.publisher(for:
 		UIApplication.willEnterForegroundNotification
@@ -188,6 +193,9 @@ struct ReceiveLightningView: View, ViewName {
 		.onReceive(chainContextPublisher) {
 			chainContextChanged($0)
 		}
+		.onReceive(channelsPublisher) {
+			channelsChanged($0)
+		}
 		.onReceive(willEnterForegroundPublisher) { _ in
 			willEnterForeground()
 		}
@@ -206,16 +214,6 @@ struct ReceiveLightningView: View, ViewName {
 				let items: [Any] = [sharingImg]
 				ActivityView(activityItems: items, applicationActivities: nil)
 			
-			case .editing(let model):
-				
-				ModifyInvoiceSheet(
-					mvi: mvi,
-					dismissSheet: { self.sheet = nil },
-					initialAmount: model.amount,
-					desc: model.desc ?? ""
-				)
-				.modifier(GlobalEnvironment()) // SwiftUI bug (prevent crash)
-			
 			} // </switch>
 		}
 		.navigationBarTitle(
@@ -229,11 +227,35 @@ struct ReceiveLightningView: View, ViewName {
 		
 		if isFullScreenQrcode {
 			fullScreenQrcode()
-		} else if verticalSizeClass == UserInterfaceSizeClass.compact {
-			mainLandscape()
 		} else {
-			mainPortrait()
+			mainWrapper()
 		}
+	}
+	
+	@ViewBuilder
+	func mainWrapper() -> some View {
+		
+		// SwiftUI BUG workaround:
+		//
+		// When the keyboard appears, the main view shouldn't move. At all.
+		// It should perform ZERO keyboard avoidance.
+		// Which means we need to use: `.ignoresSafeArea(.keyboard)`
+		//
+		// But, of course, this doesn't work properly because of a SwiftUI bug.
+		// So the current recommended workaround is to wrap everything in a GeometryReader.
+		//
+		GeometryReader { _ in
+			HStack(alignment: VerticalAlignment.top, spacing: 0) {
+				Spacer(minLength: 0)
+				if verticalSizeClass == UserInterfaceSizeClass.compact {
+					mainLandscape()
+				} else {
+					mainPortrait()
+				}
+				Spacer(minLength: 0)
+			} // </HStack>
+		} // </GeometryReader>
+		.ignoresSafeArea(.keyboard)
 	}
 	
 	@ViewBuilder
@@ -255,8 +277,11 @@ struct ReceiveLightningView: View, ViewName {
 				.matchedGeometryEffect(id: "qrCodeView_outer", in: qrCodeAnimation_outer)
 				.padding(.top)
 			
-			if !isPayToOpenEnabled {
+			if !payToOpen_enabled {
 				payToOpenDisabledWarning()
+					.padding(.top, 8)
+			} else if channelsCount == 0 {
+				payToOpenMinimumWarning()
 					.padding(.top, 8)
 			}
 			
@@ -546,12 +571,43 @@ struct ReceiveLightningView: View, ViewName {
 			Image(systemName: "exclamationmark.triangle")
 				.imageScale(.large)
 				.padding(.trailing, 10)
+				.foregroundColor(Color(UIColor.tertiaryLabel))
 			Text(
 				"""
 				Channel creation has been temporarily disabled. \
 				You may not be able to receive some payments.
 				"""
 			)
+			.multilineTextAlignment(.center)
+			Image(systemName: "exclamationmark.triangle")
+				.imageScale(.large)
+				.padding(.leading, 10)
+				.foregroundColor(Color(UIColor.tertiaryLabel))
+		}
+		.font(.caption)
+		.padding(12)
+		.background(
+			RoundedRectangle(cornerRadius: 8)
+				.stroke(Color.appAccent, lineWidth: 1)
+		)
+		.padding([.leading, .trailing], 10)
+	}
+	
+	@ViewBuilder
+	func payToOpenMinimumWarning() -> some View {
+		
+		let minFunding = Utils.formatBitcoin(sat: payToOpen_minFundingSat, bitcoinUnit: .sat)
+		
+		HStack(alignment: VerticalAlignment.top, spacing: 0) {
+			Text(styled: String(format: NSLocalizedString(
+				"""
+				Your wallet is empty. The first payment you \
+				receive must be at least **%@**.
+				""",
+				comment:	"Minimum amount description."),
+				minFunding.string
+			))
+			.multilineTextAlignment(.center)
 		}
 		.font(.caption)
 		.padding(12)
@@ -629,6 +685,17 @@ struct ReceiveLightningView: View, ViewName {
 		} else {
 			
 			checkPushPermissions()
+		}
+		
+		if currencyPrefs.currencyType == .fiat, currencyPrefs.fiatExchangeRate() != nil {
+			
+			let fiatCurrency = currencyPrefs.fiatCurrency
+			modificationUnit = Currency.fiat(fiatCurrency)
+			
+		} else {
+			
+			let bitcoinUnit = currencyPrefs.bitcoinUnit
+			modificationUnit = Currency.bitcoin(bitcoinUnit)
 		}
 	}
 	
@@ -725,21 +792,17 @@ struct ReceiveLightningView: View, ViewName {
 	func showBgAppRefreshDisabledWarning() -> Void {
 		log.trace("[\(viewName)] showBgAppRefreshDisabledWarning()")
 		
-		popoverState.display.send(PopoverItem(
-			
-			BgAppRefreshDisabledWarning().anyView,
-			dismissable: false
-		))
+		popoverState.display(dismissable: false) {
+			BgAppRefreshDisabledWarning()
+		}
 	}
 	
 	func showNotificationsDisabledWarning() -> Void {
 		log.trace("[\(viewName)] showNotificationsDisabledWarning()")
 		
-		popoverState.display.send(PopoverItem(
-			
-			NotificationsDisabledWarning().anyView,
-			dismissable: false
-		))
+		popoverState.display(dismissable: false) {
+			NotificationsDisabledWarning()
+		}
 	}
 	
 	func showRequestPushPermissionPopover() -> Void {
@@ -764,11 +827,9 @@ struct ReceiveLightningView: View, ViewName {
 			}
 		}
 		
-		popoverState.display.send(PopoverItem(
-		
-			RequestPushPermissionPopover(callback: callback).anyView,
-			dismissable: true
-		))
+		popoverState.display(dismissable: true) {
+			RequestPushPermissionPopover(callback: callback)
+		}
 	}
 	
 	func didTapCopyButton() -> Void {
@@ -799,8 +860,15 @@ struct ReceiveLightningView: View, ViewName {
 		log.trace("[\(viewName)] didTapEditButton()")
 		
 		if let model = mvi.model as? Receive.ModelGenerated {
-			withAnimation {
-				sheet = ReceiveViewSheet.editing(model: model)
+			
+			shortSheetState.display(dismissable: true) {
+				
+				ModifyInvoiceSheet(
+					mvi: mvi,
+					initialAmount: model.amount,
+					desc: model.desc ?? "",
+					unit: $modificationUnit
+				)
 			}
 		}
 	}
@@ -822,24 +890,43 @@ struct ReceiveLightningView: View, ViewName {
 	func chainContextChanged(_ context: WalletContext.V0ChainContext) -> Void {
 		log.trace("[\(viewName)] chainContextChanged()")
 		
-		isSwapInEnabled = context.swapIn.v1.status is WalletContext.V0ServiceStatusActive
-		isPayToOpenEnabled = context.payToOpen.v1.status is WalletContext.V0ServiceStatusActive
+		swapIn_enabled = context.swapIn.v1.status is WalletContext.V0ServiceStatusActive
+		payToOpen_enabled = context.payToOpen.v1.status is WalletContext.V0ServiceStatusActive
+		payToOpen_minFundingSat = context.payToOpen.v1.minFundingSat
+	}
+	
+	func channelsChanged(_ channels: Lightning_kmpPeer.ChannelsMap) -> Void {
+		log.trace("[\(viewName)] channelsChanged()")
+		
+		var availableCount = 0
+		for (_, channel) in channels {
+			
+			if channel.asClosing() != nil ||
+			   channel.asClosed() != nil ||
+			   channel.asAborted() != nil
+			{
+				// ignore - channel isn't usable for incoming payments
+			} else {
+				availableCount += 1
+			}
+			
+		}
+		
+		channelsCount = availableCount
 	}
 	
 	func didTapSwapInButton() -> Void {
 		log.trace("[\(viewName)] didTapSwapInButton()")
 		
-		if isSwapInEnabled {
+		if swapIn_enabled {
 			
 			mvi.intent(Receive.IntentRequestSwapIn())
 			
 		} else {
 			
-			popoverState.display.send(PopoverItem(
-				
-				SwapInDisabledPopover().anyView,
-				dismissable: true
-			))
+			popoverState.display(dismissable: true) {
+				SwapInDisabledPopover()
+			}
 		}
 	}
 }
@@ -847,11 +934,12 @@ struct ReceiveLightningView: View, ViewName {
 struct ModifyInvoiceSheet: View, ViewName {
 
 	@ObservedObject var mvi: MVIState<Receive.Model, Receive.Intent>
-	let dismissSheet: () -> Void
 
 	let initialAmount: Lightning_kmpMilliSatoshi?
 	
-	@State var unit: CurrencyUnit = CurrencyUnit(bitcoinUnit: BitcoinUnit.sat)
+	@State var desc: String
+	
+	@Binding var unit: Currency
 	@State var amount: String = ""
 	@State var parsedAmount: Result<Double, TextFieldCurrencyStylerError> = Result.failure(.emptyInput)
 	
@@ -859,9 +947,17 @@ struct ModifyInvoiceSheet: View, ViewName {
 	@State var isInvalidAmount: Bool = false
 	@State var isEmptyAmount: Bool = false
 	
-	@State var desc: String
-	
 	@EnvironmentObject private var currencyPrefs: CurrencyPrefs
+	
+	@Environment(\.shortSheetState) var shortSheetState: ShortSheetState
+	
+	// Workaround for SwiftUI bug
+	enum TextHeight: Preference {}
+	let textHeightReader = GeometryPreferenceReader(
+		key: AppendValue<TextHeight>.self,
+		value: { [$0.size.height] }
+	)
+	@State var textHeight: CGFloat? = nil
 	
 	func currencyStyler() -> TextFieldCurrencyStyler {
 		return TextFieldCurrencyStyler(
@@ -872,6 +968,7 @@ struct ModifyInvoiceSheet: View, ViewName {
 		)
 	}
 
+	@ViewBuilder
 	var body: some View {
 		
 		VStack(alignment: .leading) {
@@ -884,21 +981,23 @@ struct ModifyInvoiceSheet: View, ViewName {
 					.keyboardType(.decimalPad)
 					.disableAutocorrection(true)
 					.foregroundColor(isInvalidAmount ? Color.appNegative : Color.primaryForeground)
+					.read(textHeightReader)
 					.padding([.top, .bottom], 8)
 					.padding(.leading, 16)
 					.padding(.trailing, 0)
-
+				
 				Picker(
 					selection: $unit,
 					label: Text(unit.abbrev).frame(minWidth: 40, alignment: Alignment.trailing)
 				) {
-					let options = CurrencyUnit.displayable(currencyPrefs: currencyPrefs)
+					let options = Currency.displayable(currencyPrefs: currencyPrefs)
 					ForEach(0 ..< options.count) {
 						let option = options[$0]
 						Text(option.abbrev).tag(option)
 					}
 				}
 				.pickerStyle(MenuPickerStyle())
+				.frame(height: textHeight) // workaround for SwiftUI bug
 				.padding(.trailing, 16)
 			}
 			.background(Capsule().stroke(Color(UIColor.separator)))
@@ -929,8 +1028,8 @@ struct ModifyInvoiceSheet: View, ViewName {
 				Capsule()
 					.strokeBorder(Color(UIColor.separator))
 			)
-
-			Spacer()
+			.padding(.bottom)
+			
 			HStack {
 				Spacer()
 				Button("Save") {
@@ -943,6 +1042,7 @@ struct ModifyInvoiceSheet: View, ViewName {
 
 		} // </VStack>
 		.padding([.leading, .trailing])
+		.assignMaxPreference(for: textHeightReader.key, to: $textHeight)
 		.onAppear() {
 			onAppear()
 		}
@@ -958,18 +1058,13 @@ struct ModifyInvoiceSheet: View, ViewName {
 	func onAppear() -> Void {
 		log.trace("[\(viewName)] onAppear()")
 		
-        let msat: Int64? = initialAmount?.msat
+		let msat: Int64? = initialAmount?.msat
 		
-		// Regardless of whether or not the invoice currently has an amount,
-		// we should default to the user's preferred currency.
-		// In other words, we should default to fiat, if that's what the user prefers.
-		//
-		if currencyPrefs.currencyType == .fiat, let exchangeRate = currencyPrefs.fiatExchangeRate() {
+		switch unit {
+		case .fiat(let fiatCurrency):
 			
-			let fiatCurrency = currencyPrefs.fiatCurrency
-			unit = CurrencyUnit(fiatCurrency: fiatCurrency)
-			
-			if let msat = msat {
+			if let msat = msat, let exchangeRate = currencyPrefs.fiatExchangeRate(fiatCurrency: fiatCurrency) {
+				
 				let targetAmt = Utils.convertToFiat(msat: msat, exchangeRate: exchangeRate)
 				parsedAmount = Result.success(targetAmt)
 				
@@ -979,12 +1074,10 @@ struct ModifyInvoiceSheet: View, ViewName {
 				refreshAltAmount()
 			}
 			
-		} else {
-			
-			let bitcoinUnit = currencyPrefs.bitcoinUnit
-			unit = CurrencyUnit(bitcoinUnit: bitcoinUnit)
+		case .bitcoin(let bitcoinUnit):
 			
 			if let msat = msat {
+				
 				let targetAmt = Utils.convertBitcoin(msat: msat, bitcoinUnit: bitcoinUnit)
 				parsedAmount = Result.success(targetAmt)
 				
@@ -1032,7 +1125,8 @@ struct ModifyInvoiceSheet: View, ViewName {
 			isInvalidAmount = false
 			isEmptyAmount = false
 			
-			if let bitcoinUnit = unit.bitcoinUnit {
+			switch unit {
+			case .bitcoin(let bitcoinUnit):
 				// amt    => bitcoinUnit
 				// altAmt => fiatCurrency
 				
@@ -1046,7 +1140,7 @@ struct ModifyInvoiceSheet: View, ViewName {
 					altAmount = "?.?? \(currencyPrefs.fiatCurrency.shortName)"
 				}
 				
-			} else if let fiatCurrency = unit.fiatCurrency {
+			case .fiat(let fiatCurrency):
 				// amt    => fiatCurrency
 				// altAmt => bitcoinUnit
 				
@@ -1057,7 +1151,7 @@ struct ModifyInvoiceSheet: View, ViewName {
 					
 				} else {
 					// We don't know the exchange rate !
-					// We shouldn't get into this state since CurrencyUnit.displayable() already filters for this.
+					// We shouldn't get into this state since Currency.displayable() already filters for this.
 					altAmount = "?.?? \(currencyPrefs.fiatCurrency.shortName)"
 				}
 			}
@@ -1067,37 +1161,35 @@ struct ModifyInvoiceSheet: View, ViewName {
 	func didTapSaveButton() -> Void {
 		log.trace("[\(viewName)] didTapSaveButton()")
 		
+		var msat: Lightning_kmpMilliSatoshi? = nil
 		let trimmedDesc = desc.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 		
 		if let amt = try? parsedAmount.get(), amt > 0 {
 			
-			if let bitcoinUnit = unit.bitcoinUnit {
+			switch unit {
+			case .bitcoin(let bitcoinUnit):
+							
+				msat = Lightning_kmpMilliSatoshi(msat:
+					Utils.toMsat(from: amt, bitcoinUnit: bitcoinUnit)
+				)
 				
-				let msat = Lightning_kmpMilliSatoshi(msat: Utils.toMsat(from: amt, bitcoinUnit: bitcoinUnit))
-				mvi.intent(Receive.IntentAsk(
-					amount: msat,
-					desc: trimmedDesc
-				))
+			case .fiat(let fiatCurrency):
 				
-			} else if let fiatCurrency = unit.fiatCurrency,
-			          let exchangeRate = currencyPrefs.fiatExchangeRate(fiatCurrency: fiatCurrency)
-			{
-				let msat = Lightning_kmpMilliSatoshi(msat: Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate))
-				mvi.intent(Receive.IntentAsk(
-					amount: msat,
-					desc: trimmedDesc
-				))
+				if let exchangeRate = currencyPrefs.fiatExchangeRate(fiatCurrency: fiatCurrency) {
+					msat = Lightning_kmpMilliSatoshi(msat:
+						Utils.toMsat(fromFiat: amt, exchangeRate: exchangeRate)
+					)
+				}
 			}
-			
-		} else {
+		}
+		
+		shortSheetState.close {
 			
 			mvi.intent(Receive.IntentAsk(
-				amount: nil,
+				amount: msat,
 				desc: trimmedDesc
 			))
 		}
-		
-		dismissSheet()
 	}
 	
 } // </ModifyInvoiceSheet>
@@ -1142,7 +1234,7 @@ struct BgAppRefreshDisabledWarning: View {
 			
 			HStack {
 				Button {
-					popoverState.close.send()
+					popoverState.close()
 				} label : {
 					Text("OK").font(.title3)
 				}
@@ -1150,7 +1242,7 @@ struct BgAppRefreshDisabledWarning: View {
 		}
 		.padding()
 		.onReceive(didEnterBackgroundPublisher, perform: { _ in
-			popoverState.close.send()
+			popoverState.close()
 		})
 	}
 }
@@ -1184,14 +1276,14 @@ struct NotificationsDisabledWarning: View {
 			HStack {
 				Button {
 					fixIt()
-					popoverState.close.send()
+					popoverState.close()
 				} label : {
 					Text("Settings").font(.title3)
 				}
 				.padding(.trailing, 20)
 				
 				Button {
-					popoverState.close.send()
+					popoverState.close()
 				} label : {
 					Text("OK").font(.title3)
 				}
@@ -1199,7 +1291,7 @@ struct NotificationsDisabledWarning: View {
 		}
 		.padding()
 		.onReceive(didEnterBackgroundPublisher, perform: { _ in
-			popoverState.close.send()
+			popoverState.close()
 		})
 	}
 	
@@ -1254,8 +1346,10 @@ struct RequestPushPermissionPopover: View, ViewName {
 			}
 		}
 		.padding()
-		.onReceive(popoverState.close) {
-			willClose()
+		.onReceive(popoverState.publisher) { item in
+			if item  == nil {
+				willClose()
+			}
 		}
 	}
 	
@@ -1264,7 +1358,7 @@ struct RequestPushPermissionPopover: View, ViewName {
 		
 		callback(.denied)
 		userIsIgnoringPopover = false
-		popoverState.close.send()
+		popoverState.close()
 	}
 	
 	func didAccept() -> Void {
@@ -1272,7 +1366,7 @@ struct RequestPushPermissionPopover: View, ViewName {
 		
 		callback(.accepted)
 		userIsIgnoringPopover = false
-		popoverState.close.send()
+		popoverState.close()
 	}
 	
 	func willClose() -> Void {
@@ -1310,7 +1404,7 @@ fileprivate struct SwapInDisabledPopover: View, ViewName {
 			
 			HStack {
 				Button {
-					popoverState.close.send()
+					popoverState.close()
 				} label : {
 					Text("Try again later").font(.headline)
 				}

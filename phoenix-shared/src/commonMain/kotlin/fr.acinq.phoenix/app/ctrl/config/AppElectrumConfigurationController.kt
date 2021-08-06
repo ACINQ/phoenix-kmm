@@ -3,11 +3,11 @@ package fr.acinq.phoenix.app.ctrl.config
 import fr.acinq.lightning.blockchain.electrum.ElectrumClient
 import fr.acinq.lightning.io.TcpSocket
 import fr.acinq.lightning.utils.ServerAddress
+import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.app.AppConfigurationManager
 import fr.acinq.phoenix.app.AppConnectionsDaemon
 import fr.acinq.phoenix.app.ctrl.AppController
 import fr.acinq.phoenix.ctrl.config.ElectrumConfiguration
-import fr.acinq.phoenix.data.ElectrumAddress
 import fr.acinq.phoenix.data.InvalidElectrumAddress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect
@@ -21,7 +21,16 @@ class AppElectrumConfigurationController(
     private val configurationManager: AppConfigurationManager,
     private val electrumClient: ElectrumClient,
     private val appConnectionsDaemon: AppConnectionsDaemon
-) : AppController<ElectrumConfiguration.Model, ElectrumConfiguration.Intent>(loggerFactory, ElectrumConfiguration.Model()) {
+) : AppController<ElectrumConfiguration.Model, ElectrumConfiguration.Intent>(
+    loggerFactory = loggerFactory,
+    firstModel = ElectrumConfiguration.Model()
+) {
+    constructor(business: PhoenixBusiness): this(
+        loggerFactory = business.loggerFactory,
+        configurationManager = business.appConfigurationManager,
+        electrumClient = business.electrumClient,
+        appConnectionsDaemon = business.appConnectionsDaemon!!
+    )
 
     init {
         launch {
@@ -49,20 +58,26 @@ class AppElectrumConfigurationController(
     override fun process(intent: ElectrumConfiguration.Intent) {
         when (intent) {
             is ElectrumConfiguration.Intent.UpdateElectrumServer -> {
-                var error: Error? = null
-                when {
-                    intent.address.isNullOrBlank() -> configurationManager.updateElectrumConfig(null)
-                    !intent.address.matches("""(.*):(\d*)""".toRegex()) -> {
-                        error = InvalidElectrumAddress
+                val error: Error? = when {
+                    intent.address.isNullOrBlank() -> {
+                        configurationManager.updateElectrumConfig(null)
+                        null
                     }
-                    else -> {
+                    intent.address.matches("""(.*):(\d*)""".toRegex()) -> {
                         intent.address.split(":").let {
                             val host = it.first()
                             val port = it.last()
                             val serverAddress = ServerAddress(host, port.toInt(), TcpSocket.TLS.SAFE)
                             configurationManager.updateElectrumConfig(serverAddress)
                         }
+                        null
                     }
+                    else -> {
+                        InvalidElectrumAddress
+                    }
+                }
+                launch {
+                    model { copy(error = error) }
                 }
             }
         }
