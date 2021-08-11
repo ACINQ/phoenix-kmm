@@ -86,6 +86,13 @@ data class CloudData @OptIn(ExperimentalSerializationApi::class) constructor(
     fun copyWithPadding(padding: ByteArray): CloudData {
        return this.copy(padding = padding)
     }
+
+    // This function exists because the `freeze()`
+    // function isn't exposed to iOS.
+    //
+    fun copyAndFreeze(): CloudData {
+        return this.freeze()
+    }
 }
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -100,7 +107,7 @@ fun CloudData.Companion.cborDeserialize(blob: ByteArray): CloudData? {
         result = Cbor.decodeFromByteArray(blob)
     } catch (e: Throwable) {}
 
-    return result?.freeze()
+    return result
 }
 
 // For DEBUGGING:
