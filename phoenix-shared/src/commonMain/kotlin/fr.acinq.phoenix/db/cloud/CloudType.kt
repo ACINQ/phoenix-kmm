@@ -52,6 +52,12 @@ import org.kodein.memory.util.freeze
 // This is improved using a custom serializer.
 //
 
+enum class CloudDataVersion(val value: Int) {
+    // Initial version
+    V0(0)
+    // Future versions go here
+}
+
 @Serializable
 data class CloudData @OptIn(ExperimentalSerializationApi::class) constructor(
     @ByteString
@@ -66,17 +72,17 @@ data class CloudData @OptIn(ExperimentalSerializationApi::class) constructor(
     @SerialName("p")
     val padding: ByteArray?,
 ) {
-    constructor(incoming: IncomingPayment, version: Int) : this(
+    constructor(incoming: IncomingPayment, version: CloudDataVersion) : this(
         incoming = IncomingPaymentWrapper(incoming),
         outgoing = null,
-        version = version,
+        version = version.value,
         padding = ByteArray(size = 0)
     )
 
-    constructor(outgoing: OutgoingPayment, version: Int) : this(
+    constructor(outgoing: OutgoingPayment, version: CloudDataVersion) : this(
         incoming = null,
         outgoing = OutgoingPaymentWrapper(outgoing),
-        version = version,
+        version = version.value,
         padding = ByteArray(size = 0)
     )
 
