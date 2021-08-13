@@ -26,6 +26,7 @@ import fr.acinq.phoenix.db.PaymentRowId
 import fr.acinq.phoenix.db.PaymentsDatabase
 import fr.acinq.phoenix.db.didCompletePaymentRow
 import fracinqphoenixdb.IncomingPaymentsQueries
+import org.kodein.memory.text.toHexString
 
 class IncomingQueries(private val database: PaymentsDatabase) {
 
@@ -117,7 +118,53 @@ class IncomingQueries(private val database: PaymentsDatabase) {
     }
 
     fun listReceivedPayments(count: Int, skip: Int): List<IncomingPayment> {
-        return queries.list(skip.toLong(), count.toLong(), ::mapIncomingPayment).executeAsList()
+        return queries.list(
+            limit = count.toLong(),
+            offset = skip.toLong(),
+            mapper = ::mapIncomingPayment
+        ).executeAsList()
+    }
+
+    fun testCborOptimizations(): String {
+        var results = ""
+        queries.list(
+            limit = 100,
+            offset = 0
+        ).executeAsList().forEach {
+            results += "IncomingPayment[${it.payment_hash.toHexString()}]:\n"
+
+            if (true) {
+                val origin = IncomingOriginData.deserialize(
+                    typeVersion = it.origin_type,
+                    blob = it.origin_blob
+                )
+                val (newTypeVersion, cborBlob) = origin.mapToDb(useCbor = true)
+
+                results += "- Origin:\n"
+                results += "  - ${it.origin_type.name}: ${it.origin_blob.size}\n"
+                results += "  - ${newTypeVersion.name}: ${cborBlob.size}\n"
+            }
+
+            if (it.received_with_type != null &&
+                it.received_with_blob != null
+            ) {
+                val received = IncomingReceivedWithData.deserialize(
+                    typeVersion = it.received_with_type,
+                    blob = it.received_with_blob,
+                    amount = it.received_amount_msat?.msat,
+                    originTypeVersion = it.origin_type
+                )
+                received.mapToDb(useCbor = true)?.let { pair ->
+                    val newTypeVersion = pair.first
+                    val cborBlob = pair.second
+
+                    results += "- Received:\n"
+                    results += "  - ${it.received_with_type.name}: ${it.received_with_blob.size}\n"
+                    results += "  - ${newTypeVersion.name}: ${cborBlob.size}\n"
+                }
+            }
+        }
+        return results
     }
 
     companion object {

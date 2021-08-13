@@ -2,6 +2,7 @@ package fr.acinq.phoenix.db.cloud
 
 import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
+import fr.acinq.lightning.MilliSatoshi
 import fr.acinq.lightning.utils.UUID
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
@@ -95,14 +96,17 @@ object ByteVector32JsonSerializer : KSerializer<ByteVector32> {
     }
 }
 
-// A UUID is serialized as: {
-//   "mostSignificantBits":-1321539888342873580,
-//   "leastSignificantBits":-7509590717981962141
+// A UUID is normally serialized as: {
+//   "uuid": {
+//     "mostSignificantBits":-1321539888342873580,
+//     "leastSignificantBits":-7509590717981962141
+//   }
 // }
 //
-// But we can decrease the size.
+// But we can decrease the size to: {
+//   "uuid": "f5bfba0f005546429fe1d0890c207b00"
+// }
 //
-
 object UUIDSerializer : KSerializer<UUID> {
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("UUID", PrimitiveKind.STRING)
@@ -113,5 +117,28 @@ object UUIDSerializer : KSerializer<UUID> {
 
     override fun deserialize(decoder: Decoder): UUID {
         return UUID.fromString(decoder.decodeString())
+    }
+}
+
+// A MilliSatoshi is normally serialized as: {
+//   "amount": {
+//     "msat": 12345
+//   }
+// }
+//
+// But we can decrease the size to: {
+//   "amount": 12345
+// }
+//
+object MilliSatoshiSerializer : KSerializer<MilliSatoshi> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("MilliSatoshi", PrimitiveKind.LONG)
+
+    override fun serialize(encoder: Encoder, value: MilliSatoshi) {
+        return encoder.encodeLong(value.msat)
+    }
+
+    override fun deserialize(decoder: Decoder): MilliSatoshi {
+        return MilliSatoshi(msat = decoder.decodeLong())
     }
 }
