@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS cloudkit_payments_queue (
     date_added INTEGER NOT NULL
 );
 
--- ########## cloudkit_payments ##########
+-- ########## cloudkit_payments_metadata ##########
 
 addMetadata:
 INSERT INTO cloudkit_payments_metadata (
@@ -46,10 +46,6 @@ SET    unpadded_size = ?,
        record_blob = ?
 WHERE  type = ? AND id = ?;
 
-deleteMetadata:
-DELETE FROM cloudkit_payments_metadata
-WHERE type = ? AND id = ?;
-
 existsMetadata:
 SELECT COUNT(*) FROM cloudkit_payments_metadata
 WHERE type = ? AND id = ?;
@@ -58,6 +54,9 @@ fetchMetadata:
 SELECT * FROM cloudkit_payments_metadata
 WHERE type = ? AND id = ?;
 
+scanMetadata:
+SELECT type, id FROM cloudkit_payments_metadata;
+
 scanSizes:
 SELECT type, id, unpadded_size FROM cloudkit_payments_metadata;
 
@@ -65,6 +64,13 @@ fetchOldestCreation:
 SELECT type, id, record_creation FROM cloudkit_payments_metadata
 ORDER BY record_creation ASC
 LIMIT 1;
+
+deleteMetadata:
+DELETE FROM cloudkit_payments_metadata
+WHERE type = ? AND id = ?;
+
+deleteAllFromMetadata:
+DELETE FROM cloudkit_payments_metadata;
 
 -- ########## cloudkit_payments_queue ##########
 
@@ -75,10 +81,6 @@ INSERT INTO cloudkit_payments_queue (
             date_added)
 VALUES (?, ?, ?);
 
-deleteFromQueue:
-DELETE FROM cloudkit_payments_queue
-WHERE rowid = ?;
-
 fetchQueueBatch:
 SELECT * FROM cloudkit_payments_queue
 ORDER BY date_added ASC
@@ -86,3 +88,10 @@ LIMIT :limit;
 
 fetchQueueCount:
 SELECT COUNT(*) FROM cloudkit_payments_queue;
+
+deleteFromQueue:
+DELETE FROM cloudkit_payments_queue
+WHERE rowid = ?;
+
+deleteAllFromQueue:
+DELETE FROM cloudkit_payments_queue;

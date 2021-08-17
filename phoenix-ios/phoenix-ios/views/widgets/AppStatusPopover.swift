@@ -16,9 +16,13 @@ fileprivate var log = Logger(OSLog.disabled)
 struct AppStatusPopover: View {
 
 	@StateObject var monitor = ObservableConnectionsMonitor()
+	
 	@State var syncState: SyncManagerState = .initializing
+	@State var pendingSettings: PendingSettings? = nil
 	
 	@Environment(\.popoverState) var popoverState: PopoverState
+	
+	let syncManager = AppDelegate.get().syncManager!
 	
 	enum TitleIconWidth: Preference {}
 	let titleIconWidthReader = GeometryPreferenceReader(
@@ -32,14 +36,14 @@ struct AppStatusPopover: View {
 		
 		VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
 			
-			connectionStatusSection
+			connectionStatusSection()
 				.padding([.top, .leading, .trailing])
 			
 			Divider()
 				.padding([.leading, .trailing])
 				.padding([.top, .bottom], 25)
 			
-			syncStatusSection
+			syncStatusSection()
 				.padding([.leading, .trailing])
 				.padding(.bottom, 25)
 			
@@ -60,13 +64,16 @@ struct AppStatusPopover: View {
 			)
 		}
 		.assignMaxPreference(for: titleIconWidthReader.key, to: $titleIconWidth)
-		.onReceive(AppDelegate.get().syncManager!.statePublisher) { state in
-			syncStateChanged(state)
+		.onReceive(syncManager.statePublisher) {
+			syncStateChanged($0)
+		}
+		.onReceive(syncManager.pendingSettingsPublisher) {
+			pendingSettingsChanged($0)
 		}
 	}
 	
 	@ViewBuilder
-	var connectionStatusSection: some View {
+	func connectionStatusSection() -> some View {
 		
 		VStack(alignment: .leading) {
 			
@@ -121,7 +128,42 @@ struct AppStatusPopover: View {
 	}
 	
 	@ViewBuilder
-	var syncStatusSection: some View {
+	func syncStatusSection() -> some View {
+		
+		if let pendingSettings = pendingSettings {
+			syncStatusSection_pending(pendingSettings)
+		} else {
+			syncStatusSection_syncState()
+		}
+	}
+	
+	@ViewBuilder
+	func syncStatusSection_pending(_ value: PendingSettings) -> some View {
+		
+		VStack(alignment: .leading) {
+			
+			Label {
+				switch value.paymentSyncing {
+				case .willEnable:
+					Text("Will enable cloud syncing")
+				case .willDisable:
+					Text("Will disable cloud syncing")
+				}
+			} icon: {
+				Image(systemName: "hourglass")
+					.imageScale(.medium)
+					.read(titleIconWidthReader)
+					.frame(width: titleIconWidth, alignment: .center)
+			}
+			.font(.title3)
+			.padding(.bottom, 15)
+			
+			PendingSettingsDetails(pendingSettings: value).font(.callout)
+		}
+	}
+	
+	@ViewBuilder
+	func syncStatusSection_syncState() -> some View {
 		
 		VStack(alignment: .leading) {
 			
@@ -284,10 +326,16 @@ struct AppStatusPopover: View {
 		} // </VStack>
 	}
 	
-	func syncStateChanged(_ newSyncState: SyncManagerState) -> Void {
+	func syncStateChanged(_ newSyncState: SyncManagerState) {
 		log.trace("syncStateChanged()")
 		
 		syncState = newSyncState
+	}
+	
+	func pendingSettingsChanged(_ newPendingSettings: PendingSettings?) {
+		log.trace("pendingSettingsChanged()")
+		
+		pendingSettings = newPendingSettings
 	}
 }
 
@@ -392,7 +440,7 @@ fileprivate struct SyncProgressDetails: View {
 	}
 }
 
-fileprivate struct SyncWaitingDetails: View {
+fileprivate struct SyncWaitingDetails: View, ViewName {
 	
 	let waiting: SyncManagerState_Waiting
 	
@@ -486,8 +534,87 @@ fileprivate struct SyncWaitingDetails: View {
 	}
 	
 	func skipButtonTapped() -> Void {
-		log.trace("didTapSkipButton()")
+		log.trace("[\(viewName)] skipButtonTapped()")
 		
 		waiting.skip()
+	}
+}
+
+fileprivate struct PendingSettingsDetails: View, ViewName {
+	
+	let pendingSettings: PendingSettings
+	
+	let timer = Timer.publish(every: 0.5, on: .current, in: .common).autoconnect()
+	@State var currentDate = Date()
+	
+	@ViewBuilder
+	var body: some View {
+		
+		HStack(alignment: VerticalAlignment.center, spacing: 8) {
+			
+			let (progress, remaining, total) = progressInfo()
+			
+			ProgressView(value: progress, total: 1.0)
+				.progressViewStyle(CircularCheckmarkProgressViewStyle(
+					strokeStyle: StrokeStyle(lineWidth: 3.0),
+					showGuidingLine: true,
+					guidingLineWidth: 1.0,
+					showPercentage: false,
+					checkmarkAnimation: .trim
+				))
+				.foregroundColor(Color.appAccent)
+				.frame(maxWidth: 20, maxHeight: 20)
+			
+			Text(verbatim: "\(remaining) / \(total)")
+				.font(.system(.callout, design: .monospaced))
+			
+			Spacer()
+			
+			Button {
+				skipButtonTapped()
+			} label: {
+				HStack(alignment: VerticalAlignment.center, spacing: 4) {
+					Text("Skip")
+					Image(systemName: "arrowshape.turn.up.forward")
+						.imageScale(.medium)
+				}
+			}
+			
+		} // </HStack>
+		.onReceive(timer) { _ in
+			self.currentDate = Date()
+		}
+	}
+	
+	func progressInfo() -> (Double, String, String) {
+		
+		let start = pendingSettings.startDate.timeIntervalSince1970
+		let end = pendingSettings.fireDate.timeIntervalSince1970
+		let now = currentDate.timeIntervalSince1970
+		
+		guard start < end, now >= start, now < end else {
+			return (1.0, "0:00", "0:00")
+		}
+		
+		let progressFraction = (now - start) / (end - start)
+		
+		let remaining = formatTimeInterval(end - now)
+		let total = formatTimeInterval(pendingSettings.delay)
+		
+		return (progressFraction, remaining, total)
+	}
+	
+	func formatTimeInterval(_ value: TimeInterval) -> String {
+		
+		let minutes = Int(value) / 60
+		let seconds = Int(value) % 60
+		
+		return String(format: "%d:%02d", minutes, seconds)
+	}
+	
+	func skipButtonTapped() -> Void {
+		log.trace("[\(viewName)] skipButtonTapped()")
+		
+		pendingSettings.skip()
 	}
 }

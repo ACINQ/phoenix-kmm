@@ -273,16 +273,21 @@ class SyncManager {
 	private func startPreferencesMonitor() {
 		log.trace("startPreferencesMonitor()")
 		
+		var isFirstFire = true
 		Prefs.shared.backupTransactions_isEnabledPublisher.sink {[weak self](shouldEnable: Bool) in
 			
 			guard let self = self else {
 				return
 			}
+			if isFirstFire {
+				isFirstFire = false
+				return
+			}
 			
-			let fireDate = Date() + 30.seconds()
+			let delay = 30.seconds()
 			let pendingSettings = shouldEnable ?
-				PendingSettings(self, enableSyncing: fireDate)
-			:	PendingSettings(self, disableSyncing: fireDate)
+				PendingSettings(self, enableSyncing: delay)
+			:	PendingSettings(self, disableSyncing: delay)
 			
 			var publishMe: PendingSettings? = pendingSettings
 			self.updateState { state, _ in
@@ -309,7 +314,7 @@ class SyncManager {
 				}
 			}
 			
-			self.pendingSettingsPublisher.value = publishMe
+			self.publishPendingSettings(publishMe)
 			
 		}.store(in: &cancellables)
 	}
@@ -350,6 +355,8 @@ class SyncManager {
 	
 	func updateState(finishing pending: PendingSettings) {
 		log.trace("updateState(finishing pending)")
+	
+		var shouldPublish = false
 		
 		updateState { state, deferToSimplifiedStateFlow in
 			
@@ -360,6 +367,7 @@ class SyncManager {
 			}
 			
 			state.pendingSettings = nil
+			shouldPublish = true
 			
 			if pending.paymentSyncing == .willEnable {
 				
@@ -417,7 +425,7 @@ class SyncManager {
 						case .waiting(let details):
 							details.skip()
 						case .synced:
-							state.active = .disabled
+							deferToSimplifiedStateFlow = true // defer to updateState()
 						default: break
 					}
 					
@@ -429,7 +437,9 @@ class SyncManager {
 			
 		} // </updateState>
 		
-		publishPendingSettings(nil)
+		if shouldPublish {
+			publishPendingSettings(nil)
+		}
 	}
 	
 	func updateState(finishing waiting: SyncManagerState_Waiting) {
@@ -736,38 +746,70 @@ class SyncManager {
 			}
 		}
 		
-		let recordZone = CKRecordZone(zoneName: encryptedNodeId)
+		var step1 : (() -> Void)!
+		var step2 : (() -> Void)!
 		
-		let operation = CKModifyRecordZonesOperation(
-			recordZonesToSave: nil,
-			recordZoneIDsToDelete: [recordZone.zoneID]
-		)
+		step1 = {
+			log.trace("deleteRecordZone(): step1()")
 		
-		operation.modifyRecordZonesCompletionBlock =
-		{ (added: [CKRecordZone]?, deleted: [CKRecordZone.ID]?, error: Error?) in
+			let recordZone = CKRecordZone(zoneName: self.encryptedNodeId)
 			
-			log.trace("operation.modifyRecordZonesCompletionBlock()")
+			let operation = CKModifyRecordZonesOperation(
+				recordZonesToSave: nil,
+				recordZoneIDsToDelete: [recordZone.zoneID]
+			)
 			
-			if let error = error {
-				log.error("Error deleting CKRecordZone: \(String(describing: error))")
-				finish(.failure(error))
+			operation.modifyRecordZonesCompletionBlock =
+			{ (added: [CKRecordZone]?, deleted: [CKRecordZone.ID]?, error: Error?) in
 				
-			} else {
-				log.error("Success deleting CKRecordZone")
-				finish(.success)
+				log.trace("operation.modifyRecordZonesCompletionBlock()")
+				
+				if let error = error {
+					log.error("Error deleting CKRecordZone: \(String(describing: error))")
+					finish(.failure(error))
+					
+				} else {
+					log.error("Success deleting CKRecordZone")
+					DispatchQueue.main.async {
+						step2()
+					}
+				}
 			}
-		}
+			
+			let configuration = CKOperation.Configuration()
+			configuration.allowsCellularAccess = true
 		
-		let configuration = CKOperation.Configuration()
-		configuration.allowsCellularAccess = true
+			operation.configuration = configuration
+			
+			if updatingCloud.register(operation) {
+				CKContainer.default().privateCloudDatabase.add(operation)
+			} else {
+				finish(.failure(CKError(.operationCancelled)))
+			}
+			
+		} // </step1>
 		
-		operation.configuration = configuration
+		step2 = {
+			log.trace("deleteRecordZone(): step2()")
+			
+			// Kotlin will crash if we try to use multiple threads (like a real app)
+			assert(Thread.isMainThread, "Kotlin ahead: background threads unsupported")
+			
+			self.cloudKitDb.clearDatabaseTables { (_, error) in
+				
+				if let error = error {
+					log.error("Error clearing database tables: \(String(describing: error))")
+					finish(.failure(error))
+					
+				} else {
+					finish(.success)
+				}
+			}
+			
+		} // </step2>
 		
-		if updatingCloud.register(operation) {
-			CKContainer.default().privateCloudDatabase.add(operation)
-		} else {
-			finish(.failure(CKError(.operationCancelled)))
-		}
+		// Go!
+		step1()
 	}
 	
 	private func downloadPayments(_ downloadProgress: SyncManagerState_Progress) {
@@ -803,8 +845,9 @@ class SyncManager {
 		var startBatchFetch   : ((Date?) -> Void)!
 		var performBatchFetch : ((CKQueryOperation, Int) -> Void)!
 		var updateDatabase    : (([DownloadedItem], CKQueryOperation.Cursor?, Int) -> Void)!
+		var enqueueMissing    : (() -> Void)!
 		
-		// Step 1 of 5:
+		// Step 1 of 6:
 		//
 		//
 		checkDatabase = {
@@ -827,7 +870,7 @@ class SyncManager {
 			}
 		}
 		
-		// Step 2 of 5:
+		// Step 2 of 6:
 		//
 		// In order to properly track the progress, we need to know the total count.
 		// So we start the process by sending a querying for the count.
@@ -839,13 +882,13 @@ class SyncManager {
 			// then we need to know the total number of records to be downloaded from the cloud.
 			//
 			// However, there's a minor problem here:
-			// CloudKit doesn't support aggragate queries !
+			// CloudKit doesn't support aggregate queries !
 			//
 			// So we cannot simply say: SELECT COUNT(*)
 			//
 			// Our only option (as far as I'm aware of),
-			// is to fetch the metadata for every record in the database.
-			// We would have to do this using a recursive batch fetching,
+			// is to fetch the metadata for every record in the cloud.
+			// We would have to do this via recursive batch fetching,
 			// and counting the downloaded records as they stream in.
 			//
 			// The big downfall of this approach is that we end up downloading
@@ -854,13 +897,14 @@ class SyncManager {
 			// - first just to count the number of records
 			// - and again when we fetch the full record (with encrypted blob)
 			//
-			// Given this bad situation, our current choice is to sacrifice the progress details.
+			// Given this bad situation (Bad Apple),
+			// our current choice is to sacrifice the progress details.
 			
 			startBatchFetch(oldestCreationDate)
 			
 		} // </fetchTotalCount>
 		
-		// Step 3 of 5:
+		// Step 3 of 6:
 		//
 		// Prepares the first CKQueryOperation to download a batch of payments from the cloud.
 		// There may be multiple batches available for download.
@@ -890,7 +934,7 @@ class SyncManager {
 		
 		} // </startBatchFetch>
 		
-		// Step 4 of 5:
+		// Step 4 of 6:
 		//
 		// Perform the CKQueryOperation to download a batch of payments from the cloud.
 		//
@@ -996,7 +1040,7 @@ class SyncManager {
 		
 		} // </performBatchFetch>
 		
-		// Step 5 of 5:
+		// Step 5 of 6:
 		//
 		// Save the downloaded results to the database.
 		//
@@ -1049,12 +1093,28 @@ class SyncManager {
 						
 					} else {
 						log.debug("downloadPayments(): updateDatabase(): moreInCloud = false")
-						finish(.success)
+						enqueueMissing()
 					}
 				}
 			}
-			
 		} // </updateDatabase>
+		
+		enqueueMissing = { () -> Void in
+			log.trace("downloadPayments(): enqueueMissing()")
+			
+			// Kotlin will crash if we try to use multiple threads (like a real app)
+			assert(Thread.isMainThread, "Kotlin ahead: background threads unsupported")
+			
+			self.cloudKitDb.enqueueMissingItems { (_, error) in
+				
+				if let error = error {
+					log.error("downloadPayments(): enqueueMissingItems(): error: \(String(describing: error))")
+					finish(.failure(error))
+				} else {
+					finish(.success)
+				}
+			}
+		}
 		
 		// Go!
 		DispatchQueue.main.async {

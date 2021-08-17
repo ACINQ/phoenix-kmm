@@ -1,7 +1,9 @@
 package fr.acinq.phoenix.db
 
+import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.db.IncomingPayment
 import fr.acinq.lightning.db.OutgoingPayment
+import fr.acinq.lightning.utils.UUID
 import fr.acinq.phoenix.db.cloud.CloudData
 
 /* Both `cloudkit_payments_metadata` & `cloudkit_payments_queue` have a column:
@@ -14,6 +16,27 @@ enum class CloudKitRowType(val value: Long) {
     INCOMING_PAYMENT(1),
     OUTGOING_PAYMENT(2)
 }
+
+fun PaymentRowId.Companion.create(type: Long, id: String): PaymentRowId? {
+    return when(type) {
+        CloudKitRowType.INCOMING_PAYMENT.value -> {
+            PaymentRowId.IncomingPaymentId.Companion.fromString(id)
+        }
+        CloudKitRowType.OUTGOING_PAYMENT.value -> {
+            PaymentRowId.OutgoingPaymentId.Companion.fromString(id)
+        }
+        else -> null
+    }
+}
+
+fun PaymentRowId.IncomingPaymentId.Companion.fromString(id: String) =
+    PaymentRowId.IncomingPaymentId(paymentHash = ByteVector32(id))
+
+fun PaymentRowId.IncomingPaymentId.Companion.fromByteArray(id: ByteArray) =
+    PaymentRowId.IncomingPaymentId(paymentHash = ByteVector32(id))
+
+fun PaymentRowId.OutgoingPaymentId.Companion.fromString(id: String) =
+    PaymentRowId.OutgoingPaymentId(id = UUID.fromString(id))
 
 /* Maps from PaymentRowId to CloudKitRowType.
  * Use paymentRowId.db_type.value to get the raw number.

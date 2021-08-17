@@ -648,10 +648,14 @@ fileprivate struct AppStatusButton: View, ViewName {
 	@State var dimStatus = false
 	
 	@State var syncState: SyncManagerState = .initializing
+	@State var pendingSettings: PendingSettings? = nil
+	
 	@StateObject var connectionsMonitor = ObservableConnectionsMonitor()
 	
 	@Environment(\.popoverState) var popoverState: PopoverState
 
+	let syncManager = AppDelegate.get().syncManager!
+	
 	@ViewBuilder
 	var body: some View {
 		
@@ -668,8 +672,11 @@ fileprivate struct AppStatusButton: View, ViewName {
 			RoundedRectangle(cornerRadius: 30) // Test this with larger dynamicFontSize
 				.stroke(Color.borderColor, lineWidth: 1)
 		)
-		.onReceive(AppDelegate.get().syncManager!.statePublisher) { state in
-			syncManagerStateChanged(state)
+		.onReceive(syncManager.statePublisher) {
+			syncManagerStateChanged($0)
+		}
+		.onReceive(syncManager.pendingSettingsPublisher) {
+			syncManagerPendingSettingsChanged($0)
 		}
 	}
 	
@@ -696,28 +703,38 @@ fileprivate struct AppStatusButton: View, ViewName {
 			.font(.caption2)
 		} else /* .established */ {
 			
-			let (isSyncing, isWaiting, isError) = buttonizeSyncStatus()
-			if isSyncing {
-				Image(systemName: "icloud")
-					.imageScale(.large)
-					.font(.caption2)
-					.squareFrame()
-			} else if isWaiting {
+			if pendingSettings != nil {
+				// The user enabled/disabled cloud sync.
+				// We are using a 30 second delay before we start operating on the user's decision.
+				// Just in-case it was an accidental change, or the user changes his/her mind.
 				Image(systemName: "hourglass")
 					.imageScale(.large)
 					.font(.caption2)
 					.squareFrame()
-			} else if isError {
-				Image(systemName: "exclamationmark.triangle")
-					.imageScale(.large)
-					.font(.caption2)
-					.squareFrame()
 			} else {
-				// Everything is good: connected + {synced|disabled|initializing}
-				Image(systemName: "bolt.fill")
-					.imageScale(.large)
-					.font(.caption2)
-					.squareFrame()
+				let (isSyncing, isWaiting, isError) = buttonizeSyncStatus()
+				if isSyncing {
+					Image(systemName: "icloud")
+						.imageScale(.large)
+						.font(.caption2)
+						.squareFrame()
+				} else if isWaiting {
+					Image(systemName: "hourglass")
+						.imageScale(.large)
+						.font(.caption2)
+						.squareFrame()
+				} else if isError {
+					Image(systemName: "exclamationmark.triangle")
+						.imageScale(.large)
+						.font(.caption2)
+						.squareFrame()
+				} else {
+					// Everything is good: connected + {synced|disabled|initializing}
+					Image(systemName: "bolt.fill")
+						.imageScale(.large)
+						.font(.caption2)
+						.squareFrame()
+				}
 			}
 		}
 	}
@@ -747,10 +764,16 @@ fileprivate struct AppStatusButton: View, ViewName {
 		return (isSyncing, isWaiting, isError)
 	}
 	
-	func syncManagerStateChanged(_ state: SyncManagerState) -> Void {
+	func syncManagerStateChanged(_ newState: SyncManagerState) -> Void {
 		log.trace("[\(viewName)] syncManagerStateChanged()")
 		
-		syncState = state
+		syncState = newState
+	}
+	
+	func syncManagerPendingSettingsChanged(_ newPendingSettings: PendingSettings?) -> Void {
+		log.trace("[\(viewName)] syncManagerPendingSettingsChanged()")
+		
+		pendingSettings = newPendingSettings
 	}
 	
 	func showAppStatusPopover() -> Void {

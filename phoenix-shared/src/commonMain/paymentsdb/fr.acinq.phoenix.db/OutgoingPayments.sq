@@ -175,6 +175,11 @@ LEFT OUTER JOIN outgoing_payment_parts AS parts ON parts.part_parent_id = parent
 ORDER BY parent.completed_at DESC, parent.id DESC
 LIMIT ?, ?;
 
+scanCompleted:
+SELECT id, completed_at
+FROM   outgoing_payments
+WHERE  completed_at IS NOT NULL;
+
 -- use this in a `transaction` block to know how many rows were changed after an UPDATE
 changes:
 SELECT changes();

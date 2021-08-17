@@ -21,20 +21,28 @@ class PendingSettings: Equatable, CustomStringConvertible {
 	private weak var parent: SyncManager?
 	
 	let paymentSyncing: EnableDisable
+	let delay: TimeInterval
+	let startDate: Date
 	let fireDate: Date
 	
-	init(_ parent: SyncManager, enableSyncing date: Date) {
+	init(_ parent: SyncManager, enableSyncing delay: TimeInterval) {
+		let now = Date()
 		self.parent = parent
 		self.paymentSyncing = .willEnable
-		self.fireDate = date
+		self.delay = delay
+		self.startDate = now
+		self.fireDate = now + delay
 		log.trace("init()")
 		startTimer()
 	}
 	
-	init(_ parent: SyncManager, disableSyncing date: Date) {
+	init(_ parent: SyncManager, disableSyncing delay: TimeInterval) {
+		let now = Date()
 		self.parent = parent
 		self.paymentSyncing = .willDisable
-		self.fireDate = date
+		self.delay = delay
+		self.startDate = now
+		self.fireDate = now + delay
 		log.trace("init()")
 		startTimer()
 	}

@@ -5,6 +5,7 @@ import com.squareup.sqldelight.runtime.coroutines.mapToOne
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.db.OutgoingPayment
 import fr.acinq.lightning.utils.UUID
+import fr.acinq.lightning.utils.currentTimestampMillis
 import fr.acinq.phoenix.db.payments.CloudKitInterface
 import fr.acinq.phoenix.db.payments.IncomingQueries
 import fr.acinq.phoenix.db.payments.OutgoingQueries
@@ -456,6 +457,81 @@ class CloudKitDb(
             metadataRow.copy(
                 recordBlob = metadataRow.recordBlob.copyOf().freeze()
             )
+        }
+    }
+
+    data class MissingItem(
+        val paymentRowId: PaymentRowId,
+        val timestamp: Long
+    )
+
+    suspend fun enqueueMissingItems(): Unit {
+        withContext(Dispatchers.Default) {
+
+            val ckQueries = database.cloudKitPaymentsQueries
+            val inQueries = database.incomingPaymentsQueries
+            val outQueries = database.outgoingPaymentsQueries
+
+            database.transaction {
+
+                val existing = mutableSetOf<PaymentRowId>()
+                ckQueries.scanMetadata().executeAsList().forEach { row ->
+                    PaymentRowId.create(row.type, row.id)?.let {
+                        existing.add(it)
+                    }
+                }
+
+                val missing = mutableListOf<MissingItem>()
+
+                inQueries.scanCompleted().executeAsList().forEach { row ->
+                    val rowId = PaymentRowId.IncomingPaymentId.fromByteArray(row.payment_hash)
+                    if (!existing.contains(rowId)) {
+                        missing.add(MissingItem(rowId, row.received_at))
+                    }
+                }
+
+                outQueries.scanCompleted().executeAsList().forEach { row ->
+                    val rowId = PaymentRowId.OutgoingPaymentId.fromString(row.id)
+                    if (!existing.contains(rowId)) {
+                        missing.add(MissingItem(rowId, row.completed_at))
+                    }
+                }
+
+                // Now we're going to add them to the database.
+                // But in what order do we want to upload them to the cloud ?
+                //
+                // We will choose to upload the newest item first.
+                // Since items are uploaded in FIFO order,
+                // we just need to make the newest item have the
+                // smallest `date_added` value.
+
+                missing.sortBy { it.timestamp }
+
+                // The list is now sorted in ascending order.
+                // Which means the oldest payment is at index 0,
+                // and the newest payment is at index <last>.
+
+                val now = currentTimestampMillis()
+                missing.forEachIndexed { idx, item ->
+                    ckQueries.addToQueue(
+                        type = item.paymentRowId.db_type.value,
+                        id = item.paymentRowId.db_id,
+                        date_added = now - idx
+                    )
+                }
+            }
+        }
+    }
+
+    suspend fun clearDatabaseTables(): Unit {
+        withContext(Dispatchers.Default) {
+
+            val ckQueries = database.cloudKitPaymentsQueries
+
+            database.transaction {
+                ckQueries.deleteAllFromMetadata()
+                ckQueries.deleteAllFromQueue()
+            }
         }
     }
 }
