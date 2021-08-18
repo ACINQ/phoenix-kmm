@@ -1,8 +1,8 @@
-package fr.acinq.phoenix.mvi.models.config
+package fr.acinq.phoenix.controllers.config
 
 import fr.acinq.lightning.utils.Connection
 import fr.acinq.lightning.utils.ServerAddress
-import fr.acinq.phoenix.mvi.MVI
+import fr.acinq.phoenix.controllers.MVI
 import fr.acinq.phoenix.data.ElectrumConfig
 
 object ElectrumConfiguration {

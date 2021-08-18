@@ -1,6 +1,6 @@
-package fr.acinq.phoenix.mvi.models
+package fr.acinq.phoenix.controllers.init
 
-import fr.acinq.phoenix.mvi.MVI
+import fr.acinq.phoenix.controllers.MVI
 
 object RestoreWallet {
 

@@ -1,4 +1,4 @@
-package fr.acinq.phoenix.mvi
+package fr.acinq.phoenix.controllers
 
 object MVI {
 

@@ -1,4 +1,4 @@
-package fr.acinq.phoenix.mvi.controllers.config
+package fr.acinq.phoenix.controllers.config
 
 import fr.acinq.bitcoin.ByteVector
 import fr.acinq.bitcoin.ByteVector32
@@ -8,9 +8,8 @@ import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.managers.PeerManager
 import fr.acinq.phoenix.managers.Utilities
 import fr.acinq.phoenix.managers.WalletManager
-import fr.acinq.phoenix.mvi.controllers.AppController
-import fr.acinq.phoenix.mvi.models.config.CloseChannelsConfiguration
-import fr.acinq.phoenix.mvi.models.config.CloseChannelsConfiguration.Model.ChannelInfoStatus
+import fr.acinq.phoenix.controllers.AppController
+import fr.acinq.phoenix.controllers.config.CloseChannelsConfiguration.Model.ChannelInfoStatus
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.flow.collect

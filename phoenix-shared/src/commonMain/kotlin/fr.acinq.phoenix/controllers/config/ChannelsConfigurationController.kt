@@ -1,4 +1,4 @@
-package fr.acinq.phoenix.mvi.controllers.config
+package fr.acinq.phoenix.controllers.config
 
 import fr.acinq.lightning.channel.ChannelStateWithCommitments
 import fr.acinq.lightning.channel.Normal
@@ -6,8 +6,7 @@ import fr.acinq.lightning.serialization.v1.ByteVector32KSerializer
 import fr.acinq.lightning.serialization.v1.Serialization.lightningSerializersModule
 import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.managers.PeerManager
-import fr.acinq.phoenix.mvi.controllers.AppController
-import fr.acinq.phoenix.mvi.models.config.ChannelsConfiguration
+import fr.acinq.phoenix.controllers.AppController
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi

@@ -20,9 +20,9 @@ package fr.acinq.phoenix.android.components.mvi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import fr.acinq.phoenix.android.LocalControllerFactory
-import fr.acinq.phoenix.mvi.*
-import fr.acinq.phoenix.mvi.models.config.*
-import fr.acinq.phoenix.mvi.models.Scan
+import fr.acinq.phoenix.controllers.*
+import fr.acinq.phoenix.controllers.config.*
+import fr.acinq.phoenix.controllers.payments.Scan
 
 @Suppress("UNREACHABLE_CODE")
 val MockControllers = object : ControllerFactory {

@@ -1,4 +1,4 @@
-package fr.acinq.phoenix.mvi.controllers.config
+package fr.acinq.phoenix.controllers.config
 
 import fr.acinq.lightning.blockchain.electrum.ElectrumClient
 import fr.acinq.lightning.io.TcpSocket
@@ -6,8 +6,7 @@ import fr.acinq.lightning.utils.ServerAddress
 import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.managers.AppConfigurationManager
 import fr.acinq.phoenix.managers.AppConnectionsDaemon
-import fr.acinq.phoenix.mvi.controllers.AppController
-import fr.acinq.phoenix.mvi.models.config.ElectrumConfiguration
+import fr.acinq.phoenix.controllers.AppController
 import fr.acinq.phoenix.data.InvalidElectrumAddress
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect

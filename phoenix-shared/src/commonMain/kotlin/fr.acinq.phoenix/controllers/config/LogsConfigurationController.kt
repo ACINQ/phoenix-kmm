@@ -1,8 +1,7 @@
-package fr.acinq.phoenix.mvi.controllers.config
+package fr.acinq.phoenix.controllers.config
 
 import fr.acinq.phoenix.PhoenixBusiness
-import fr.acinq.phoenix.mvi.controllers.AppController
-import fr.acinq.phoenix.mvi.models.config.LogsConfiguration
+import fr.acinq.phoenix.controllers.AppController
 import fr.acinq.phoenix.utils.LogMemory
 import fr.acinq.phoenix.utils.PlatformContext
 import fr.acinq.phoenix.utils.getTemporaryDirectoryPath

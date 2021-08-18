@@ -1,7 +1,7 @@
-package fr.acinq.phoenix.mvi.models
+package fr.acinq.phoenix.controllers.main
 
 import fr.acinq.lightning.MilliSatoshi
-import fr.acinq.phoenix.mvi.MVI
+import fr.acinq.phoenix.controllers.MVI
 
 object Home {
 

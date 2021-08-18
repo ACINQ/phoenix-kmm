@@ -1,9 +1,8 @@
-package fr.acinq.phoenix.mvi.controllers.config
+package fr.acinq.phoenix.controllers.config
 
 import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.managers.WalletManager
-import fr.acinq.phoenix.mvi.controllers.AppController
-import fr.acinq.phoenix.mvi.models.config.Configuration
+import fr.acinq.phoenix.controllers.AppController
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory

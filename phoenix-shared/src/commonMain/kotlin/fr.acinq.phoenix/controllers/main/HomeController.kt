@@ -1,13 +1,13 @@
-package fr.acinq.phoenix.mvi.controllers
+package fr.acinq.phoenix.controllers.main
 
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.MilliSatoshi
 import fr.acinq.lightning.channel.*
 import fr.acinq.lightning.utils.sum
 import fr.acinq.phoenix.PhoenixBusiness
+import fr.acinq.phoenix.controllers.AppController
 import fr.acinq.phoenix.managers.PaymentsManager
 import fr.acinq.phoenix.managers.PeerManager
-import fr.acinq.phoenix.mvi.models.Home
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.collect

@@ -1,6 +1,6 @@
-package fr.acinq.phoenix.mvi.models.config
+package fr.acinq.phoenix.controllers.config
 
-import fr.acinq.phoenix.mvi.MVI
+import fr.acinq.phoenix.controllers.MVI
 
 object LogsConfiguration {
 

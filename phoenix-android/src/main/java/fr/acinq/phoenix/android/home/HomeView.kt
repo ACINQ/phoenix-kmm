@@ -61,9 +61,9 @@ import fr.acinq.phoenix.android.utils.Converter.toRelativeDateString
 import fr.acinq.phoenix.android.utils.copyToClipboard
 import fr.acinq.phoenix.android.utils.logger
 import fr.acinq.phoenix.managers.PaymentsManager
-import fr.acinq.phoenix.mvi.ControllerFactory
-import fr.acinq.phoenix.mvi.models.Home
-import fr.acinq.phoenix.mvi.HomeController
+import fr.acinq.phoenix.controllers.ControllerFactory
+import fr.acinq.phoenix.controllers.main.Home
+import fr.acinq.phoenix.controllers.HomeController
 import fr.acinq.phoenix.db.WalletPaymentOrderRow
 import fr.acinq.phoenix.managers.Connections
 import kotlinx.coroutines.CoroutineScope

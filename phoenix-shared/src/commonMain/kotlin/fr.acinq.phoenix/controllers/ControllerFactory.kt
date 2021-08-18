@@ -1,7 +1,12 @@
-package fr.acinq.phoenix.mvi
+package fr.acinq.phoenix.controllers
 
-import fr.acinq.phoenix.mvi.models.*
-import fr.acinq.phoenix.mvi.models.config.*
+import fr.acinq.phoenix.controllers.config.*
+import fr.acinq.phoenix.controllers.init.Initialization
+import fr.acinq.phoenix.controllers.init.RestoreWallet
+import fr.acinq.phoenix.controllers.main.Content
+import fr.acinq.phoenix.controllers.main.Home
+import fr.acinq.phoenix.controllers.payments.Receive
+import fr.acinq.phoenix.controllers.payments.Scan
 
 typealias ContentController = MVI.Controller<Content.Model, Content.Intent>
 typealias HomeController = MVI.Controller<Home.Model, Home.Intent>
@@ -16,6 +21,7 @@ typealias ConfigurationController = MVI.Controller<Configuration.Model, Configur
 typealias ElectrumConfigurationController = MVI.Controller<ElectrumConfiguration.Model, ElectrumConfiguration.Intent>
 typealias LogsConfigurationController = MVI.Controller<LogsConfiguration.Model, LogsConfiguration.Intent>
 
+/** Lets us define different implementation for the controllers, which is useful for mocks. */
 interface ControllerFactory {
     fun content(): ContentController
     fun initialization(): InitializationController

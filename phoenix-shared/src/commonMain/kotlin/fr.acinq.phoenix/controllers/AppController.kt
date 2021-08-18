@@ -1,6 +1,5 @@
-package fr.acinq.phoenix.mvi.controllers
+package fr.acinq.phoenix.controllers
 
-import fr.acinq.phoenix.mvi.MVI
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach

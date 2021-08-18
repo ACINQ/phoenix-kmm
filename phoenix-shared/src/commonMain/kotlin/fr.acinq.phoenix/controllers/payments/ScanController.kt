@@ -1,4 +1,4 @@
-package fr.acinq.phoenix.mvi.controllers
+package fr.acinq.phoenix.controllers.payments
 
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.Feature
@@ -12,10 +12,10 @@ import fr.acinq.lightning.utils.Either
 import fr.acinq.lightning.utils.UUID
 import fr.acinq.lightning.utils.sum
 import fr.acinq.phoenix.PhoenixBusiness
+import fr.acinq.phoenix.controllers.AppController
 import fr.acinq.phoenix.managers.DatabaseManager
 import fr.acinq.phoenix.managers.PeerManager
 import fr.acinq.phoenix.managers.Utilities
-import fr.acinq.phoenix.mvi.models.Scan
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import kotlinx.coroutines.flow.collect

@@ -1,4 +1,4 @@
-package fr.acinq.phoenix.mvi.controllers
+package fr.acinq.phoenix.controllers.payments
 
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.io.*
@@ -6,8 +6,8 @@ import fr.acinq.lightning.payment.PaymentRequest
 import fr.acinq.lightning.utils.secure
 import fr.acinq.lightning.wire.SwapInRequest
 import fr.acinq.phoenix.PhoenixBusiness
+import fr.acinq.phoenix.controllers.AppController
 import fr.acinq.phoenix.managers.PeerManager
-import fr.acinq.phoenix.mvi.models.Receive
 import fr.acinq.phoenix.data.Chain
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.consumeEach

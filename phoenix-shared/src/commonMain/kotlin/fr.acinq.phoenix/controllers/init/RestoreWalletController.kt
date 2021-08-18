@@ -1,8 +1,8 @@
-package fr.acinq.phoenix.mvi.controllers
+package fr.acinq.phoenix.controllers.init
 
 import fr.acinq.bitcoin.MnemonicCode
 import fr.acinq.phoenix.PhoenixBusiness
-import fr.acinq.phoenix.mvi.models.RestoreWallet
+import fr.acinq.phoenix.controllers.AppController
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.kodein.log.LoggerFactory
