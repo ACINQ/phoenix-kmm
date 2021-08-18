@@ -18,8 +18,8 @@ package fr.acinq.phoenix.android.components.mvi
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import fr.acinq.phoenix.ctrl.ControllerFactory
-import fr.acinq.phoenix.ctrl.MVI
+import fr.acinq.phoenix.mvi.ControllerFactory
+import fr.acinq.phoenix.mvi.MVI
 import org.kodein.log.Logger
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
