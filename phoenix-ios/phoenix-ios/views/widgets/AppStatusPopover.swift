@@ -15,7 +15,7 @@ fileprivate var log = Logger(OSLog.disabled)
 
 struct AppStatusPopover: View {
 
-	@StateObject var monitor = ObservableConnectionsMonitor()
+	@StateObject var monitor = ObservableConnectionsManager()
 	
 	@State var syncState: SyncManagerState = .initializing
 	@State var pendingSettings: PendingSettings? = nil

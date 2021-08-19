@@ -6,14 +6,19 @@ import fr.acinq.lightning.blockchain.electrum.ElectrumClient
 import fr.acinq.lightning.blockchain.electrum.ElectrumWatcher
 import fr.acinq.lightning.io.TcpSocket
 import fr.acinq.lightning.utils.setLightningLoggerFactory
-import fr.acinq.phoenix.app.*
-import fr.acinq.phoenix.app.ctrl.*
-import fr.acinq.phoenix.app.ctrl.config.*
-import fr.acinq.phoenix.ctrl.*
-import fr.acinq.phoenix.ctrl.config.*
+import fr.acinq.phoenix.controllers.*
+import fr.acinq.phoenix.managers.*
+import fr.acinq.phoenix.controllers.config.*
+import fr.acinq.phoenix.controllers.init.AppInitController
+import fr.acinq.phoenix.controllers.init.AppRestoreWalletController
+import fr.acinq.phoenix.controllers.main.AppContentController
+import fr.acinq.phoenix.controllers.main.AppHomeController
+import fr.acinq.phoenix.controllers.payments.AppReceiveController
+import fr.acinq.phoenix.controllers.payments.AppScanController
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.db.SqliteAppDb
 import fr.acinq.phoenix.db.createAppDbDriver
+import fr.acinq.phoenix.controllers.payments.Scan
 import fr.acinq.phoenix.utils.*
 import io.ktor.client.*
 import io.ktor.client.features.json.JsonFeature
@@ -44,7 +49,7 @@ class PhoenixBusiness(
 
     internal val tcpSocketBuilder = TcpSocket.Builder()
 
-    internal val networkMonitor by lazy { NetworkMonitor(loggerFactory, ctx) }
+    internal val networkMonitor by lazy { NetworkManager(loggerFactory, ctx) }
     internal val httpClient by lazy {
         HttpClient {
             install(JsonFeature) {
@@ -71,7 +76,7 @@ class PhoenixBusiness(
     val paymentsManager by lazy { PaymentsManager(this) }
     val appConfigurationManager by lazy { AppConfigurationManager(this) }
     val currencyManager by lazy { CurrencyManager(this) }
-    val connectionsMonitor by lazy { ConnectionsMonitor(this) }
+    val connectionsManager by lazy { ConnectionsManager(this) }
     val util by lazy { Utilities(this) }
 
     init {

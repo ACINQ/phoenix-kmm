@@ -650,7 +650,7 @@ fileprivate struct AppStatusButton: View, ViewName {
 	@State var syncState: SyncManagerState = .initializing
 	@State var pendingSettings: PendingSettings? = nil
 	
-	@StateObject var connectionsMonitor = ObservableConnectionsMonitor()
+	@StateObject var connectionsManager = ObservableConnectionsManager()
 	
 	@Environment(\.popoverState) var popoverState: PopoverState
 
@@ -683,7 +683,7 @@ fileprivate struct AppStatusButton: View, ViewName {
 	@ViewBuilder
 	var buttonContent: some View {
 		
-		let connectionStatus = connectionsMonitor.connections.global
+		let connectionStatus = connectionsManager.connections.global
 		if connectionStatus == .closed {
 			HStack(alignment: .firstTextBaseline, spacing: 3) {
 				Image(systemName: "bolt.slash.fill")
