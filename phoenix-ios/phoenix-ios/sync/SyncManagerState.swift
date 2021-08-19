@@ -117,15 +117,22 @@ enum SyncManagerState: Equatable, CustomStringConvertible {
 		return .waiting(details: SyncManagerState_Waiting(kind: .forCloudCredentials))
 	}
 	
-	static func waiting_exponentialBackoff(_ parent: SyncManager, delay: TimeInterval) -> SyncManagerState {
+	static func waiting_exponentialBackoff(
+		_ parent: SyncManager,
+		delay: TimeInterval,
+		error: Error
+	) -> SyncManagerState {
 		return .waiting(details: SyncManagerState_Waiting(
-			kind: .exponentialBackoff,
+			kind: .exponentialBackoff(error),
 			parent: parent,
 			delay: delay
 		))
 	}
 	
-	static func waiting_randomizedUploadDelay(_ parent: SyncManager, delay: TimeInterval) -> SyncManagerState {
+	static func waiting_randomizedUploadDelay(
+		_ parent: SyncManager,
+		delay: TimeInterval
+	) -> SyncManagerState {
 		return .waiting(details: SyncManagerState_Waiting(
 			kind: .randomizedUploadDelay,
 			parent: parent,
@@ -242,11 +249,23 @@ class SyncManagerState_Progress: ObservableObject, Equatable {
 ///
 class SyncManagerState_Waiting: Equatable {
 	
-	enum Kind {
+	enum Kind: Equatable {
 		case forInternet
 		case forCloudCredentials
-		case exponentialBackoff
+		case exponentialBackoff(Error)
 		case randomizedUploadDelay
+		
+		static func == (lhs: SyncManagerState_Waiting.Kind, rhs: SyncManagerState_Waiting.Kind) -> Bool {
+			switch (lhs, rhs) {
+				case (.forInternet, .forInternet): return true
+				case (.forCloudCredentials, .forCloudCredentials): return true
+				case (.randomizedUploadDelay, .randomizedUploadDelay): return true
+				case (.exponentialBackoff(let lhe), .exponentialBackoff(let rhe)):
+					return lhe.localizedDescription == rhe.localizedDescription
+				default:
+					return false
+			}
+		}
 	}
 	
 	let kind: Kind

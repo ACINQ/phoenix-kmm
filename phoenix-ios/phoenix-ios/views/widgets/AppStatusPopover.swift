@@ -2,6 +2,7 @@ import SwiftUI
 import PhoenixShared
 import os.log
 import CircularCheckmarkProgress
+import CloudKit
 
 #if DEBUG && true
 fileprivate var log = Logger(
@@ -497,6 +498,13 @@ fileprivate struct SyncWaitingDetails: View, ViewName {
 			.padding(.top, 4)
 			.padding(.bottom, 4)
 			
+			if let errorInfo = errorInfo() {
+				Text(errorInfo)
+					.font(.callout)
+					.multilineTextAlignment(.leading)
+					.lineLimit(2)
+			}
+			
 		} // </VStack>
 		.onReceive(timer) { _ in
 			self.currentDate = Date()
@@ -531,6 +539,26 @@ fileprivate struct SyncWaitingDetails: View, ViewName {
 		let seconds = Int(value) % 60
 		
 		return String(format: "%d:%02d", minutes, seconds)
+	}
+	
+	func errorInfo() -> String? {
+		
+		guard case .exponentialBackoff(let error) = waiting.kind else {
+			return nil
+		}
+		
+		var result: String? = nil
+		if let ckerror = error as? CKError {
+			
+			switch ckerror.errorCode {
+				case CKError.quotaExceeded.rawValue:
+					result = "iCloud storage is full"
+				
+				default: break
+			}
+		}
+		
+		return result ?? error.localizedDescription
 	}
 	
 	func skipButtonTapped() -> Void {

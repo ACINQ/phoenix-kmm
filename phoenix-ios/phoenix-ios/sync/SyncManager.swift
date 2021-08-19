@@ -2042,7 +2042,7 @@ class SyncManager {
 				case .uploading:
 					
 					if useExponentialBackoff {
-						state.active = .waiting_exponentialBackoff(self, delay: delay)
+						state.active = .waiting_exponentialBackoff(self, delay: delay, error: error)
 					} else {
 						deferToSimplifiedStateFlow = true
 					}
