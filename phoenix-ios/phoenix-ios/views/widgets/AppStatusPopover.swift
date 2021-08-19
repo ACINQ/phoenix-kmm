@@ -264,7 +264,7 @@ struct AppStatusPopover: View {
 							.font(.title3)
 							.padding(.bottom, 15)
 							
-							Text("Please sign into iCloud")
+							Text("Sign into iCloud to backup your payments")
 								.font(.callout)
 							
 						case .exponentialBackoff:
