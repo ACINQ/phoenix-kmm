@@ -753,13 +753,18 @@ fileprivate struct AppStatusButton: View, ViewName {
 			case .waiting(let details):
 				switch details.kind {
 					case .forInternet: break
-					case .forCloudCredentials: isError = true
+					case .forCloudCredentials: break // see discussion below
 					case .exponentialBackoff: isError = true
 					case .randomizedUploadDelay: isWaiting = true
 				}
 			case .synced: break
 			case .disabled: break
 		}
+		
+		// If the user isn't signed into iCloud, is this an error ?
+		// We are choosing to treat it more like the disabled case,
+		// since the user has choosed to not sign in,
+		// or has ignored Apple's continual "sign into iCloud" popups.
 		
 		return (isSyncing, isWaiting, isError)
 	}
