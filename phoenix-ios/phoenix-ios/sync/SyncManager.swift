@@ -284,6 +284,8 @@ class SyncManager {
 				return
 			}
 			
+			log.debug("Prefs.shared.backupTransactions_isEnabled = \(shouldEnable ? "true" : "false")")
+			
 			let delay = 30.seconds()
 			let pendingSettings = shouldEnable ?
 				PendingSettings(self, enableSyncing: delay)
@@ -296,8 +298,8 @@ class SyncManager {
 					if !state.isEnabled {
 						log.debug("state.pendingSettings = \(pendingSettings))")
 						state.pendingSettings = pendingSettings
-					} else if state.pendingSettings != nil {
-						log.debug("state.pendingSettings = nil")
+					} else {
+						log.debug("state.pendingSettings = nil (already enabled)")
 						state.pendingSettings = nil
 						publishMe = nil
 					}
@@ -306,8 +308,8 @@ class SyncManager {
 					if state.isEnabled {
 						log.debug("state.pendingSettings = \(pendingSettings))")
 						state.pendingSettings = pendingSettings
-					} else if state.pendingSettings != nil {
-						log.debug("state.pendingSettings = nil")
+					} else {
+						log.debug("state.pendingSettings = nil (already disabled)")
 						state.pendingSettings = nil
 						publishMe = nil
 					}
@@ -324,6 +326,7 @@ class SyncManager {
 	// ----------------------------------------
 	
 	private func publishNewState(_ state: SyncManagerState) {
+		log.trace("publishNewState()")
 		
 		let block = {
 			self.statePublisher.value = state
@@ -337,6 +340,7 @@ class SyncManager {
 	}
 	
 	private func publishPendingSettings(_ pending: PendingSettings?) {
+		log.trace("publishPendingSettings()")
 		
 		let block = {
 			self.pendingSettingsPublisher.value = pending
@@ -353,8 +357,8 @@ class SyncManager {
 	// MARK: State Machine
 	// ----------------------------------------
 	
-	func updateState(finishing pending: PendingSettings) {
-		log.trace("updateState(finishing pending)")
+	func updateState(pending: PendingSettings, approved: Bool) {
+		log.trace("updateState(pending: approved: \(approved ? "true" : "false"))")
 	
 		var shouldPublish = false
 		
@@ -369,76 +373,91 @@ class SyncManager {
 			state.pendingSettings = nil
 			shouldPublish = true
 			
-			if pending.paymentSyncing == .willEnable {
-				
-				if !state.isEnabled {
-				
-					log.debug("Transitioning to enabled state")
+			if approved {
+				if pending.paymentSyncing == .willEnable {
 					
-					state.isEnabled = true
-					state.needsCreateRecordZone = true
-					state.needsDownloadExisting = true
-					state.needsDeleteRecordZone = false
+					if !state.isEnabled {
 					
-					switch state.active {
-						case .updatingCloud(let details):
-							switch details.kind {
-								case .deletingRecordZone:
-									details.cancel()
-								default: break
-							}
-						case .disabled:
-							deferToSimplifiedStateFlow = true // defer to updateState()
-						default: break
+						log.debug("Transitioning to enabled state")
+						
+						state.isEnabled = true
+						state.needsCreateRecordZone = true
+						state.needsDownloadExisting = true
+						state.needsDeleteRecordZone = false
+						
+						switch state.active {
+							case .updatingCloud(let details):
+								switch details.kind {
+									case .deletingRecordZone:
+										details.cancel()
+									default: break
+								}
+							case .disabled:
+								deferToSimplifiedStateFlow = true // defer to updateState()
+							default: break
+						}
+						
+					} else {
+						
+						log.debug("Reqeust to transition to enabled state, but already enabled")
 					}
 					
-				} else {
+					// Transitioning to enabled state
 					
-					log.debug("Reqeust to transition to enabled state, but already enabled")
-				}
-				
-				// Transitioning to enabled state
-				
-				
-			} else /* if pending.paymentSyncing == .willDisable */ {
-				
-				if state.isEnabled {
-				
-					log.debug("Transitioning to disabled state")
 					
-					state.isEnabled = false
-					state.needsCreateRecordZone = false
-					state.needsDownloadExisting = false
-					state.needsDeleteRecordZone = true
+				} else /* if pending.paymentSyncing == .willDisable */ {
 					
-					switch state.active {
-						case .updatingCloud(let details):
-							switch details.kind {
-								case .creatingRecordZone:
-									details.cancel()
-								default: break
-							}
-						case .downloading(let progress):
-							progress.cancel()
-						case .uploading(let progress):
-							progress.cancel()
-						case .waiting(let details):
-							details.skip()
-						case .synced:
-							deferToSimplifiedStateFlow = true // defer to updateState()
-						default: break
+					if state.isEnabled {
+					
+						log.debug("Transitioning to disabled state")
+						
+						state.isEnabled = false
+						state.needsCreateRecordZone = false
+						state.needsDownloadExisting = false
+						state.needsDeleteRecordZone = true
+						
+						switch state.active {
+							case .updatingCloud(let details):
+								switch details.kind {
+									case .creatingRecordZone:
+										details.cancel()
+									default: break
+								}
+							case .downloading(let progress):
+								progress.cancel()
+							case .uploading(let progress):
+								progress.cancel()
+							case .waiting(let details):
+								details.skip()
+							case .synced:
+								deferToSimplifiedStateFlow = true // defer to updateState()
+							default: break
+						}
+						
+					} else {
+						
+						log.debug("Request to transition to disabled state, but already disabled")
 					}
-					
-				} else {
-					
-					log.debug("Request to transition to disabled state, but already disabled")
 				}
-			}
+			} // </if approved>
 			
 		} // </updateState>
 		
 		if shouldPublish {
 			publishPendingSettings(nil)
+			if !approved {
+				if pending.paymentSyncing == .willEnable {
+					// We were going to enable cloud syncing.
+					// But the user just changed their mind, and cancelled it.
+					// So now we need to disable it again.
+					Prefs.shared.backupTransactions_isEnabled = false
+				} else {
+					// We were going to disable cloud syncing.
+					// But the user just changed their mind, and cancelled it.
+					// So now we need to enable it again.
+					Prefs.shared.backupTransactions_isEnabled = true
+				}
+			}
 		}
 	}
 	

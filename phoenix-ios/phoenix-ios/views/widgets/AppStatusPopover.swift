@@ -544,77 +544,25 @@ fileprivate struct PendingSettingsDetails: View, ViewName {
 	
 	let pendingSettings: PendingSettings
 	
-	let timer = Timer.publish(every: 0.5, on: .current, in: .common).autoconnect()
-	@State var currentDate = Date()
-	
 	@ViewBuilder
 	var body: some View {
 		
 		HStack(alignment: VerticalAlignment.center, spacing: 8) {
 			
-			let (progress, remaining, total) = progressInfo()
-			
-			ProgressView(value: progress, total: 1.0)
-				.progressViewStyle(CircularCheckmarkProgressViewStyle(
-					strokeStyle: StrokeStyle(lineWidth: 3.0),
-					showGuidingLine: true,
-					guidingLineWidth: 1.0,
-					showPercentage: false,
-					checkmarkAnimation: .trim
-				))
-				.foregroundColor(Color.appAccent)
-				.frame(maxWidth: 20, maxHeight: 20)
-			
-			Text(verbatim: "\(remaining) / \(total)")
-				.font(.system(.callout, design: .monospaced))
+			Button {
+				cancelButtonTapped()
+			} label: {
+				Text("Cancel")
+			}
 			
 			Spacer()
 			
-			Button {
-				skipButtonTapped()
-			} label: {
-				HStack(alignment: VerticalAlignment.center, spacing: 4) {
-					Text("Skip")
-					Image(systemName: "arrowshape.turn.up.forward")
-						.imageScale(.medium)
-				}
-			}
-			
 		} // </HStack>
-		.onReceive(timer) { _ in
-			self.currentDate = Date()
-		}
 	}
 	
-	func progressInfo() -> (Double, String, String) {
+	func cancelButtonTapped() -> Void {
+		log.trace("[\(viewName)] cancelButtonTapped()")
 		
-		let start = pendingSettings.startDate.timeIntervalSince1970
-		let end = pendingSettings.fireDate.timeIntervalSince1970
-		let now = currentDate.timeIntervalSince1970
-		
-		guard start < end, now >= start, now < end else {
-			return (1.0, "0:00", "0:00")
-		}
-		
-		let progressFraction = (now - start) / (end - start)
-		
-		let remaining = formatTimeInterval(end - now)
-		let total = formatTimeInterval(pendingSettings.delay)
-		
-		return (progressFraction, remaining, total)
-	}
-	
-	func formatTimeInterval(_ value: TimeInterval) -> String {
-		
-		let minutes = Int(value) / 60
-		let seconds = Int(value) % 60
-		
-		return String(format: "%d:%02d", minutes, seconds)
-	}
-	
-	func skipButtonTapped() -> Void {
-		log.trace("[\(viewName)] skipButtonTapped()")
-		
-		pendingSettings.skip()
+		pendingSettings.cancel()
 	}
 }

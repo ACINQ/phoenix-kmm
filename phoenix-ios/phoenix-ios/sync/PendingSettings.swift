@@ -56,25 +56,27 @@ class PendingSettings: Equatable, CustomStringConvertible {
 		
 		let deadline: DispatchTime = DispatchTime.now() + fireDate.timeIntervalSinceNow
 		DispatchQueue.global(qos: .utility).asyncAfter(deadline: deadline) {[weak self] in
-			self?.timerFire()
+			self?.approve()
 		}
 	}
 	
-	private func timerFire() {
-		log.trace("timerFire()")
+	/// Automatically invoked after the timer expires.
+	/// Can also be called manually to approve before the delay.
+	///
+	func approve() {
+		log.trace("approve()")
 		
 		if let parent = parent {
-			parent.updateState(finishing: self)
-		} else {
-			log.debug("parent is nil")
+			parent.updateState(pending: self, approved: true)
 		}
 	}
 	
-	/// Allows the user to terminate the delay early.
-	///
-	func skip() {
-		log.trace("skip()")
-		timerFire()
+	func cancel() {
+		log.trace("cancel()")
+		
+		if let parent = parent {
+			parent.updateState(pending: self, approved: false)
+		}
 	}
 	
 	var description: String {
