@@ -26,37 +26,13 @@ struct CloudOptionsView: View {
 	@State var useCellularData = Prefs.shared.backupTransactions_useCellular
 	@State var useUploadDelays = Prefs.shared.backupTransactions_useUploadDelay
 	
+	@State var backupSeed = false
+	
 	var body: some View {
 		
 		Form {
-			Section {
-				Toggle(isOn: $backupEnabled) {
-					Text("Backup transactions")
-				}
-				.padding(.bottom, 5)
-				
-				// Implicit divider added here, between Toggle & VStack
-				
-				VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
-					statusLabel()
-						.padding(.top, 5)
-					
-					if backupEnabled {
-						cellularDataOption()
-							.padding(.top, 30)
-						
-						uploadDelaysOption()
-							.padding(.top, 20)
-					}
-					
-					// NB: SwiftUI seems very buggy within Forms.
-					// Be dilligent when you modify padding & spacing.
-					//
-					// I spent a lot of time looking for combinations that wouldn't create unintended
-					// side effects in the UI (thanks to SwiftUI bugs).
-					Spacer(minLength: 10)
-				}
-			} // </Section>
+			section_backupTransactions()
+			section_backupSeed()
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.navigationBarTitle(
@@ -71,6 +47,90 @@ struct CloudOptionsView: View {
 		}
 		.onChange(of: useUploadDelays) { newValue in
 			self.didToggleUploadDelays(newValue)
+		}
+	}
+	
+	@ViewBuilder
+	func section_backupTransactions() -> some View {
+		
+		Section {
+			Toggle(isOn: $backupEnabled) {
+				Text("Backup transactions")
+			}
+			.padding(.bottom, 5)
+			
+			// Implicit divider added here, between Toggle & VStack
+			
+			VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+				statusLabel()
+					.padding(.top, 5)
+				
+				if backupEnabled {
+					cellularDataOption()
+						.padding(.top, 30)
+					
+					uploadDelaysOption()
+						.padding(.top, 20)
+				}
+				
+				// NB: SwiftUI seems very buggy within Forms.
+				// Be dilligent when you modify padding & spacing.
+				//
+				// I spent a lot of time looking for combinations that wouldn't create unintended
+				// side effects in the UI (thanks to SwiftUI bugs).
+				Spacer(minLength: 10)
+			}
+		} // </Section>
+	}
+	
+	@ViewBuilder
+	func section_backupSeed() -> some View {
+		
+		Section {
+			HStack(alignment: VerticalAlignment.center) {
+				Text("Backup seed")
+					.padding(.trailing, 2)
+				Text("(coming soon)")
+					.foregroundColor(.secondary)
+					.padding(.trailing, 2)
+				
+				Spacer()
+				
+				Toggle("", isOn: $backupSeed)
+					.labelsHidden()
+					.disabled(true)
+			}
+			
+			// Implicit divider added here, between Toggle & VStack
+			
+			VStack(alignment: HorizontalAlignment.leading, spacing: 0) {
+				
+				Label {
+					VStack(alignment: HorizontalAlignment.leading, spacing: 10) {
+						Text("You are responsible for backing up your seed.")
+						
+						Text(
+							"""
+							Save it somewhere safe (not on this phone). If you lose \
+							your seed and your phone, you've lost your funds.
+							"""
+						)
+						.foregroundColor(Color.gray)
+					}
+				} icon: {
+					Image(systemName: "rectangle.and.pencil.and.ellipsis")
+						.renderingMode(.template)
+						.imageScale(.medium)
+						.foregroundColor(Color.appWarn)
+				}
+				
+				// NB: SwiftUI seems very buggy within Forms.
+				// Be dilligent when you modify padding & spacing.
+				//
+				// I spent a lot of time looking for combinations that wouldn't create unintended
+				// side effects in the UI (thanks to SwiftUI bugs).
+				Spacer(minLength: 10)
+			}
 		}
 	}
 	
