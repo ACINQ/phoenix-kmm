@@ -46,7 +46,7 @@ data class Wallet(val seed: ByteArray) {
             is Chain.Testnet, is Chain.Regtest -> true
             else -> false
         }
-        val path = if (isTestnet) "m/48'/0'/100'/0" else "m/50'/0'/100'/0"
+        val path = if (isTestnet) "m/51'/1'/0'/0" else "m/51'/0'/0'/0"
 
         val extPrivKey = DeterministicWallet.derivePrivateKey(master, path)
 
