@@ -116,6 +116,13 @@ struct CloudOptionsView: View {
 							"""
 						)
 						.foregroundColor(Color.gray)
+						
+						Text(
+							"""
+							If done correctly, self-backup is the most secure option.
+							"""
+						)
+						.foregroundColor(Color.gray)
 					}
 				} icon: {
 					Image(systemName: "rectangle.and.pencil.and.ellipsis")
