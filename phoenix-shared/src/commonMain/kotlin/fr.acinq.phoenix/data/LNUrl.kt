@@ -22,11 +22,8 @@ import fr.acinq.lightning.utils.msat
 import io.ktor.client.call.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.long
-import kotlinx.serialization.json.longOrNull
-import org.json.JSONArray
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.*
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
@@ -113,6 +110,7 @@ sealed class LNUrl {
 
     companion object {
         private val log = newLogger(LoggerFactory.default)
+        private val format: Json = Json { ignoreUnknownKeys = true }
 
         /** LNUrls are originally bech32 encoded. If unreadable, throw an exception. */
         fun parseBech32Url(source: String): Url {
@@ -198,20 +196,19 @@ sealed class LNUrl {
 
         /** Decode a serialized [LNUrl.Pay.Metadata] object. */
         private fun decodeLNUrlPayMeta(raw: String): Pay.Metadata = try {
-            val array = JSONArray(raw)
+            val array = format.decodeFromString<JsonArray>(raw)
             var plainText: String? = null
             var rawImage: String? = null
-            for (i in 0 until array.length()) {
-                val rawMeta = array.getJSONArray(i)
+            array.forEach {
                 try {
-                    when (rawMeta.getString(0)) {
-                        "text/plain" -> plainText = rawMeta.getString(1)
-                        "image/png;base64" -> rawImage = rawMeta.getString(1)
-                        "image/jpeg;base64" -> rawImage = rawMeta.getString(1)
-                        else -> throw RuntimeException("unhandled metadata type=${rawMeta[i]}")
+                    when (it.jsonArray[0].jsonPrimitive.content) {
+                        "text/plain" -> plainText = it.jsonArray[1].jsonPrimitive.content
+                        "image/png;base64" -> rawImage = it.jsonArray[1].jsonPrimitive.content
+                        "image/jpeg;base64" -> rawImage = it.jsonArray[1].jsonPrimitive.content
+                        else -> throw RuntimeException("unhandled metadata type=$it")
                     }
                 } catch (e: Exception) {
-                    log.warning { "could not decode raw meta=$rawMeta at index=$i: ${e.message}" }
+                    log.warning { "could not decode raw meta=$it: ${e.message}" }
                 }
             }
             Pay.Metadata(raw, plainText!!, rawImage?.encodeToByteArray())
