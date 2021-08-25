@@ -44,7 +44,24 @@ sealed class LNUrl {
     data class Auth(
         val url: Url,
         val k1: String
-    ) : LNUrl()
+    ) : LNUrl() {
+        
+        enum class Action {
+            Register, Login, Link, Auth
+        }
+
+        fun action(): Action? {
+            return url.parameters.get("action")?.let { action ->
+                when (action.toLowerCase()) {
+                    "register" -> Action.Register
+                    "login" -> Action.Login
+                    "link" -> Action.Link
+                    "auth" -> Action.Auth
+                    else -> null
+                }
+            }
+        }
+    }
 
     data class Withdraw(
         val callback: Url,

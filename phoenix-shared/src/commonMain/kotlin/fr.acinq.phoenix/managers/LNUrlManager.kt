@@ -16,22 +16,32 @@
 
 package fr.acinq.phoenix.managers
 
+import fr.acinq.bitcoin.ByteVector32
+import fr.acinq.bitcoin.Crypto
+import fr.acinq.lightning.utils.Either
 import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.data.LNUrl
 import io.ktor.client.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import org.kodein.log.LoggerFactory
 import org.kodein.log.newLogger
 
 class LNUrlManager(
+    loggerFactory: LoggerFactory,
     private val httpClient: HttpClient,
-    loggerFactory: LoggerFactory
+    private val walletManager: WalletManager
 ) : CoroutineScope by MainScope() {
+
     constructor(business: PhoenixBusiness) : this(
+        loggerFactory = business.loggerFactory,
         httpClient = business.httpClient,
-        loggerFactory = business.loggerFactory
+        walletManager = business.walletManager
     )
 
     private val log = newLogger(loggerFactory)
@@ -41,6 +51,21 @@ class LNUrlManager(
      * Will execute an HTTP request for some urls and parse the response into an actionable LNUrl object.
      */
     suspend fun extractLNUrl(source: String): LNUrl {
+        return when (val result = interactiveExtractLNUrl(source)) {
+            is Either.Left -> result.value
+            is Either.Right -> continueLnUrl(result.value)
+        }
+    }
+
+    /**
+     * Attempts to extract a Bech32 URL from the string.
+     * On success:
+     * - if the LnUrl is a simple Auth, it's returned immediately
+     * - otherwise the Url is returned (call `continueLnUrl` to fetch & parse the Url)
+     *
+     * Throws an exception if source is malformed, or invalid.
+     */
+    fun interactiveExtractLNUrl(source: String): Either<LNUrl.Auth, Url> {
         val url = try {
             LNUrl.parseBech32Url(source)
         } catch (e1: Exception) {
@@ -59,14 +84,60 @@ class LNUrlManager(
                 if (k1.isNullOrBlank()) {
                     throw LNUrl.Error.Auth.MissingK1
                 } else {
-                    LNUrl.Auth(url, k1)
+                    Either.Left(LNUrl.Auth(url, k1))
                 }
             }
-            // query the url and parse metadata
-            else -> {
-                val json = LNUrl.handleLNUrlResponse(httpClient.get(url))
-                LNUrl.parseLNUrlMetadata(json)
-            }
+            else -> Either.Right(url)
         }
+    }
+
+    /**
+     * Executes the HTTP request for the LnUrl and parses the response
+     * into an actionable LNUrl object.
+     */
+    suspend fun continueLnUrl(url: Url): LNUrl {
+        val json = LNUrl.handleLNUrlResponse(httpClient.get(url))
+        return LNUrl.parseLNUrlMetadata(json)
+    }
+
+    suspend fun requestAuth(auth: LNUrl.Auth) {
+        val wallet = walletManager.wallet.filterNotNull().first()
+
+        // According to the spec, the "full domain name" is to be used for key derivation:
+        // > LN SERVICE should carefully choose which subdomain (if any) will be used as
+        // > LNURL-auth endpoint and stick to chosen subdomain in future. For example,
+        // > if `auth.site.com` was initially chosen then changing it to, say,
+        // > `login.site.com` will result in different account for each user because
+        // > full domain name is used by wallets as material for key derivation.
+        // >
+        // > LN SERVICE should consider giving meaningful names to chosen subdomains
+        // > since LN WALLET may show a full domain name to users on login attempt.
+        // > For example, `auth.site.com` is less confusing than `ksf03.site.com`.
+        //
+        // Spec: https://github.com/fiatjaf/lnurl-rfc/blob/luds/04.md
+        //
+        val domain = auth.url.host
+        val key = wallet.lnurlAuthLinkingKey(domain)
+        val signedK1 = Crypto.compact2der(Crypto.sign(
+            data = ByteVector32.fromValidHex(auth.k1),
+            privateKey = key
+        )).toHex()
+
+        val builder = URLBuilder(auth.url)
+        builder.parameters.append(name = "sig", value = signedK1)
+        builder.parameters.append(name = "key", value = key.publicKey().toString())
+        val url = builder.build()
+
+        val response: HttpResponse = try {
+            httpClient.get(url)
+        } catch (sre: io.ktor.client.features.ServerResponseException) {
+            // ktor throws an exception when we get a non-200 response from the server.
+            // That's not what we want. We'd like to handle the JSON error ourselves.
+            sre.response
+        } catch (t: Throwable) {
+            throw LNUrl.Error.RemoteFailure.CouldNotConnect(origin = url.host)
+        }
+
+        LNUrl.handleLNUrlResponse(response) // throws on any/all non-success
     }
 }
