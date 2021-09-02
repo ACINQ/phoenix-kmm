@@ -21,6 +21,7 @@ import fr.acinq.bitcoin.Crypto
 import fr.acinq.lightning.utils.Either
 import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.data.LNUrl
+import fr.acinq.phoenix.utils.PublicSuffixList
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -100,23 +101,10 @@ class LNUrlManager(
         return LNUrl.parseLNUrlMetadata(json)
     }
 
-    suspend fun requestAuth(auth: LNUrl.Auth) {
+    suspend fun requestAuth(auth: LNUrl.Auth, publicSuffixList: PublicSuffixList) {
         val wallet = walletManager.wallet.filterNotNull().first()
-
-        // According to the spec, the "full domain name" is to be used for key derivation:
-        // > LN SERVICE should carefully choose which subdomain (if any) will be used as
-        // > LNURL-auth endpoint and stick to chosen subdomain in future. For example,
-        // > if `auth.site.com` was initially chosen then changing it to, say,
-        // > `login.site.com` will result in different account for each user because
-        // > full domain name is used by wallets as material for key derivation.
-        // >
-        // > LN SERVICE should consider giving meaningful names to chosen subdomains
-        // > since LN WALLET may show a full domain name to users on login attempt.
-        // > For example, `auth.site.com` is less confusing than `ksf03.site.com`.
-        //
-        // Spec: https://github.com/fiatjaf/lnurl-rfc/blob/luds/04.md
-        //
-        val domain = auth.url.host
+        
+        val domain = publicSuffixList.eTldPlusOne(auth.url.host) ?: throw LNUrl.Error.CouldNotDetermineDomain
         val key = wallet.lnurlAuthLinkingKey(domain)
         val signedK1 = Crypto.compact2der(Crypto.sign(
             data = ByteVector32.fromValidHex(auth.k1),

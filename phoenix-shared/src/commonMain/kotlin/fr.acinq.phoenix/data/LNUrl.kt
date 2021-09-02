@@ -114,10 +114,12 @@ sealed class LNUrl {
         object UnsafeCallback : Error("resource should be https")
         object MissingCallback : Error("missing callback in metadata response")
 
+        object MissingPublicSuffixList : Error("missing public suffix list")
+        object CouldNotDetermineDomain : Error("could not determine domain")
+
         sealed class RemoteFailure(override val message: String) : Error(message) {
             abstract val origin: String
 
-            data class Generic(override val origin: String) : RemoteFailure("error from $origin")
             data class CouldNotConnect(override val origin: String) : RemoteFailure("could not connect to $origin")
             data class Unreadable(override val origin: String) : RemoteFailure("unreadable response from $origin")
             data class Detailed(override val origin: String, val reason: String) : RemoteFailure("error=$reason from $origin")

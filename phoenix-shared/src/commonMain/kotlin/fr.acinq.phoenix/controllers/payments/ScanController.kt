@@ -14,14 +14,13 @@ import fr.acinq.lightning.utils.UUID
 import fr.acinq.lightning.utils.sum
 import fr.acinq.phoenix.PhoenixBusiness
 import fr.acinq.phoenix.controllers.AppController
-import fr.acinq.phoenix.managers.DatabaseManager
-import fr.acinq.phoenix.managers.PeerManager
-import fr.acinq.phoenix.managers.Utilities
 import fr.acinq.phoenix.data.Chain
 import fr.acinq.phoenix.data.LNUrl
-import fr.acinq.phoenix.managers.LNUrlManager
+import fr.acinq.phoenix.managers.*
+import fr.acinq.phoenix.utils.PublicSuffixList
 import fr.acinq.phoenix.utils.localCommitmentSpec
 import io.ktor.http.*
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.filterNotNull
@@ -39,18 +38,22 @@ class AppScanController(
     private val peerManager: PeerManager,
     private val lnurlManager: LNUrlManager,
     private val databaseManager: DatabaseManager,
+    private val appConfigManager: AppConfigurationManager,
     private val utilities: Utilities,
     private val chain: Chain
 ) : AppController<Scan.Model, Scan.Intent>(
     loggerFactory = loggerFactory,
     firstModel = firstModel ?: Scan.Model.Ready
 ) {
+    private var prefetchPublicSuffixListTask: Deferred<Pair<String, Long>?>? = null
+
     constructor(business: PhoenixBusiness, firstModel: Scan.Model?): this(
         loggerFactory = business.loggerFactory,
         firstModel = firstModel,
         peerManager = business.peerManager,
         lnurlManager = business.lnUrlManager,
         databaseManager = business.databaseManager,
+        appConfigManager = business.appConfigurationManager,
         utilities = business.util,
         chain = business.chain,
     )
@@ -139,6 +142,7 @@ class AppScanController(
         // Is it an LNURL ?
         readLNURL(input)?.let { return when (it) {
             is Either.Left -> { // it.value: LnUrl.Auth
+                prefetchPublicSuffixListTask = appConfigManager.prefetchPublicSuffixList()
                 model(Scan.Model.LoginRequest(auth = it.value))
             }
             is Either.Right -> { // it.value: Url
@@ -180,8 +184,19 @@ class AppScanController(
     ) {
         model(Scan.Model.LoggingIn(auth = intent.auth))
         val start = TimeSource.Monotonic.markNow()
+        val psl = prefetchPublicSuffixListTask?.await()
+        if (psl == null) {
+            model(Scan.Model.LoginResult(
+                auth = intent.auth,
+                error = Scan.LoginError.OtherError(details = LNUrl.Error.MissingPublicSuffixList)
+            ))
+            return
+        }
         val error = try {
-            lnurlManager.requestAuth(auth = intent.auth)
+            lnurlManager.requestAuth(
+                auth = intent.auth,
+                publicSuffixList = PublicSuffixList(psl.first)
+            )
             null
         } catch (e: LNUrl.Error.RemoteFailure.CouldNotConnect) {
             Scan.LoginError.NetworkError(details = e)
