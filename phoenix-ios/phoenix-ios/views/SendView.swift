@@ -752,6 +752,9 @@ struct LoginView: View, ViewName {
 	)
 	@State var maxImageHeight: CGFloat? = nil
 	
+	let buttonFont: Font = .title3
+	let buttonImgScale: Image.Scale = .medium
+	
 	@ViewBuilder
 	var body: some View {
 		
@@ -770,14 +773,14 @@ struct LoginView: View, ViewName {
 			// But they're not - unless we measure them, and enforce matching heights.
 			
 			Image(systemName: "bolt")
-				.imageScale(.large)
-				.font(.title2)
+				.imageScale(buttonImgScale)
+				.font(buttonFont)
 				.foregroundColor(.clear)
 				.read(maxImageHeightReader)
 			
 			Image(systemName: "hand.thumbsup.fill")
-				.imageScale(.large)
-				.font(.title2)
+				.imageScale(buttonImgScale)
+				.font(buttonFont)
 				.foregroundColor(.clear)
 				.read(maxImageHeightReader)
 			
@@ -813,11 +816,11 @@ struct LoginView: View, ViewName {
 				HStack(alignment: VerticalAlignment.firstTextBaseline) {
 					Image(systemName: "hand.thumbsup.fill")
 						.renderingMode(.template)
-						.imageScale(.large)
+						.imageScale(buttonImgScale)
 						.frame(minHeight: maxImageHeight)
 					Text(successTitle())
 				}
-				.font(.title2)
+				.font(buttonFont)
 				.foregroundColor(Color.appPositive)
 				.padding(.top, 4)
 				.padding(.bottom, 5)
@@ -831,11 +834,11 @@ struct LoginView: View, ViewName {
 					HStack(alignment: VerticalAlignment.firstTextBaseline) {
 						Image(systemName: "bolt")
 							.renderingMode(.template)
-							.imageScale(.large)
+							.imageScale(buttonImgScale)
 							.frame(minHeight: maxImageHeight)
 						Text(buttonTitle())
 					}
-					.font(.title2)
+					.font(buttonFont)
 					.foregroundColor(Color.white)
 					.padding(.top, 4)
 					.padding(.bottom, 5)
