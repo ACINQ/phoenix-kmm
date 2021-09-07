@@ -4,15 +4,23 @@ package fr.acinq.phoenix.utils
  * https://publicsuffix.org/list/
  */
 class PublicSuffixList(
-    private val list: String
+    list: String
 ) {
-    private class Rule(
+    /**
+     * Represents a single "rule".
+     * That is, a singe (parsed) line from Public Suffix List.
+     */
+    class Rule(
         val labels: List<String>,
         val isExceptionRule: Boolean
     ) {
         companion object {
-            val whitespace = "\\s+".toRegex()
+            private val whitespace = "\\s+".toRegex()
 
+            /**
+             * Attempts to parse a rule from the given line.
+             * If the line is only whitespace or a comment, then returns null.
+             */
             fun parse(line: String): Rule? {
                 // Definitions:
                 // - Each line is only read up to the first whitespace;
@@ -84,6 +92,40 @@ class PublicSuffixList(
 
             return true
         }
+
+        val label: String get() {
+            val label = labels.joinToString(".")
+            return if (isExceptionRule) {
+                "!${label}"
+            } else {
+                label
+            }
+        }
+    }
+
+    data class Match(
+        val matchingRules: List<Rule>,
+        val prevailingRule: Rule,
+        val domainComponents: List<String>
+    ) {
+        fun eTld(plus: Int = 0): String? {
+
+            val eTldCount = if (prevailingRule.isExceptionRule) {
+                prevailingRule.labels.size - 1
+            } else {
+                prevailingRule.labels.size
+            }
+            val desiredCount = eTldCount + plus
+
+            return if (domainComponents.size < desiredCount) {
+                null
+            } else {
+                domainComponents.subList(
+                    fromIndex = domainComponents.size - desiredCount, // inclusive
+                    toIndex = domainComponents.size // exclusive
+                ).joinToString(separator = ".").toLowerCase()
+            }
+        }
     }
 
     private val rules = mutableListOf<Rule>()
@@ -96,20 +138,16 @@ class PublicSuffixList(
         }
     }
 
-    public fun eTldPlusOne(domain: String): String? {
+    fun match(domain: String): Match {
 
         val whitespace = "\\s+".toRegex()
-        val components = domain
+        val domainComponents = domain
             .trimStart()
             .split(whitespace, limit = 1).first() // split always returns non-empty list
             .split('.')
             .filter { it.isNotEmpty() }
 
-        if (components.isEmpty()) {
-            return null
-        }
-
-        val labels = components.map { it.toLowerCase() }
+        val domainLabels = domainComponents.map { it.toLowerCase() }
 
         // Algorithm:
         // 1. Match domain against all rules and take note of the matching ones.
@@ -122,9 +160,11 @@ class PublicSuffixList(
         // 7. The registered or registrable domain is the public suffix plus one additional label.
 
         val matchingRules = mutableListOf<Rule>()
-        for (rule in rules) {
-            if (rule.matches(labels)) {
-                matchingRules.add(rule)
+        if (domainLabels.isNotEmpty()) {
+            for (rule in rules) {
+                if (rule.matches(domainLabels)) {
+                    matchingRules.add(rule)
+                }
             }
         }
 
@@ -142,19 +182,14 @@ class PublicSuffixList(
                 }
             }
 
-        val countPlusOne = if (prevailingRule.isExceptionRule) {
-            prevailingRule.labels.size
-        } else {
-            prevailingRule.labels.size + 1
-        }
+        return Match(matchingRules, prevailingRule, domainComponents)
+    }
 
-        return if (components.size < countPlusOne) {
-            null
-        } else {
-            components.subList(
-                fromIndex = components.size - countPlusOne, // inclusive
-                toIndex = components.size // exclusive
-            ).joinToString(separator = ".")
-        }
+    fun eTld(domain: String): String? {
+        return match(domain).eTld(plus = 0)
+    }
+
+    fun eTldPlusOne(domain: String): String? {
+        return match(domain).eTld(plus = 1)
     }
 }
