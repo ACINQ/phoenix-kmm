@@ -132,9 +132,10 @@ class AppConfigurationManager(
     }
 
     private val publicSuffixListKey = "publicSuffixList"
+    private val publicSuffixListDefaultRefresh = 30.days
 
     public suspend fun fetchPublicSuffixList(
-        refreshIfOlderThan: Duration = 1.days
+        refreshIfOlderThan: Duration = publicSuffixListDefaultRefresh
     ): Pair<String, Long>? {
         val databaseRow = appDb.getValue(publicSuffixListKey) {
             String(bytes = it, charset = Charsets.UTF_8)
@@ -159,7 +160,7 @@ class AppConfigurationManager(
     }
 
     public suspend fun prefetchPublicSuffixList(
-        refreshIfOlderThan: Duration = 1.days
+        refreshIfOlderThan: Duration = publicSuffixListDefaultRefresh
     ): Deferred<Pair<String, Long>?> {
         return async {
             fetchPublicSuffixList(refreshIfOlderThan)

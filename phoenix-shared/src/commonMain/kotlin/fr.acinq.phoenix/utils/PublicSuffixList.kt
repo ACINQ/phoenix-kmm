@@ -34,7 +34,7 @@ class PublicSuffixList(
                 //   Empty labels are not permitted, meaning that leading and trailing dots are ignored.
 
                 var suffix = line.split(regex = whitespace, limit = 1).firstOrNull() ?: ""
-                if (suffix.isEmpty() || suffix.startsWith("//")) {
+                if (suffix.isBlank() || suffix.startsWith("//")) {
                     return null
                 }
 
@@ -45,7 +45,7 @@ class PublicSuffixList(
                 }
 
                 val labels = suffix.split('.').filter {
-                    it.isNotEmpty()
+                    it.isNotBlank()
                 }.map {
                     it.toLowerCase()
                 }
