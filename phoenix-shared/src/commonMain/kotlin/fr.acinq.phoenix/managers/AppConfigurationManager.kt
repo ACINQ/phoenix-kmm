@@ -148,7 +148,7 @@ class AppConfigurationManager(
         }
 
         val latestList: String = try {
-            httpClient.get("https://publicsuffix.org/list/public_suffix_list.dat")
+            httpClient.get("https://acinq.co/phoenix/public_suffix_list.dat")
         } catch (err: Throwable) {
             logger.warning { "Error fetching public_suffix_list.dat: $err" }
             return databaseRow
