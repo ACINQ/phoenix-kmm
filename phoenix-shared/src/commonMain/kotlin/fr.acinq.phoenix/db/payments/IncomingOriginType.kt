@@ -18,20 +18,19 @@ package fr.acinq.phoenix.db.payments
 
 import fr.acinq.lightning.db.IncomingPayment
 import fr.acinq.lightning.payment.PaymentRequest
-import fr.acinq.phoenix.db.payments.DbTypesHelper.decodeBlob
 import io.ktor.utils.io.charsets.*
 import io.ktor.utils.io.core.*
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.*
+import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.json.Json
 
 
 enum class IncomingOriginTypeVersion {
-    KEYSEND_V0,
-    INVOICE_V0,
-    SWAPIN_V0
+    KEYSEND_V0, // encoded as empty ByteArray
+    INVOICE_V0, // encoded using JSON
+    INVOICE_V1, // encoded using CBOR
+    SWAPIN_V0,  // encoded using JSON
+    SWAPIN_V1   // encoded using CBOR
 }
 
 sealed class IncomingOriginData {
@@ -53,21 +52,70 @@ sealed class IncomingOriginData {
     }
 
     companion object {
-        fun deserialize(typeVersion: IncomingOriginTypeVersion, blob: ByteArray): IncomingPayment.Origin = decodeBlob(blob) { json, format ->
-            when (typeVersion) {
-                IncomingOriginTypeVersion.KEYSEND_V0 -> IncomingPayment.Origin.KeySend
-                IncomingOriginTypeVersion.INVOICE_V0 -> format.decodeFromString<Invoice.V0>(json).let { IncomingPayment.Origin.Invoice(PaymentRequest.read(it.paymentRequest)) }
-                IncomingOriginTypeVersion.SWAPIN_V0 -> format.decodeFromString<SwapIn.V0>(json).let { IncomingPayment.Origin.SwapIn(it.address) }
+        @OptIn(ExperimentalSerializationApi::class)
+        fun deserialize(
+            typeVersion: IncomingOriginTypeVersion,
+            blob: ByteArray
+        ): IncomingPayment.Origin {
+            return when (typeVersion) {
+                IncomingOriginTypeVersion.KEYSEND_V0 -> {
+                    IncomingPayment.Origin.KeySend
+                }
+                IncomingOriginTypeVersion.INVOICE_V0 -> {
+                    Json.decodeFromString<Invoice.V0>(
+                        String(bytes = blob, charset = Charsets.UTF_8)
+                    ).let {
+                        IncomingPayment.Origin.Invoice(PaymentRequest.read(it.paymentRequest))
+                    }
+                }
+                IncomingOriginTypeVersion.INVOICE_V1 -> {
+                    Cbor.decodeFromByteArray<Invoice.V0>(blob).let {
+                        IncomingPayment.Origin.Invoice(PaymentRequest.read(it.paymentRequest))
+                    }
+                }
+                IncomingOriginTypeVersion.SWAPIN_V0 -> {
+                    Json.decodeFromString<SwapIn.V0>(
+                        String(bytes = blob, charset = Charsets.UTF_8)
+                    ).let {
+                        IncomingPayment.Origin.SwapIn(it.address)
+                    }
+                }
+                IncomingOriginTypeVersion.SWAPIN_V1 -> {
+                    Cbor.decodeFromByteArray<SwapIn.V0>(blob).let {
+                        IncomingPayment.Origin.SwapIn(it.address)
+                    }
+                }
             }
         }
     }
 }
 
-fun IncomingPayment.Origin.mapToDb(): Pair<IncomingOriginTypeVersion, ByteArray> = when (this) {
-    is IncomingPayment.Origin.KeySend -> IncomingOriginTypeVersion.KEYSEND_V0 to
-            Json.encodeToString(IncomingOriginData.KeySend.V0).toByteArray(Charsets.UTF_8)
-    is IncomingPayment.Origin.Invoice -> IncomingOriginTypeVersion.INVOICE_V0 to
-            Json.encodeToString(IncomingOriginData.Invoice.V0(paymentRequest.write())).toByteArray(Charsets.UTF_8)
-    is IncomingPayment.Origin.SwapIn -> IncomingOriginTypeVersion.SWAPIN_V0 to
-            Json.encodeToString(IncomingOriginData.SwapIn.V0(address)).toByteArray(Charsets.UTF_8)
+@OptIn(ExperimentalSerializationApi::class)
+fun IncomingPayment.Origin.mapToDb(
+    useCbor: Boolean = false
+): Pair<IncomingOriginTypeVersion, ByteArray> = when (this) {
+    is IncomingPayment.Origin.KeySend -> {
+        IncomingOriginTypeVersion.KEYSEND_V0 to
+          ByteArray(size = 0)
+    }
+    is IncomingPayment.Origin.Invoice -> {
+        val wrapper = IncomingOriginData.Invoice.V0(paymentRequest.write())
+        if (useCbor) {
+            IncomingOriginTypeVersion.INVOICE_V1 to
+              Cbor.encodeToByteArray(wrapper)
+        } else {
+            IncomingOriginTypeVersion.INVOICE_V0 to
+              Json.encodeToString(wrapper).toByteArray(Charsets.UTF_8)
+        }
+    }
+    is IncomingPayment.Origin.SwapIn -> {
+        val wrapper = IncomingOriginData.SwapIn.V0(address)
+        if (useCbor) {
+            IncomingOriginTypeVersion.SWAPIN_V1 to
+              Cbor.encodeToByteArray(wrapper)
+        } else {
+            IncomingOriginTypeVersion.SWAPIN_V0 to
+              Json.encodeToString(wrapper).toByteArray(Charsets.UTF_8)
+        }
+    }
 }

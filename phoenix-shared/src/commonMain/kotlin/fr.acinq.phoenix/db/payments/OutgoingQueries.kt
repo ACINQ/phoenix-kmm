@@ -187,9 +187,75 @@ class OutgoingQueries(val database: PaymentsDatabase) {
     }
 
     fun listOutgoingPayments(count: Int, skip: Int): List<OutgoingPayment> {
-        // LIMIT ?, ? : "the first expression is used as the OFFSET expression and the second as the LIMIT expression."
-        return queries.listOutgoingInOffset(skip.toLong(), count.toLong(), ::mapOutgoingPayment).executeAsList()
-            .run { groupByRawOutgoing(this) }
+        return queries.listOutgoingInOffset(
+            limit = count.toLong(),
+            offset = skip.toLong(),
+            mapper = ::mapOutgoingPayment
+        ).executeAsList().run { groupByRawOutgoing(this) }
+    }
+
+    fun testCborOptimizations(): String {
+        var results = ""
+        queries.listOutgoingInOffset(
+            limit = 100,
+            offset = 0
+        ).executeAsList().forEach {
+            results += "OutgoingPayment[${it.id}]:\n"
+
+            if (true) {
+                val details = OutgoingDetailsData.deserialize(
+                    typeVersion = it.details_type,
+                    blob = it.details_blob
+                )
+                val (newTypeVersion, cborBlob) = details.mapToDb(useCbor = true)
+
+                results += "- Details:\n"
+                results += "  - ${it.details_type.name}: ${it.details_blob.size}\n"
+                results += "  - ${newTypeVersion.name}: ${cborBlob.size}\n"
+            }
+
+            if (it.status_type != null &&
+                it.status_blob != null &&
+                it.completed_at != null
+            ) {
+                val status = OutgoingStatusData.deserialize(
+                    typeVersion = it.status_type,
+                    blob = it.status_blob,
+                    completedAt = it.completed_at
+                )
+                if (status is OutgoingPayment.Status.Completed) {
+                    val (newTypeVersion, cborBlob) = status.mapToDb(useCbor = true)
+
+                    results += "- Status:\n"
+                    results += "  - ${it.status_type.name}: ${it.status_blob.size}\n"
+                    results += "  - ${newTypeVersion.name}: ${cborBlob.size}\n"
+                }
+            }
+
+            if (it.part_status_type != null &&
+                it.part_status_blob != null &&
+                it.completed_at != null
+            ) {
+                val status = OutgoingPartStatusData.deserialize(
+                    typeVersion = it.part_status_type,
+                    blob = it.part_status_blob,
+                    completedAt = it.completed_at
+                )
+                when (status) {
+                    is OutgoingPayment.Part.Status.Succeeded -> status.mapToDb(useCbor = true)
+                    is OutgoingPayment.Part.Status.Failed -> status.mapToDb(useCbor = true)
+                    is OutgoingPayment.Part.Status.Pending -> null
+                }?.let { pair ->
+                    val newTypeVersion = pair.first
+                    val cborBlob = pair.second
+
+                    results += "- Part.Status:\n"
+                    results += "  - ${it.part_status_type.name}: ${it.part_status_blob.size}\n"
+                    results += "  - ${newTypeVersion.name}: ${cborBlob.size}\n"
+                }
+            }
+        }
+        return results
     }
 
     /** Group a list of outgoing payments by parent id and parts. */

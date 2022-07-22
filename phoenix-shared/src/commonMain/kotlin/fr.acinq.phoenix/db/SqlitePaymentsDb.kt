@@ -183,6 +183,15 @@ class SqlitePaymentsDb(private val driver: SqlDriver) : PaymentsDb {
 
     override suspend fun listPayments(count: Int, skip: Int, filters: Set<PaymentTypeFilter>): List<WalletPayment> = throw NotImplementedError("Use listPaymentsOrderFlow instead")
 
+    suspend fun testCborOptimizations(): String {
+        return withContext(Dispatchers.Default) {
+            var results = ""
+            results += inQueries.testCborOptimizations()
+            results += outQueries.testCborOptimizations()
+            results
+        }
+    }
+
     private fun allPaymentsCountMapper(
         result: Long?
     ): Long {

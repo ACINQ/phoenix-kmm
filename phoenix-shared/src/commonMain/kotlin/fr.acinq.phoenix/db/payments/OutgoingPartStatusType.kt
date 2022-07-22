@@ -19,45 +19,119 @@ package fr.acinq.phoenix.db.payments
 import fr.acinq.bitcoin.ByteVector32
 import fr.acinq.lightning.db.OutgoingPayment
 import fr.acinq.lightning.serialization.v1.ByteVector32KSerializer
+import fr.acinq.lightning.utils.toByteVector32
 import io.ktor.utils.io.charsets.*
 import io.ktor.utils.io.core.*
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
+import kotlinx.serialization.*
+import kotlinx.serialization.cbor.ByteString
+import kotlinx.serialization.cbor.Cbor
 import kotlinx.serialization.json.Json
 
 enum class OutgoingPartStatusTypeVersion {
-    SUCCEEDED_V0,
-    FAILED_V0,
+    SUCCEEDED_V0, // encoded using JSON
+    SUCCEEDED_V1, // encoded using CBOR
+    FAILED_V0,    // encoded using JSON
+    FAILED_V1     // encoded using CBOR
 }
 
 sealed class OutgoingPartStatusData {
 
     sealed class Succeeded : OutgoingPartStatusData() {
         @Serializable
-        data class V0(@Serializable(with = ByteVector32KSerializer::class) val preimage: ByteVector32) : Succeeded()
+        data class V0(
+            @Serializable(with = ByteVector32KSerializer::class)
+            val preimage: ByteVector32
+        ) : Succeeded() {
+            constructor(succeeded: OutgoingPayment.Part.Status.Succeeded): this(
+                preimage = succeeded.preimage
+            )
+            fun unwrap(completedAt: Long) = OutgoingPayment.Part.Status.Succeeded(
+                preimage = preimage,
+                completedAt = completedAt
+            )
+        }
+        @Serializable
+        @OptIn(ExperimentalSerializationApi::class)
+        data class V1(
+            @ByteString
+            val preimage: ByteArray
+        ) : Succeeded() {
+            constructor(succeeded: OutgoingPayment.Part.Status.Succeeded): this(
+                preimage = succeeded.preimage.toByteArray()
+            )
+            fun unwrap(completedAt: Long) = OutgoingPayment.Part.Status.Succeeded(
+                preimage = preimage.toByteVector32(),
+                completedAt = completedAt
+            )
+        }
     }
 
     sealed class Failed : OutgoingPartStatusData() {
         @Serializable
-        data class V0(val remoteFailureCode: Int?, val details: String) : Failed()
+        data class V0(
+            val remoteFailureCode: Int?,
+            val details: String
+        ) : Failed() {
+            constructor(failed: OutgoingPayment.Part.Status.Failed): this(
+                remoteFailureCode = failed.remoteFailureCode,
+                details = failed.details
+            )
+            fun unwrap(completedAt: Long) = OutgoingPayment.Part.Status.Failed(
+                remoteFailureCode = remoteFailureCode,
+                details = details,
+                completedAt = completedAt
+            )
+        }
     }
 
     companion object {
-        fun deserialize(typeVersion: OutgoingPartStatusTypeVersion, blob: ByteArray, completedAt: Long): OutgoingPayment.Part.Status = DbTypesHelper.decodeBlob(blob) { json, format ->
-            when (typeVersion) {
-                OutgoingPartStatusTypeVersion.SUCCEEDED_V0 -> format.decodeFromString<Succeeded.V0>(json).let {
-                    OutgoingPayment.Part.Status.Succeeded(it.preimage, completedAt)
+        @OptIn(ExperimentalSerializationApi::class)
+        fun deserialize(
+            typeVersion: OutgoingPartStatusTypeVersion,
+            blob: ByteArray,
+            completedAt: Long
+        ): OutgoingPayment.Part.Status {
+            val jsonStr = { String(bytes = blob, charset = Charsets.UTF_8) }
+            return when (typeVersion) {
+                OutgoingPartStatusTypeVersion.SUCCEEDED_V0 -> {
+                    Json.decodeFromString<Succeeded.V0>(jsonStr()).unwrap(completedAt)
                 }
-                OutgoingPartStatusTypeVersion.FAILED_V0 -> format.decodeFromString<Failed.V0>(json).let {
-                    OutgoingPayment.Part.Status.Failed(it.remoteFailureCode, it.details, completedAt)
+                OutgoingPartStatusTypeVersion.SUCCEEDED_V1 -> {
+                    Cbor.decodeFromByteArray<Succeeded.V1>(blob).unwrap(completedAt)
+                }
+                OutgoingPartStatusTypeVersion.FAILED_V0 -> {
+                    Json.decodeFromString<Failed.V0>(jsonStr()).unwrap(completedAt)
+                }
+                OutgoingPartStatusTypeVersion.FAILED_V1 -> { // reusing V0 wrapper
+                    Cbor.decodeFromByteArray<Failed.V0>(blob).unwrap(completedAt)
                 }
             }
         }
     }
 }
 
-fun OutgoingPayment.Part.Status.Succeeded.mapToDb() = OutgoingPartStatusTypeVersion.SUCCEEDED_V0 to
-        Json.encodeToString(OutgoingPartStatusData.Succeeded.V0(preimage)).toByteArray(Charsets.UTF_8)
-fun OutgoingPayment.Part.Status.Failed.mapToDb() = OutgoingPartStatusTypeVersion.FAILED_V0 to
-        Json.encodeToString(OutgoingPartStatusData.Failed.V0(remoteFailureCode, details)).toByteArray(Charsets.UTF_8)
+@OptIn(ExperimentalSerializationApi::class)
+fun OutgoingPayment.Part.Status.Succeeded.mapToDb(
+    useCbor: Boolean = false
+) = if (useCbor) {
+    OutgoingPartStatusTypeVersion.SUCCEEDED_V1 to Cbor.encodeToByteArray(
+        OutgoingPartStatusData.Succeeded.V1(this)
+    )
+} else {
+    OutgoingPartStatusTypeVersion.SUCCEEDED_V0 to Json.encodeToString(
+        OutgoingPartStatusData.Succeeded.V0(this)
+    ).toByteArray(Charsets.UTF_8)
+}
+
+@OptIn(ExperimentalSerializationApi::class)
+fun OutgoingPayment.Part.Status.Failed.mapToDb(
+    useCbor: Boolean = false
+) = if (useCbor) {
+    OutgoingPartStatusTypeVersion.FAILED_V1 to Cbor.encodeToByteArray(
+        OutgoingPartStatusData.Failed.V0(this) // reusing V0 wrapper
+    )
+} else {
+    OutgoingPartStatusTypeVersion.FAILED_V0 to Json.encodeToString(
+        OutgoingPartStatusData.Failed.V0(this)
+    ).toByteArray(Charsets.UTF_8)
+}
